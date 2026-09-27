@@ -807,7 +807,9 @@ export default function App() {
                 <div
                   className={`character-stage character-evolved`}
                   data-powered={appearance.aura}
-                  data-awakened={appearance.awakened}
+                  style={{
+                    "--aura-color": `#${appearance.auraColor.toString(16).padStart(6, "0")}`,
+                  }}
                 >
                   <div className="character-orbit" />
                   <Character
