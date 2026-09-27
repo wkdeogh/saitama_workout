@@ -243,3 +243,22 @@ test("Kakao subject is fetched server-side with client secret and minimal profil
     /provider_failed/,
   );
 });
+
+test("production API entry loads Firebase Admin dependencies and responds safely when disabled", async () => {
+  const { default: handler } = await import("../api/auth/kakao/[action].js");
+  const res = {
+    headers: {},
+    setHeader(k, v) {
+      this.headers[k] = v;
+    },
+    end(body) {
+      this.body = body;
+    },
+  };
+  await handler(
+    { method: "GET", query: { action: "status" }, headers: {} },
+    res,
+  );
+  assert.equal(res.statusCode, 200);
+  assert.equal(typeof JSON.parse(res.body).enabled, "boolean");
+});

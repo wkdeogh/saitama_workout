@@ -32,7 +32,7 @@
 
 ## 개발
 
-Node.js 22 이상 권장.
+Node.js 24.x 사용. Vercel Functions와 로컬 개발의 런타임을 동일하게 유지합니다.
 
 ```sh
 npm ci
