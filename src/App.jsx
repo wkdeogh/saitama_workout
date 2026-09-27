@@ -550,8 +550,7 @@ export default function App() {
     [toast, setToast] = useState(""),
     [celebrate, setCelebrate] = useState(false),
     [preview, setPreview] = useState(null),
-    [deleteOpen, setDeleteOpen] = useState(false),
-    [posterOpen, setPosterOpen] = useState(false);
+    [deleteOpen, setDeleteOpen] = useState(false);
   const [draft, setDraft] = useState({ pushups: 0, squats: 0 });
   const [formError, setFormError] = useState("");
   const toastTimer = useRef(null),
@@ -870,22 +869,17 @@ export default function App() {
                 </div>
                 <span className="streak-deco">↗</span>
               </div>
-              <button
-                className="training-poster"
-                onClick={() => setPosterOpen(true)}
-              >
+              <section className="training-poster" aria-label="사이타마 훈련법">
+                <h2>사이타마 훈련법</h2>
                 <img
                   src={`${import.meta.env.BASE_URL}images/training-manga.jpg`}
-                  alt="진지한 표정으로 매일 훈련을 다짐하는 사이타마"
+                  alt="사이타마 훈련법: 팔굽혀펴기 100회, 윗몸일으키기 100회, 스쿼트 100회, 10km 달리기를 매일 한다는 만화 장면"
+                  width="620"
+                  height="685"
+                  loading="lazy"
+                  decoding="async"
                 />
-                <span>
-                  <small>TRAINING</small>
-                  <strong>사이타마 훈련법</strong>
-                  <em>
-                    원본 이미지 보기 <ArrowUpRight size={13} />
-                  </em>
-                </span>
-              </button>
+              </section>
             </aside>
           )}
           <div className="content-column">
@@ -1136,19 +1130,6 @@ export default function App() {
           <span>설정</span>
         </button>
       </nav>
-      {posterOpen && (
-        <Modal title="사이타마 훈련법" onClose={() => setPosterOpen(false)}>
-          <img
-            className="manga-full"
-            src={`${import.meta.env.BASE_URL}images/training-manga.jpg`}
-            alt="하루도 빠짐없이 매일 운동한다는 사이타마의 만화 장면"
-          />
-          <p className="hint">
-            현재 목표: 푸쉬업 {data.goals.pushups}개, 스쿼트 {data.goals.squats}
-            개.
-          </p>
-        </Modal>
-      )}
       {settings && (
         <SettingsPanel
           {...{ data, persist, notify, error, setError }}
