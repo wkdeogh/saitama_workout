@@ -13,19 +13,19 @@ test("level 1 is short, skinny and has no muscle definition or effects", () => {
   for (const key of ["aura", "eyes", "lightning", "fists", "awakened"])
     assert.equal(p[key], false);
 });
-test("every one of the 200 levels has monotonically growing finite proportions", () => {
+test("every one of the 1000 levels has monotonically growing finite proportions", () => {
   let previous = characterAppearance(1);
-  for (let level = 2; level <= 200; level++) {
+  for (let level = 2; level <= 1000; level++) {
     const p = characterAppearance(level);
     for (const key of ["height", "shoulder", "waist", "arm"]) {
       assert.ok(Number.isFinite(p[key]));
       assert.ok(p[key] > previous[key], `${key} must grow at level ${level}`);
     }
-    assert.ok(p.height <= 1);
+    assert.ok(p.height <= 1.055);
     assert.ok(p.shoulder > p.waist);
     previous = p;
   }
-  assert.equal(previous.height, 1);
+  assert.ok(previous.height > 1);
   assert.ok(previous.arm > characterAppearance(1).arm * 4);
 });
 test("effects unlock at their documented thresholds and rings build to three", () => {
@@ -50,18 +50,42 @@ test("effects unlock at their documented thresholds and rings build to three", (
     assert.equal(characterAppearance(level).rings, rings);
 });
 test("unlock previews always show a future reward and end at maximum level", () => {
-  for (let level = 1; level < 200; level++) {
+  for (let level = 1; level < 1000; level++) {
     const next = characterAppearance(level).nextUnlock;
     assert.ok(next.level > level);
     assert.ok(VISUAL_UNLOCKS.includes(next));
   }
-  assert.equal(characterAppearance(200).nextUnlock, null);
+  assert.equal(characterAppearance(1000).nextUnlock, null);
   assert.equal(characterAppearance(59).nextUnlock.level, 60);
   assert.equal(characterAppearance(60).nextUnlock.level, 80);
 });
 test("appearance stays bounded for malformed preview values", () => {
   for (const input of [undefined, NaN, -3, 0, "wrong"])
     assert.equal(characterAppearance(input).level, 1);
-  assert.equal(characterAppearance(201).level, 200);
+  assert.equal(characterAppearance(1001).level, 1000);
   assert.equal(characterAppearance(150.9).level, 150);
+});
+
+test("hair and clothing unlock progressively through the golden final form", () => {
+  assert.equal(characterAppearance(199).hair, 0);
+  assert.ok(characterAppearance(200).hair > 0);
+  for (const [key, level] of [
+    ["wraps", 250],
+    ["shorts", 350],
+    ["pants", 450],
+    ["sash", 550],
+    ["vest", 650],
+    ["golden", 850],
+    ["ultimate", 1000],
+  ]) {
+    assert.equal(characterAppearance(level - 1)[key], false);
+    assert.equal(characterAppearance(level)[key], true);
+  }
+  for (let level = 201; level <= 1000; level++)
+    assert.ok(
+      characterAppearance(level).hair > characterAppearance(level - 1).hair,
+    );
+  assert.equal(characterAppearance(749).hairGold, 0);
+  assert.equal(characterAppearance(850).hairGold, 1);
+  assert.equal(characterAppearance(1000).rings, 4);
 });

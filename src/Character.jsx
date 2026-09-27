@@ -36,6 +36,24 @@ function createFigure(p) {
     color: 0xd62e25,
     roughness: 0.7,
   });
+  const orange = new THREE.MeshStandardMaterial({
+    color: 0xf36b0b,
+    roughness: 0.78,
+  });
+  const navy = new THREE.MeshStandardMaterial({
+    color: 0x143f85,
+    roughness: 0.75,
+  });
+  const hairMaterial = new THREE.MeshStandardMaterial({
+    color: new THREE.Color(0x161b27).lerp(
+      new THREE.Color(0xffd12b),
+      p.hairGold,
+    ),
+    roughness: 0.4,
+    metalness: p.golden ? 0.2 : 0,
+    emissive: 0xffbc14,
+    emissiveIntensity: p.hairGold * 0.22,
+  });
   const sphere = (parent, material, pos, scale) => {
     const mesh = new THREE.Mesh(geometry, material);
     mesh.position.set(...pos);
@@ -134,10 +152,15 @@ function createFigure(p) {
       );
     }
   const hip = waist * 1.12;
-  sphere(root, red, [0, 1.2, 0], [hip, 0.225, 0.145 + 0.13 * g]);
+  sphere(
+    root,
+    p.shorts ? (p.pants ? orange : navy) : red,
+    [0, 1.2, 0],
+    [hip, 0.225, 0.145 + 0.13 * g],
+  );
   const belt = new THREE.Mesh(
     new THREE.CylinderGeometry(hip, hip, 0.06, 40),
-    white,
+    p.sash ? navy : white,
   );
   belt.scale.z = (0.145 + 0.13 * g) / hip;
   belt.position.y = 1.34;
@@ -184,6 +207,31 @@ function createFigure(p) {
       [ankle[0], 0.285, 0.1],
       [0.09 + 0.08 * g, 0.075 + 0.025 * g, 0.15 + 0.11 * g],
     );
+    if (p.wraps)
+      limb(
+        [hand[0] - side * 0.025, hand[1] + 0.1, hand[2] * 0.8],
+        [hand[0] - side * 0.05, hand[1] + 0.22, hand[2] * 0.5],
+        p.arm * 0.84,
+        navy,
+      );
+    if (p.shorts)
+      limb(hipJoint, knee, 0.082 + 0.17 * g, p.pants ? orange : navy);
+    if (p.pants) {
+      limb(knee, [ankle[0], 0.45, 0], 0.065 + 0.15 * g, orange);
+      limb([ankle[0], 0.51, 0], ankle, 0.058 + 0.13 * g, navy);
+      sphere(
+        root,
+        navy,
+        [ankle[0], 0.285, 0.12],
+        [0.12 + 0.08 * g, 0.105, 0.18 + 0.11 * g],
+      );
+      sphere(
+        root,
+        orange,
+        [ankle[0], 0.49, 0],
+        [0.065 + 0.14 * g, 0.035, 0.065 + 0.14 * g],
+      );
+    }
     if (p.fists) {
       const glow = new THREE.Mesh(
         geometry,
@@ -209,13 +257,102 @@ function createFigure(p) {
       fists.push(cuff);
     }
   }
+  if (p.vest) {
+    const vest = new THREE.Mesh(torso.geometry.clone(), orange);
+    vest.scale.set(1.055, 1, 0.75);
+    vest.castShadow = true;
+    root.add(vest);
+    // Blue undershirt and overlapping lapels read as a martial arts gi from the front.
+    const bib = new THREE.Shape();
+    bib.moveTo(-chest * 0.62, 2.15);
+    bib.lineTo(chest * 0.62, 2.15);
+    bib.lineTo(0, 1.61);
+    bib.closePath();
+    const undershirt = new THREE.Mesh(new THREE.ShapeGeometry(bib), navy);
+    undershirt.position.z = chest * 0.72;
+    root.add(undershirt);
+    for (const side of [-1, 1]) {
+      limb(
+        [side * chest * 0.65, 2.16, chest * 0.72],
+        [0, 1.59, chest * 0.72],
+        0.045,
+        orange,
+      );
+    }
+  }
+  if (p.sash) {
+    const sash = new THREE.Mesh(
+      new THREE.CylinderGeometry(waist * 1.16, waist * 1.16, 0.14, 32),
+      navy,
+    );
+    sash.scale.z = 0.8;
+    sash.position.y = 1.4;
+    root.add(sash);
+    sphere(root, navy, [0.13, 1.4, waist * 0.91], [0.13, 0.1, 0.08]);
+    for (const side of [-1, 1]) {
+      const tail = new THREE.Mesh(
+        new THREE.BoxGeometry(0.09, 0.35, 0.045),
+        navy,
+      );
+      tail.position.set(0.13 + side * 0.075, 1.2, waist * 0.96);
+      tail.rotation.z = side * 0.25;
+      root.add(tail);
+    }
+  }
   sphere(root, skin, [0, 2.23, 0], [0.085 + 0.095 * g, 0.19, 0.09 + 0.09 * g]);
   const head = new THREE.Group();
   head.position.set(0, 2.84, 0);
   root.add(head);
   const headWidth = 0.6 + 0.04 * g;
   sphere(head, skinLight, [0, 0, 0], [headWidth, 0.69, 0.55]);
-  const eyeGlow = new THREE.MeshBasicMaterial({ color: 0xffec90 });
+  if (p.hair > 0) {
+    if (p.level >= 250) {
+      const cap = new THREE.Mesh(
+        new THREE.SphereGeometry(1, 24, 12, 0, Math.PI * 2, 0, Math.PI * 0.47),
+        hairMaterial,
+      );
+      cap.scale.set(headWidth * 1.035, 0.72, 0.57);
+      head.add(cap);
+    }
+    const spike = (base, tip, width) => {
+      const start = new THREE.Vector3(...base),
+        end = new THREE.Vector3(...tip);
+      const direction = end.clone().sub(start);
+      const mesh = new THREE.Mesh(
+        new THREE.ConeGeometry(width, direction.length(), 5),
+        hairMaterial,
+      );
+      mesh.position.copy(start.add(end).multiplyScalar(0.5));
+      mesh.quaternion.setFromUnitVectors(
+        new THREE.Vector3(0, 1, 0),
+        direction.normalize(),
+      );
+      mesh.castShadow = true;
+      head.add(mesh);
+    };
+    const h = p.hair;
+    // A crown of swept angular locks grows continuously at each level.
+    for (let i = -3; i <= 3; i++) {
+      const x = i * 0.16;
+      spike(
+        [x * h, 0.58 - Math.abs(i) * 0.06, 0.03],
+        [x * (0.3 + h * 1.7), 0.66 + h * (1.02 - Math.abs(i) * 0.14), -0.04],
+        0.045 + h * 0.19,
+      );
+    }
+    if (p.level >= 250)
+      for (const side of [-1, 1]) {
+        spike(
+          [side * 0.47, 0.34, -0.17],
+          [side * (0.58 + h * 0.35), 0.53 + h * 0.56, -0.23],
+          0.17 + h * 0.06,
+        );
+        spike([side * 0.25, 0.57, 0.38], [side * 0.12, 0.18, 0.55], 0.13);
+      }
+  }
+  const eyeGlow = new THREE.MeshBasicMaterial({
+    color: p.hairGold > 0 ? 0x3fffe0 : 0xffec90,
+  });
   for (const side of [-1, 1]) {
     sphere(head, skin, [side * headWidth, -0.12, 0], [0.085, 0.135, 0.075]);
     sphere(
@@ -232,7 +369,7 @@ function createFigure(p) {
     );
     const brow = new THREE.Mesh(
       new THREE.CapsuleGeometry(0.016, 0.19, 4, 8),
-      dark,
+      p.hairGold > 0 ? hairMaterial : dark,
     );
     brow.position.set(side * 0.235, 0.015, 0.524);
     brow.rotation.z = Math.PI / 2 + side * (-0.22 + g * 0.55);
@@ -247,7 +384,7 @@ function createFigure(p) {
   mouth.rotation.z = Math.PI / 2;
   head.add(mouth);
   const eyeFlames = [];
-  if (p.eyes)
+  if (p.eyes && !p.hairGold)
     for (const side of [-1, 1])
       for (let layer = 0; layer < 3; layer++) {
         const shape = new THREE.Shape();
@@ -310,7 +447,7 @@ function createEnergy(p) {
     edge: { value: new THREE.Color(p.auraEdge) },
   };
   flame = new THREE.Mesh(
-    new THREE.PlaneGeometry(4.6, 4.2),
+    new THREE.PlaneGeometry(4.6 + p.hair * 0.7, 4.2 + p.hair * 1.6),
     new THREE.ShaderMaterial({
       uniforms,
       vertexShader: auraVertex,
@@ -321,7 +458,7 @@ function createEnergy(p) {
       blending: THREE.AdditiveBlending,
     }),
   );
-  flame.position.set(0, 2.1, -0.56);
+  flame.position.set(0, 2.1 + p.hair * 0.6, -0.56);
   root.add(flame);
   const count = 40 + Math.round(p.growth * 48),
     positions = new Float32Array(count * 3);
@@ -460,7 +597,13 @@ export default function Character({ stage = 0, level = 1, celebrate = false }) {
     floor.position.y = 0.035;
     floor.receiveShadow = true;
     scene.add(floor);
-    const state = { scene, figure: null, energy: null, rotation: -0.16 };
+    const state = {
+      scene,
+      camera,
+      figure: null,
+      energy: null,
+      rotation: -0.16,
+    };
     runtime.current = state;
     let dragging = false,
       startX = 0,
@@ -564,6 +707,8 @@ export default function Character({ stage = 0, level = 1, celebrate = false }) {
     const p = characterAppearance(level),
       figure = createFigure(p),
       energy = createEnergy(p);
+    state.camera.position.set(0, 2.9 + p.hair * 0.5, 9.3 + p.hair * 1.7);
+    state.camera.lookAt(0, 1.85 + p.hair * 0.42, 0);
     state.figure = figure;
     state.energy = energy;
     state.scene.add(figure.root, energy.root);
@@ -582,7 +727,7 @@ export default function Character({ stage = 0, level = 1, celebrate = false }) {
       ref={mount}
       className="character-canvas"
       role="img"
-      aria-label={`${level}레벨, 성장 ${stage + 1}단계, 빤쓰를 입은 빡빡이 3D 캐릭터. 좌우로 드래그하면 회전해요.`}
+      aria-label={`${level}레벨, 성장 ${stage + 1}단계, ${level >= 850 ? "금발 도복 전사" : level >= 650 ? "도복 전사" : level >= 200 ? "머리카락이 자라는 전사" : "빤쓰를 입은 빡빡이"} 3D 캐릭터. 좌우로 드래그하면 회전해요.`}
     >
       {fallback && (
         <div

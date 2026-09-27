@@ -26,7 +26,10 @@ import { characterAppearance, VISUAL_UNLOCKS } from "./characterAppearance";
 import {
   STORAGE_KEY,
   STAGES,
-  MAX_REPS,
+  MAX_LEVEL,
+  EXERCISES,
+  emptyCounts,
+  recordExp,
   dateKey,
   parseDate,
   initialData,
@@ -120,6 +123,16 @@ function ExerciseIcon({ type }) {
             <circle cx="43" cy="10" r="4" fill="currentColor" stroke="none" />
             <path d="m8 29 14-12 15 1 7 14h7M37 18l-7 14h9M6 34h47" />
           </>
+        ) : type === "runningKm" ? (
+          <>
+            <circle cx="34" cy="5" r="4" fill="currentColor" stroke="none" />
+            <path d="m31 14-8 11 12 4 5 10M24 24l-9 12H6M31 14l9 7 10-4M29 14l-12 3-5 9" />
+          </>
+        ) : type === "situps" ? (
+          <>
+            <circle cx="15" cy="15" r="4" fill="currentColor" stroke="none" />
+            <path d="m19 22 12 12 10-15 10 15M19 22l8-8 5 5M7 38h47" />
+          </>
         ) : (
           <>
             <circle cx="33" cy="6" r="4" fill="currentColor" stroke="none" />
@@ -131,7 +144,15 @@ function ExerciseIcon({ type }) {
   );
 }
 function WorkoutCard({ type, label, value, goal, onChange }) {
-  const done = Number(value) >= goal;
+  const { unit, step, max } = EXERCISES.find(({ key }) => key === type);
+  const running = type === "runningKm";
+  const done = goal > 0 && Number(value) >= goal;
+  const add = (amount) =>
+    onChange(
+      Math.round(
+        Math.min(max, Math.max(0, (Number(value) || 0) + amount)) * 10,
+      ) / 10,
+    );
   return (
     <div className={`exercise-card ${done ? "exercise-done" : ""}`}>
       <div className="exercise-top">
@@ -140,12 +161,17 @@ function WorkoutCard({ type, label, value, goal, onChange }) {
         </span>
         <div>
           <h3>{label}</h3>
-          <span>목표 {goal}개</span>
+          <span>
+            {goal > 0 ? `목표 ${goal}${unit}` : "선택 운동"}
+            <br />
+            {running ? "0.1km" : "1개"}=1 EXP
+          </span>
         </div>
         <button
           type="button"
           className={`complete-toggle ${done ? "checked" : ""}`}
           aria-label={`${label} 목표 채우기`}
+          disabled={!goal}
           aria-pressed={done}
           onClick={() =>
             onChange(done ? 0 : Math.max(Number(value) || 0, goal))
@@ -158,9 +184,9 @@ function WorkoutCard({ type, label, value, goal, onChange }) {
         <button
           type="button"
           className="counter-btn"
-          aria-label={`${label} 1개 빼기`}
+          aria-label={`${label} ${step}${unit} 빼기`}
           disabled={!Number(value)}
-          onClick={() => onChange(Math.max(0, Number(value) - 1))}
+          onClick={() => add(-step)}
         >
           <Minus size={17} />
         </button>
@@ -168,26 +194,26 @@ function WorkoutCard({ type, label, value, goal, onChange }) {
           className={`count-field ${String(value).length > 3 ? "count-long" : String(value).length > 2 ? "count-medium" : ""}`}
         >
           <input
-            aria-label={`${label} 횟수`}
+            aria-label={`${label} ${running ? "거리" : "횟수"}`}
             type="number"
-            inputMode="numeric"
+            inputMode={running ? "decimal" : "numeric"}
             min="0"
-            max={MAX_REPS}
-            step="1"
+            max={max}
+            step={step}
             value={value}
             onChange={(e) => onChange(e.target.value)}
           />
           <span>
-            / {goal}
-            <small> 개</small>
+            {goal > 0 ? `/ ${goal}` : ""}
+            <small> {unit}</small>
           </span>
         </label>
         <button
           type="button"
           className="counter-btn"
-          aria-label={`${label} 1개 더하기`}
-          disabled={Number(value) >= MAX_REPS}
-          onClick={() => onChange(Math.min(MAX_REPS, (Number(value) || 0) + 1))}
+          aria-label={`${label} ${step}${unit} 더하기`}
+          disabled={Number(value) >= max}
+          onClick={() => add(step)}
         >
           <Plus size={17} />
         </button>
@@ -195,24 +221,20 @@ function WorkoutCard({ type, label, value, goal, onChange }) {
       <div className="track">
         <i
           style={{
-            width: `${Math.min(100, Math.max(0, (Number(value) / goal) * 100))}%`,
+            width: `${Math.min(100, Math.max(0, goal > 0 ? (Number(value) / goal) * 100 : 0))}%`,
           }}
         />
       </div>
       <div className="quick-add">
-        {[10, 25].map((n) => (
-          <button
-            type="button"
-            key={n}
-            onClick={() =>
-              onChange(Math.min(MAX_REPS, (Number(value) || 0) + n))
-            }
-          >
-            +{n}개
+        {(running ? [0.1, 1] : [10, 25]).map((n) => (
+          <button type="button" key={n} onClick={() => add(n)}>
+            +{n}
+            {unit}
           </button>
         ))}
         <button
           type="button"
+          disabled={!goal}
           onClick={() => onChange(Math.max(Number(value) || 0, goal))}
         >
           목표 채우기 <Check size={13} />
@@ -353,48 +375,52 @@ function SettingsPanel({ data, persist, onClose, notify, error, setError }) {
           하루 운동 목표
         </h3>
         <div className="goal-fields">
-          {[
-            ["pushups", "푸쉬업"],
-            ["squats", "스쿼트"],
-          ].map(([key, label]) => (
+          {EXERCISES.map(({ key, label, unit, step, max }) => (
             <label key={key}>
               {label}
               <div>
                 <input
                   type="number"
-                  inputMode="numeric"
-                  min="1"
-                  max="10000"
+                  inputMode={step === 1 ? "numeric" : "decimal"}
+                  min={key === "pushups" || key === "squats" ? 1 : 0}
+                  max={max}
+                  step={step}
                   value={goals[key]}
                   aria-label={`${label} 하루 목표`}
                   onChange={(e) =>
                     setGoals({ ...goals, [key]: e.target.value })
                   }
                 />
-                <span>개</span>
+                <span>{unit}</span>
               </div>
             </label>
           ))}
         </div>
         <div className="goal-presets">
-          <button onClick={() => setGoals({ pushups: 50, squats: 50 })}>
-            각각 50개
+          <button
+            onClick={() => setGoals({ ...goals, pushups: 50, squats: 50 })}
+          >
+            푸쉬업·스쿼트 50개
           </button>
-          <button onClick={() => setGoals({ pushups: 100, squats: 100 })}>
-            각각 100개
+          <button
+            onClick={() => setGoals({ ...goals, pushups: 100, squats: 100 })}
+          >
+            푸쉬업·스쿼트 100개
           </button>
         </div>
-        <p className="hint">새 목표는 아직 기록하지 않은 날짜부터 적용돼요.</p>
+        <p className="hint">
+          윗몸일으키기·달리기 목표 0은 선택 운동입니다. EXP는 목표와 관계없이
+          적립됩니다. 새 목표는 미기록 날짜부터 적용됩니다.
+        </p>
         <button
           className="primary-button"
           onClick={() => {
             try {
               const next = validateData({
                 ...data,
-                goals: {
-                  pushups: Number(goals.pushups),
-                  squats: Number(goals.squats),
-                },
+                goals: Object.fromEntries(
+                  EXERCISES.map(({ key }) => [key, Number(goals[key])]),
+                ),
               });
               if (persist(next)) {
                 notify("새로운 목표를 저장했어요.");
@@ -454,7 +480,7 @@ function SettingsPanel({ data, persist, onClose, notify, error, setError }) {
               찾았어요.
             </strong>
             <p>
-              총 {number(stats(incoming).total)}개 · 겹치는 날짜{" "}
+              총 {number(stats(incoming).total)} EXP · 겹치는 날짜{" "}
               {
                 Object.keys(incoming.records).filter((k) => data.records[k])
                   .length
@@ -551,7 +577,7 @@ export default function App() {
     [celebrate, setCelebrate] = useState(false),
     [preview, setPreview] = useState(null),
     [deleteOpen, setDeleteOpen] = useState(false);
-  const [draft, setDraft] = useState({ pushups: 0, squats: 0 });
+  const [draft, setDraft] = useState(emptyCounts);
   const [formError, setFormError] = useState("");
   const toastTimer = useRef(null),
     celebrateTimer = useRef(null);
@@ -562,10 +588,11 @@ export default function App() {
   const nextVisual = characterAppearance(summary.level).nextUnlock;
   const record = data.records[selected],
     goals = record?.goals || data.goals;
-  const dirty =
-    String(draft.pushups) !== String(record?.pushups || 0) ||
-    String(draft.squats) !== String(record?.squats || 0);
-  const progress = summary.level === 200 ? 100 : summary.progressDays * 10;
+  const dirty = EXERCISES.some(
+    ({ key }) => String(draft[key]) !== String(record?.[key] || 0),
+  );
+  const progress = summary.level === MAX_LEVEL ? 100 : summary.progressExp;
+  const expDelta = recordExp(draft) - recordExp(record);
   function notify(text) {
     clearTimeout(toastTimer.current);
     setToast(text);
@@ -586,7 +613,9 @@ export default function App() {
     }
   }
   useEffect(() => {
-    setDraft({ pushups: record?.pushups || 0, squats: record?.squats || 0 });
+    setDraft(
+      Object.fromEntries(EXERCISES.map(({ key }) => [key, record?.[key] || 0])),
+    );
     setFormError("");
   }, [selected, record]);
   useEffect(() => {
@@ -645,20 +674,25 @@ export default function App() {
   function save(e) {
     e.preventDefault();
     try {
-      if (draft.pushups === "" || draft.squats === "")
+      if (EXERCISES.some(({ key }) => draft[key] === ""))
         throw new Error(
-          "두 운동의 횟수를 입력해 주세요. 하지 않은 운동은 0으로 입력하면 돼요.",
+          "운동량을 입력해 주세요. 하지 않은 운동은 0으로 입력하면 됩니다.",
         );
       const nextData = saveRecord(
         data,
         selected,
-        { pushups: Number(draft.pushups), squats: Number(draft.squats) },
+        Object.fromEntries(
+          EXERCISES.map(({ key }) => [key, Number(draft[key])]),
+        ),
         dateKey(),
       );
       const oldLevel = summary.level;
       if (persist(nextData)) {
         setFormError("");
-        if (isComplete(nextData.records[selected]) && !isComplete(record)) {
+        if (
+          stats(nextData).level > oldLevel ||
+          (isComplete(nextData.records[selected]) && !isComplete(record))
+        ) {
           setCelebrate(true);
           clearTimeout(celebrateTimer.current);
           celebrateTimer.current = setTimeout(() => setCelebrate(false), 2600);
@@ -667,7 +701,7 @@ export default function App() {
           stats(nextData).level > oldLevel
             ? "레벨이 올랐습니다. 캐릭터 외형이 진화했습니다."
             : isComplete(nextData.records[selected])
-              ? "운동 기록 저장 완료. 두 운동의 목표를 달성했습니다."
+              ? "운동 기록 저장 완료. 설정한 목표를 달성했습니다."
               : "운동 기록을 저장했습니다.",
         );
       }
@@ -767,7 +801,7 @@ export default function App() {
                   <p>
                     {preview !== null
                       ? `LV. ${preview} 미리보기`
-                      : `LV. ${summary.level} / 200`}
+                      : `LV. ${summary.level} / ${MAX_LEVEL}`}
                   </p>
                 </div>
                 <div
@@ -810,7 +844,7 @@ export default function App() {
                     </span>
                     <button
                       aria-label="다음 레벨 미리보기"
-                      disabled={appearance.level === 200}
+                      disabled={appearance.level === MAX_LEVEL}
                       onClick={() => setPreview(appearance.level + 1)}
                     >
                       <ChevronRight size={18} />
@@ -820,12 +854,14 @@ export default function App() {
                 <div className="hero-progress">
                   <div>
                     <strong>
-                      {summary.level < 200 ? "다음 레벨까지" : "최고 레벨 달성"}
+                      {summary.level < MAX_LEVEL
+                        ? "다음 레벨까지"
+                        : "최고 레벨 달성"}
                     </strong>
                     <span>
-                      {summary.level < 200 ? (
+                      {summary.level < MAX_LEVEL ? (
                         <>
-                          <b>{summary.daysToNext}</b>일 남음
+                          <b>{summary.expToNext}</b> EXP 남음
                         </>
                       ) : (
                         <Trophy size={18} />
@@ -836,15 +872,15 @@ export default function App() {
                     <i style={{ width: `${progress}%` }} />
                   </div>
                   <p>
-                    {summary.level === 200
+                    {summary.level === MAX_LEVEL
                       ? "MAX LEVEL"
-                      : `${summary.progressDays} / 10 DAYS`}{" "}
-                    <span>· 운동한 날 기준</span>
+                      : `${summary.progressExp} / 100 EXP`}{" "}
+                    <span>· 100 EXP마다 +1레벨</span>
                   </p>
                   {summary.inactiveDays > 0 && summary.level > 1 && (
                     <p className="decay-status">
                       미기록 {summary.inactiveDays}일 · {summary.daysToDecay}일
-                      뒤 −1레벨
+                      뒤 −5레벨
                     </p>
                   )}
                 </div>
@@ -865,7 +901,7 @@ export default function App() {
                 </span>
                 <div>
                   <strong>{summary.streak}일 연속 달성 중</strong>
-                  <p>푸쉬업 · 스쿼트 목표 기준</p>
+                  <p>설정한 운동 목표 기준</p>
                 </div>
                 <span className="streak-deco">↗</span>
               </div>
@@ -889,11 +925,11 @@ export default function App() {
                   <div>
                     <span>
                       <Dumbbell size={14} />
-                      누적 운동
+                      누적 EXP
                     </span>
                     <strong>
                       {number(summary.total)}
-                      <small>개</small>
+                      <small>EXP</small>
                     </strong>
                   </div>
                   <div>
@@ -955,20 +991,18 @@ export default function App() {
                   </div>
                   <form onSubmit={save}>
                     <div className="exercise-grid">
-                      <WorkoutCard
-                        type="pushups"
-                        label="푸쉬업"
-                        value={draft.pushups}
-                        goal={goals.pushups}
-                        onChange={(pushups) => setDraft({ ...draft, pushups })}
-                      />
-                      <WorkoutCard
-                        type="squats"
-                        label="스쿼트"
-                        value={draft.squats}
-                        goal={goals.squats}
-                        onChange={(squats) => setDraft({ ...draft, squats })}
-                      />
+                      {EXERCISES.map(({ key, label }) => (
+                        <WorkoutCard
+                          key={key}
+                          type={key}
+                          label={label}
+                          value={draft[key]}
+                          goal={goals[key]}
+                          onChange={(value) =>
+                            setDraft({ ...draft, [key]: value })
+                          }
+                        />
+                      ))}
                     </div>
                     {formError && (
                       <p className="error-box" role="alert">
@@ -988,17 +1022,8 @@ export default function App() {
                           : "운동 기록 저장"}
                       {dirty && (
                         <span>
-                          +
-                          {number(
-                            Math.max(
-                              0,
-                              (Number(draft.pushups) || 0) +
-                                (Number(draft.squats) || 0) -
-                                (record?.pushups || 0) -
-                                (record?.squats || 0),
-                            ),
-                          )}{" "}
-                          REP
+                          {expDelta >= 0 ? "+" : ""}
+                          {number(expDelta)} EXP
                         </span>
                       )}
                     </button>
@@ -1043,14 +1068,14 @@ export default function App() {
                   </span>
                 </div>
                 <p className="growth-description">
-                  운동 10일마다 +1레벨 · 매 레벨 외형 변화
+                  100 EXP마다 +1레벨 · 매 레벨 외형 변화
                   <br />
-                  최대 200레벨 · 미기록 10일마다 −1레벨
+                  최대 1000레벨 · 연속 미기록 5일마다 −5레벨
                 </p>
                 <div className="growth-rules">
-                  <span>1개 이상 기록한 날만 하루로 계산</span>
-                  <span>연속일 필요 없이 누적 10일마다 성장</span>
-                  <span>미기록 20일은 −2레벨 · 최저 1레벨</span>
+                  <span>푸쉬업 · 스쿼트 · 윗몸일으키기 1개 = 1 EXP</span>
+                  <span>달리기 0.1km = 1 EXP · 하루 여러 레벨 상승 가능</span>
+                  <span>미기록 10일은 −10레벨 · 최저 1레벨</span>
                 </div>
                 <div className="level-preview">
                   <label htmlFor="level-preview">
@@ -1061,13 +1086,13 @@ export default function App() {
                     id="level-preview"
                     type="range"
                     min="1"
-                    max="200"
+                    max={MAX_LEVEL}
                     value={preview ?? summary.level}
                     onChange={(e) => setPreview(Number(e.target.value))}
                   />
                   <div>
                     <span>LV. 1</span>
-                    <span>LV. 200</span>
+                    <span>LV. {MAX_LEVEL}</span>
                   </div>
                 </div>
                 <div className="stage-list">
