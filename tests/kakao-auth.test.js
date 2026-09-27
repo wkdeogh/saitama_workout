@@ -1,5 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { spawnSync } from "node:child_process";
 import {
   createKakaoHandler,
   configuration,
@@ -16,6 +17,15 @@ const config = {
   secret: "test-secret-only",
   redirectUri: "https://app.example/api/auth/kakao/callback",
 };
+test("server dependencies load when the host disables require of ES modules", () => {
+  const result = spawnSync(process.execPath, [
+    "--no-experimental-require-module",
+    "--input-type=module",
+    "-e",
+    `await import(${JSON.stringify(new URL("../api/auth/kakao/[action].js", import.meta.url).href)})`,
+  ], { encoding: "utf8", timeout: 15000 });
+  assert.equal(result.status, 0, result.stderr || result.error?.message);
+});
 const time = () => Math.floor(Date.now() / 1000);
 function harness(overrides = {}) {
   const calls = [];
