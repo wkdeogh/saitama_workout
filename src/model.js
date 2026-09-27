@@ -290,6 +290,19 @@ export function mergeBackup(current, incoming, replace = false) {
         records: { ...current.records, ...incoming.records },
       };
 }
+export function updateGoals(data, goals, today = dateKey()) {
+  const validated = validateCounts(goals, true);
+  return {
+    ...data,
+    goals: validated,
+    records: data.records[today]
+      ? {
+          ...data.records,
+          [today]: { ...data.records[today], goals: { ...validated } },
+        }
+      : data.records,
+  };
+}
 export function saveRecord(data, date, counts, today = dateKey()) {
   if (!isDateKey(date) || date > today)
     throw new Error("오늘까지의 운동만 기록할 수 있어요.");

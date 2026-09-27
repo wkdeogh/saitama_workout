@@ -45,6 +45,7 @@ import {
   validateData,
   mergeBackup,
   saveRecord,
+  updateGoals,
   monthCells,
   stageIndex,
 } from "./model";
@@ -645,18 +646,18 @@ function SettingsPanel({
         </div>
         <p className="hint">
           윗몸일으키기·달리기 목표 0은 선택 운동입니다. EXP는 목표와 관계없이
-          적립됩니다. 새 목표는 미기록 날짜부터 적용됩니다.
+          적립됩니다. 새 목표는 오늘부터 적용되며 과거 기록의 목표는 유지됩니다.
         </p>
         <button
           className="primary-button"
           onClick={() => {
             try {
-              const next = validateData({
-                ...data,
-                goals: Object.fromEntries(
+              const next = updateGoals(
+                data,
+                Object.fromEntries(
                   EXERCISES.map(({ key }) => [key, Number(goals[key])]),
                 ),
-              });
+              );
               if (persist(next)) {
                 notify("새로운 목표를 저장했어요.");
                 onClose();

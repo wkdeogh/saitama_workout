@@ -5,6 +5,7 @@ import {
   saveRecord,
   emptyCounts,
   upgradeDefaultGoals,
+  updateGoals,
 } from "../src/model.js";
 import {
   weekStart,
@@ -18,6 +19,15 @@ import {
 const day = "2026-09-27";
 const add = (d, date, counts) =>
   saveRecord(d, date, { ...emptyCounts(), ...counts }, day);
+test("changed goals and today's snapshot survive cloud sync without rewriting past goals", () => {
+  const base = add(add(initialData(), "2026-09-26", { pushups: 100 }), day, { pushups: 50 });
+  const local = updateGoals(base, { pushups: 50, squats: 50, situps: 0, runningKm: 0 }, day);
+  const synced = mergeChanges(base, local, base);
+  assert.deepEqual(synced.goals, local.goals);
+  assert.deepEqual(synced.records[day], local.records[day]);
+  assert.deepEqual(synced.records["2026-09-26"], base.records["2026-09-26"]);
+  assert.deepEqual(mergeChanges(synced, synced, synced), synced);
+});
 test("ranking week uses Monday in Korea and crosses years correctly", () => {
   assert.equal(weekStart("2026-09-27"), "2026-09-21");
   assert.equal(weekStart("2026-09-28"), "2026-09-28");

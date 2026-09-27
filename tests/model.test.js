@@ -4,6 +4,7 @@ import {
   initialData,
   upgradeDefaultGoals,
   saveRecord,
+  updateGoals,
   stats,
   isComplete,
   parseBackup,
@@ -57,6 +58,30 @@ test("goal changes preserve historical completion and apply to new records", () 
   assert.equal(isComplete(d.records[today]), false);
   d = record(d, "2026-09-26");
   assert.equal(d.records["2026-09-26"].goals.pushups, 50);
+});
+test("changing goals updates today's saved target but preserves past completion and EXP", () => {
+  const original = record(record(legacyGoals(), "2026-09-26"), today);
+  const goals = { pushups: 100, squats: 100, situps: 100, runningKm: 10 };
+  const updated = updateGoals(original, goals, today);
+  assert.deepEqual(updated.records[today].goals, goals);
+  assert.equal(isComplete(updated.records[today]), false);
+  assert.deepEqual(updated.records["2026-09-26"], original.records["2026-09-26"]);
+  assert.equal(isComplete(updated.records["2026-09-26"]), true);
+  assert.equal(stats(updated, today).total, stats(original, today).total);
+  assert.equal(isComplete(original.records[today]), true);
+  const restored = updateGoals(updated, original.goals, today);
+  assert.equal(isComplete(restored.records[today]), true);
+  assert.deepEqual(record(updated, today).records[today].goals, goals);
+  assert.deepEqual(record(updated, "2026-09-26").records["2026-09-26"].goals, original.goals);
+  assert.deepEqual(parseBackup(JSON.stringify(updated), today), updated);
+});
+test("changing goals without today's record does not create workout history", () => {
+  const original = record(legacyGoals(), "2026-09-26");
+  const updated = updateGoals(original, initialData().goals, today);
+  assert.deepEqual(updated.records, original.records);
+  assert.equal(updated.records[today], undefined);
+  assert.deepEqual(record(updated, today).records[today].goals, initialData().goals);
+  assert.throws(() => updateGoals(original, { ...original.goals, runningKm: -1 }, today));
 });
 test("streak includes yesterday until today is completed", () => {
   let d = record(legacyGoals(), "2026-09-25");
