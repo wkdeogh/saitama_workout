@@ -1,4 +1,4 @@
-name: Test and deploy to GitHub Pages
+name: Test app and publish migration notice
 on:
   push:
     branches: [main]
@@ -26,10 +26,12 @@ jobs:
           java-version: 21
       - run: npm run test:rules
       - run: npm run check
+        env:
+          VERCEL: "1"
       - uses: actions/upload-pages-artifact@v3
         if: github.event_name != 'pull_request'
         with:
-          path: dist
+          path: pages-migration
   deploy:
     if: github.event_name != 'pull_request'
     needs: build

@@ -1,6 +1,6 @@
 # 싸이따마훈련소
 
-푸쉬업·스쿼트·윗몸일으키기·달리기 기록, 월별 캘린더, Three.js 캐릭터 성장. 모바일 우선 웹 앱입니다. GitHub Pages에서 호스팅하고 Firebase Authentication과 Firestore를 사용합니다.
+푸쉬업·스쿼트·윗몸일으키기·달리기 기록, 월별 캘린더, Three.js 캐릭터 성장. 모바일 우선 웹 앱입니다. Vercel에서 호스팅하고 Firebase Authentication과 Firestore를 사용합니다.
 
 - Google 로그인 후 최초 접속 시 캐릭터 이름(1~20자)을 입력합니다. 설정에서 변경할 수 있으며 로컬 저장과 JSON 백업에 포함됩니다. 이름 없는 기존 기록은 유지한 채 이름을 설정합니다. 백업 합치기는 현재 이름을 유지하고, 전체 교체는 백업 이름을 사용합니다(이름 없는 백업은 현재 이름 유지).
 - 신규 계정의 기본 목표: 푸쉬업·스쿼트·윗몸일으키기 각각 100개, 달리기 10km. 설정에서 변경할 수 있으며 기존 개인 목표와 과거 날짜의 목표는 유지합니다. 예전 기본값(50·50·0·0)을 그대로 쓰던 계정은 다음 접속 시 오늘 목표부터 한 번만 새 기본값으로 전환합니다. 이후 개인이 다시 변경한 목표는 그대로 유지합니다. 목표와 관계없이 실제 운동량으로 EXP를 얻습니다.
@@ -42,11 +42,13 @@ npm run check
 
 `npm test`는 기록, 날짜, 백업, 레벨, 계정 병합과 랭킹을 검증합니다. `npm run test:rules`는 Java 21 이상이 필요하며 Firestore 에뮬레이터에서 계정 격리, Google 인증 필수, 랭킹 쓰기 검증을 수행합니다. `npm run build` 출력은 `dist/`입니다.
 
-## GitHub Pages
+## 배포
 
-[Vite 공식 배포 방식](https://vite.dev/guide/static-deploy#github-pages)에 따라 저장소의 Settings → Pages → Source를 **GitHub Actions**로 설정합니다. `main` 푸시 때 `.github/workflows/deploy.yml`에서 테스트·빌드 후 배포합니다. PR에서는 검증만 수행합니다.
+서비스 주소: https://saitama-workout.vercel.app/
 
-서비스 경로: `https://wkdeogh.github.io/saitama_workout/`
+Vercel 프로젝트 `saitama-workout`은 GitHub `wkdeogh/saitama_workout`의 `main`에 연결되어 자동 배포합니다. `vercel.json`에서 `npm run check`로 테스트 후 `dist/`를 배포합니다. Vercel의 `VERCEL=1` 환경에서는 앱 경로가 `/`이고 로컬 개발은 기존 `/saitama_workout/` 경로를 유지합니다. Firebase 공개 웹 설정은 코드에 포함되어 별도 환경 변수 없이 운영합니다. `.env.example`의 에뮬레이터 설정을 프로덕션에 등록하지 마세요.
+
+GitHub Actions는 Firestore 규칙 테스트와 앱 테스트·빌드를 수행하고, 기존 Pages 주소에는 `pages-migration/`의 이동 안내만 배포합니다. 기존 주소 https://wkdeogh.github.io/saitama_workout/ 는 8초 후 새 주소로 이동합니다. Firebase 프로젝트와 사용자 UID가 같으므로 서버 기록을 이전할 필요는 없습니다. 새 주소에서는 다시 로그인해야 하며 홈 화면 앱은 새 주소에서 다시 추가합니다. 도메인별 로컬 캐시는 공유되지 않으므로 미동기화 기록은 이전 브라우저에서 동기화하거나 JSON으로 백업해야 합니다.
 
 ## 저장과 백업
 
@@ -64,7 +66,7 @@ npm run check
 
 프로젝트: `saitama-workout-ff2d5`, Spark, Firestore Standard 서울(`asia-northeast3`). 공개 웹 설정은 `src/cloud/firebaseConfig.js`에 있습니다. 공개 설정값은 인증 비밀키가 아니며 접근 권한은 `firestore.rules`로 제한합니다. 서비스 계정 키는 프런트엔드나 저장소에 넣지 않습니다.
 
-- Authentication: Google만 사용. 승인 도메인에 `wkdeogh.github.io`와 `localhost`를 등록합니다.
+- Authentication: Google만 사용. 승인 도메인에 `saitama-workout.vercel.app`, `wkdeogh.github.io`, `localhost`를 등록합니다.
 - Firestore: `accounts/{uid}`는 본인만 읽고 쓸 수 있습니다. 원본 운동 기록은 검증된 JSON 문자열로 보관합니다(앱 동기화 상한 850KB).
 - `rankings/{uid}`는 로그인 사용자만 읽을 수 있고, 본인만 수정·삭제합니다. 계정 기록과 공개 요약은 한 트랜잭션으로 반영합니다. 참여/중단 선택은 제공하지 않으며, 기존 미참여 계정도 다음 접속 시 이름 설정 후 자동 등록됩니다.
 - `firestore.indexes.json`에 주간 순위용 복합 색인과 큰 payload 필드의 색인 제외를 정의했습니다. 규칙/색인 변경은 권한 있는 Firebase CLI 로그인 후 `npx firebase deploy --only firestore`로 별도 배포합니다. GitHub Actions는 앱 배포만 수행합니다.
