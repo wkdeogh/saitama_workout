@@ -2557,3 +2557,53 @@ main {
 .hero-title h2 {
   overflow-wrap: anywhere;
 }
+
+.stage-reveal {
+  height: clamp(240px, 42svh, 360px);
+  border-radius: 6px;
+  overflow: hidden;
+}
+.stage-reveal.stage-unlocked {
+  background-color: #ffd61f;
+}
+.stage-reveal.stage-concealed {
+  background: #101116;
+}
+.stage-concealed::before,
+.stage-concealed::after {
+  display: none;
+}
+.stage-concealed .character-canvas {
+  filter: brightness(0.22) saturate(0.3) blur(0.7px);
+}
+.conceal-veil {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  background: radial-gradient(
+    ellipse at 50% 45%,
+    #07081018 10%,
+    #07081085 58%,
+    #070810f2 100%
+  );
+}
+.stage-reveal-status {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin: 16px 0 0;
+  font-size: 13px;
+  font-weight: 700;
+  color: #171717;
+}
+.stage-reveal-status.is-locked {
+  color: #555;
+}
+
+.stage-reveal-name {
+  margin: 0 0 14px;
+  font-size: 14px;
+  font-weight: 700;
+}

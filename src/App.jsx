@@ -8,7 +8,6 @@ import {
   Settings,
   ChevronLeft,
   ChevronRight,
-  ArrowUpRight,
   Check,
   Plus,
   Minus,
@@ -83,8 +82,10 @@ function Modal({ title, onClose, children, dismissible = true }) {
   const ref = useRef(null);
   useEffect(() => {
     const previous = document.activeElement;
-    ref.current.showModal();
+    const dialog = ref.current;
+    dialog.showModal();
     return () => {
+      dialog.close();
       previous?.focus();
     };
   }, []);
@@ -113,6 +114,37 @@ function Modal({ title, onClose, children, dismissible = true }) {
         {children}
       </div>
     </dialog>
+  );
+}
+function StageDialog({ stage, currentLevel, onClose }) {
+  const locked = stage.level > currentLevel;
+  const appearance = characterAppearance(stage.level);
+  return (
+    <Modal title={`LV. ${stage.level} 성장 단계`} onClose={onClose}>
+      <p className="stage-reveal-name">{stage.name}</p>
+      <div
+        className={`stage-reveal character-stage character-evolved ${locked ? "stage-concealed" : "stage-unlocked"}`}
+        data-powered={appearance.aura}
+        style={{
+          "--aura-color": `#${appearance.auraColor.toString(16).padStart(6, "0")}`,
+        }}
+      >
+        <Character
+          level={stage.level}
+          stage={stageIndex(stage.level)}
+          label={
+            locked ? `${stage.level}레벨 잠긴 외형의 어두운 실루엣` : undefined
+          }
+        />
+        {locked && <div className="conceal-veil" aria-hidden="true" />}
+      </div>
+      <p className={`stage-reveal-status ${locked ? "is-locked" : ""}`}>
+        {locked ? <LockKeyhole size={17} /> : <Check size={17} />}
+        {locked
+          ? `LV. ${stage.level} 해금 · ${stage.level - currentLevel}레벨 남음`
+          : "해금한 외형"}
+      </p>
+    </Modal>
   );
 }
 function CharacterNameForm({ initialName = "", onSave, autofocus = false }) {
@@ -644,7 +676,7 @@ export default function App() {
     [settings, setSettings] = useState(false),
     [toast, setToast] = useState(""),
     [celebrate, setCelebrate] = useState(false),
-    [preview, setPreview] = useState(null),
+    [stageDetail, setStageDetail] = useState(null),
     [deleteOpen, setDeleteOpen] = useState(false);
   const [draft, setDraft] = useState(emptyCounts);
   const [formError, setFormError] = useState("");
@@ -652,8 +684,7 @@ export default function App() {
     celebrateTimer = useRef(null);
   const workoutRef = useRef(null);
   const summary = stats(data, today);
-  const appearance = characterAppearance(preview ?? summary.level);
-  const nextVisual = characterAppearance(summary.level).nextUnlock;
+  const appearance = characterAppearance(summary.level);
   const record = data.records[selected],
     goals = record?.goals || data.goals;
   const dirty = EXERCISES.some(
@@ -735,7 +766,7 @@ export default function App() {
       if (!selectDate(today)) return;
       setMonth(parseDate(today));
     }
-    setPreview(null);
+    setStageDetail(null);
     setTab(value);
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
@@ -862,11 +893,7 @@ export default function App() {
                 </div>
                 <div className="hero-title">
                   <h2>{data.characterName || "캐릭터"}</h2>
-                  <p>
-                    {preview !== null
-                      ? `LV. ${preview} 미리보기`
-                      : `LV. ${summary.level}`}
-                  </p>
+                  <p>LV. {summary.level}</p>
                 </div>
                 <div
                   className={`character-stage character-evolved`}
@@ -877,46 +904,15 @@ export default function App() {
                 >
                   <div className="character-orbit" />
                   <Character
-                    stage={
-                      preview !== null ? stageIndex(preview) : summary.stage
-                    }
-                    level={preview ?? summary.level}
+                    stage={summary.stage}
+                    level={summary.level}
                     celebrate={celebrate}
                   />
                   <span className="drag-label">
                     <RotateCcw size={11} />
                     드래그해서 돌려보기
                   </span>
-                  {preview !== null && (
-                    <button
-                      className="preview-exit"
-                      onClick={() => setPreview(null)}
-                    >
-                      미리보기 종료 <X size={13} />
-                    </button>
-                  )}
                 </div>
-                {tab === "growth" && (
-                  <div className="preview-stepper">
-                    <button
-                      aria-label="이전 레벨 미리보기"
-                      disabled={appearance.level === 1}
-                      onClick={() => setPreview(appearance.level - 1)}
-                    >
-                      <ChevronLeft size={18} />
-                    </button>
-                    <span>
-                      미리보기 <strong>LV. {appearance.level}</strong>
-                    </span>
-                    <button
-                      aria-label="다음 레벨 미리보기"
-                      disabled={appearance.level === MAX_LEVEL}
-                      onClick={() => setPreview(appearance.level + 1)}
-                    >
-                      <ChevronRight size={18} />
-                    </button>
-                  </div>
-                )}
                 <div className="hero-progress">
                   <div>
                     <strong>
@@ -950,16 +946,6 @@ export default function App() {
                     </p>
                   )}
                 </div>
-                <button
-                  className="evolution-link"
-                  onClick={() => navigate("growth")}
-                >
-                  <Sparkles size={16} />
-                  {nextVisual
-                    ? `다음 외형 · LV. ${nextVisual.level} ${nextVisual.name}`
-                    : "모든 외형 해금 완료"}
-                  <ArrowUpRight size={17} />
-                </button>
               </section>
               <div className="streak-card">
                 <span className="streak-icon">
@@ -1143,34 +1129,13 @@ export default function App() {
                   <span>달리기 0.1km = 1 EXP · 하루 여러 레벨 상승 가능</span>
                   <span>미기록 10일은 −10레벨 · 최저 1레벨</span>
                 </div>
-                <div className="level-preview">
-                  <label htmlFor="level-preview">
-                    레벨별 외형 미리보기{" "}
-                    <strong>LV. {preview ?? summary.level}</strong>
-                  </label>
-                  <input
-                    id="level-preview"
-                    type="range"
-                    min="1"
-                    max={MAX_LEVEL}
-                    value={preview ?? summary.level}
-                    onChange={(e) => setPreview(Number(e.target.value))}
-                  />
-                  <div>
-                    <span>LV. 1</span>
-                    <span>LV. {MAX_LEVEL}</span>
-                  </div>
-                </div>
                 <div className="stage-list">
                   {VISUAL_UNLOCKS.map((s, i) => (
                     <button
                       key={s.name}
-                      className={`evolution-card ${s.level <= summary.level ? "unlocked" : ""} ${s.level <= summary.level && (!VISUAL_UNLOCKS[i + 1] || VISUAL_UNLOCKS[i + 1].level > summary.level) ? "current" : ""} ${preview === s.level ? "previewing" : ""}`}
-                      onClick={() => {
-                        setPreview(s.level);
-                        if (window.innerWidth < 760)
-                          window.scrollTo({ top: 100, behavior: "smooth" });
-                      }}
+                      className={`evolution-card ${s.level <= summary.level ? "unlocked" : ""} ${s.level <= summary.level && (!VISUAL_UNLOCKS[i + 1] || VISUAL_UNLOCKS[i + 1].level > summary.level) ? "current" : ""}`}
+                      aria-haspopup="dialog"
+                      onClick={() => setStageDetail(s)}
                     >
                       <span className="evolution-number">
                         {s.level <= summary.level ? (
@@ -1191,7 +1156,8 @@ export default function App() {
                   ))}
                 </div>
                 <p className="hint">
-                  각 단계를 눌러 진화한 모습을 미리 볼 수 있어요.
+                  잠긴 단계는 실루엣만 표시됩니다. 해당 레벨에 도달하면 외형이
+                  공개됩니다.
                 </p>
               </section>
             )}
@@ -1221,6 +1187,13 @@ export default function App() {
           <span>설정</span>
         </button>
       </nav>
+      {stageDetail && (
+        <StageDialog
+          stage={stageDetail}
+          currentLevel={summary.level}
+          onClose={() => setStageDetail(null)}
+        />
+      )}
       {!data.characterName && !error && !settings && (
         <Modal title="캐릭터 이름 설정" dismissible={false}>
           <CharacterNameForm

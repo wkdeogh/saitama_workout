@@ -538,7 +538,12 @@ function createEnergy(p) {
   return { root, rings, bolts, flame, particles };
 }
 
-export default function Character({ stage = 0, level = 1, celebrate = false }) {
+export default function Character({
+  stage = 0,
+  level = 1,
+  celebrate = false,
+  label,
+}) {
   const mount = useRef(null),
     runtime = useRef(null),
     celebration = useRef(celebrate);
@@ -727,7 +732,10 @@ export default function Character({ stage = 0, level = 1, celebrate = false }) {
       ref={mount}
       className="character-canvas"
       role="img"
-      aria-label={`${level}레벨, 성장 ${stage + 1}단계, ${level >= 850 ? "금발 도복 전사" : level >= 650 ? "도복 전사" : level >= 200 ? "머리카락이 자라는 전사" : "빤쓰를 입은 빡빡이"} 3D 캐릭터. 좌우로 드래그하면 회전해요.`}
+      aria-label={
+        label ??
+        `${level}레벨, 성장 ${stage + 1}단계, ${level >= 850 ? "금발 도복 전사" : level >= 650 ? "도복 전사" : level >= 200 ? "머리카락이 자라는 전사" : "빤쓰를 입은 빡빡이"} 3D 캐릭터. 좌우로 드래그하면 회전해요.`
+      }
     >
       {fallback && (
         <div
