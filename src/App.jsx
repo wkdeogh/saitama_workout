@@ -801,7 +801,7 @@ export default function App() {
                   <p>
                     {preview !== null
                       ? `LV. ${preview} 미리보기`
-                      : `LV. ${summary.level} / ${MAX_LEVEL}`}
+                      : `LV. ${summary.level}`}
                   </p>
                 </div>
                 <div
