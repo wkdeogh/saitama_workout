@@ -159,9 +159,10 @@ export function HelpDialog({ onClose }) {
         <section>
           <h3>저장과 백업</h3>
           <p>
-            같은 구글 계정으로 로그인하면 기록을 불러옵니다. 동기화 오류가 나면
-            설정의 ‘동기화’를 누르세요. JSON 내보내기·가져오기로 따로 백업할 수
-            있습니다.
+            같은 계정으로 로그인하면 기록을 불러옵니다. Google 계정에 카카오를
+            연결하려면 설정의 ‘카카오 계정 연결’을 사용하세요. 동기화 오류가
+            나면 설정의 ‘동기화’를 누르세요. JSON 내보내기·가져오기로 따로
+            백업할 수 있습니다.
           </p>
         </section>
         <section>
@@ -594,7 +595,7 @@ function SettingsPanel({
   }
   return (
     <Modal title="훈련소 설정" onClose={onClose}>
-      <AccountControls account={account} />
+      <AccountControls account={account} showLink />
       <section className="settings-section">
         <CharacterNameForm
           initialName={data.characterName}

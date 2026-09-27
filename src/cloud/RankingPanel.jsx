@@ -56,14 +56,33 @@ export function LoginScreen({ account }) {
         {account.authLoading || (account.user && !account.ready) ? (
           <p role="status">계정과 기록을 불러오는 중…</p>
         ) : (
-          <GoogleLoginButton
-            disabled={!account.configured || opening}
-            onClick={async () => {
-              setOpening(true);
-              await account.login();
-              setOpening(false);
-            }}
-          />
+          <div className="login-options" aria-busy={opening}>
+            <GoogleLoginButton
+              disabled={!account.configured || opening}
+              onClick={async () => {
+                setOpening(true);
+                await account.login();
+                setOpening(false);
+              }}
+            />
+            <button
+              className="kakao-login"
+              aria-label="카카오 로그인"
+              disabled={!account.kakao?.enabled || opening}
+              onClick={async () => {
+                setOpening(true);
+                await account.kakaoLogin();
+                setOpening(false);
+              }}
+            >
+              <img
+                src={`${import.meta.env.BASE_URL}icons/kakao-login.svg`}
+                alt="카카오 로그인"
+              />
+            </button>
+            {opening && <p role="status">로그인하는 중…</p>}
+            {!account.kakao?.enabled && <small>카카오 로그인 준비 중</small>}
+          </div>
         )}
         {!account.configured && (
           <p role="status">로그인 서비스를 준비 중입니다.</p>
@@ -78,13 +97,41 @@ export function LoginScreen({ account }) {
     </main>
   );
 }
-export function AccountControls({ account }) {
+export function AccountControls({ account, showLink = false }) {
+  const [linking, setLinking] = useState(false);
   return (
     <section className="account-controls">
       <div className="account-identity">
         <UserRound size={18} />
-        <span>{account.user?.email || "Google 계정"}</span>
+        <span>{account.user?.email || "카카오 계정"}</span>
       </div>
+      {showLink &&
+        account.kakao?.enabled &&
+        (account.kakao.linked ? (
+          <p className="hint">카카오 계정 연결됨</p>
+        ) : (
+          account.user?.providerData.some(
+            (provider) => provider.providerId === "google.com",
+          ) && (
+            <div className="account-link">
+              <button
+                className="secondary-button"
+                disabled={linking || account.busy || !account.ready}
+                onClick={async () => {
+                  setLinking(true);
+                  await account.kakaoLogin("link");
+                  setLinking(false);
+                }}
+              >
+                {linking ? "계정 확인 중…" : "카카오 계정 연결"}
+              </button>
+              <p className="hint">
+                연결하면 카카오 로그인으로도 현재 운동 기록을 사용할 수
+                있습니다.
+              </p>
+            </div>
+          )
+        ))}
       <p className="hint" role="status">
         {account.busy
           ? "동기화 중…"

@@ -126,3 +126,47 @@ test("anonymous auth cannot use records or rankings", async () => {
   await assertFails(setDoc(doc(a, "accounts", "anon"), account()));
   await assertFails(getDocs(query(collection(a, "rankings"), limit(50))));
 });
+
+test("verified Kakao custom auth can use own records and rankings, but untrusted custom auth cannot", async () => {
+  const a = env
+    .authenticatedContext("kakao-user", {
+      firebase: { sign_in_provider: "custom" },
+      kakao: true,
+    })
+    .firestore();
+  const batch = writeBatch(a);
+  batch.set(doc(a, "accounts", "kakao-user"), account());
+  batch.set(doc(a, "rankings", "kakao-user"), entry());
+  await assertSucceeds(batch.commit());
+  await assertSucceeds(getDoc(doc(a, "accounts", "kakao-user")));
+  await assertSucceeds(getDocs(query(collection(a, "rankings"), limit(50))));
+  await assertFails(getDoc(doc(a, "accounts", "owner")));
+  for (const claims of [
+    { firebase: { sign_in_provider: "custom" } },
+    { firebase: { sign_in_provider: "anonymous" }, kakao: true },
+  ]) {
+    const rejected = env.authenticatedContext("untrusted", claims).firestore();
+    await assertFails(
+      setDoc(doc(rejected, "accounts", "untrusted"), account()),
+    );
+    await assertFails(
+      getDocs(query(collection(rejected, "rankings"), limit(50))),
+    );
+  }
+});
+test("identity mapping is inaccessible to all client providers", async () => {
+  for (const a of [
+    authed("owner"),
+    env
+      .authenticatedContext("kakao-user", {
+        firebase: { sign_in_provider: "custom" },
+        kakao: true,
+      })
+      .firestore(),
+  ]) {
+    for (const path of ["kakaoIdentities/123", "authLinks/owner"]) {
+      await assertFails(getDoc(doc(a, path)));
+      await assertFails(setDoc(doc(a, path), { uid: "owner" }));
+    }
+  }
+});

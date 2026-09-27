@@ -10,6 +10,7 @@ import {
   firebaseConfigured,
 } from "./firebaseClient";
 import { mergeChanges, needsAccountSync } from "./rankingModel";
+import { kakaoStatus, startKakao, finishKakao } from "./kakaoClient";
 
 export const accountKey = (uid) =>
   uid ? `${STORAGE_KEY}:account:${uid}` : STORAGE_KEY;
@@ -89,6 +90,10 @@ const withTimeout = async (promise) => {
   }
 };
 export default function useWorkoutAccount() {
+  const [kakao, setKakao] = useState({ enabled: false, linked: false });
+  const [kakaoProcessing, setKakaoProcessing] = useState(() =>
+    new URLSearchParams(window.location.search).has("kakao"),
+  );
   const [scope, setScope] = useState(() => loadLocal(null));
   const [user, setUser] = useState(null),
     [authLoading, setAuthLoading] = useState(firebaseConfigured);
@@ -213,6 +218,32 @@ export default function useWorkoutAccount() {
     [publish],
   );
   useEffect(() => {
+    let active = true;
+    kakaoStatus(user)
+      .then((value) => {
+        if (active) setKakao(value);
+      })
+      .catch(() => {
+        if (active) setKakao({ enabled: false, linked: false });
+      });
+    return () => {
+      active = false;
+    };
+  }, [user]);
+  useEffect(() => {
+    let active = true;
+    finishKakao()
+      .catch((error) => {
+        if (active) setMessage(cloudError(error));
+      })
+      .finally(() => {
+        if (active) setKakaoProcessing(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
+  useEffect(() => {
     if (!scope.uid || !ready || scope.error || busy || !needsAccountSync(scope))
       return;
     // An explicit retry is required after failure, preventing quota-draining loops.
@@ -251,6 +282,20 @@ export default function useWorkoutAccount() {
       setMessage(cloudError(error));
     }
   }
+  async function kakaoLogin(mode = "login") {
+    setMessage("");
+    try {
+      if (
+        mode === "link" &&
+        needsAccountSync(live.current) &&
+        !(await synchronize())
+      )
+        throw new Error("기록 동기화를 마친 후 카카오 계정을 연결해 주세요.");
+      await startKakao(mode);
+    } catch (error) {
+      setMessage(cloudError(error));
+    }
+  }
   return {
     data: scope.data,
     error: scope.error,
@@ -259,7 +304,9 @@ export default function useWorkoutAccount() {
     storageKey: scope.key,
     account: {
       user,
-      authLoading,
+      authLoading: authLoading || kakaoProcessing,
+      kakao,
+      kakaoLogin,
       ready,
       busy,
       message,

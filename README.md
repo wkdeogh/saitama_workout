@@ -2,10 +2,10 @@
 
 푸쉬업·스쿼트·윗몸일으키기·달리기 기록, 월별 캘린더, Three.js 캐릭터 성장. 모바일 우선 웹 앱입니다. Vercel에서 호스팅하고 Firebase Authentication과 Firestore를 사용합니다.
 
-- Google 로그인 후 최초 접속 시 캐릭터 이름(1~20자)을 입력합니다. 설정에서 변경할 수 있으며 로컬 저장과 JSON 백업에 포함됩니다. 이름 없는 기존 기록은 유지한 채 이름을 설정합니다. 백업 합치기는 현재 이름을 유지하고, 전체 교체는 백업 이름을 사용합니다(이름 없는 백업은 현재 이름 유지).
+- Google 또는 카카오 로그인 후 최초 접속 시 캐릭터 이름(1~20자)을 입력합니다. 설정에서 변경할 수 있으며 로컬 저장과 JSON 백업에 포함됩니다. 이름 없는 기존 기록은 유지한 채 이름을 설정합니다. 백업 합치기는 현재 이름을 유지하고, 전체 교체는 백업 이름을 사용합니다(이름 없는 백업은 현재 이름 유지).
 - 신규 계정의 기본 목표: 푸쉬업·스쿼트·윗몸일으키기 각각 100개, 달리기 10km. 설정에서 목표를 저장하면 오늘의 훈련과 오늘 저장된 기록의 목표에 즉시 반영합니다. 운동량과 EXP는 바뀌지 않으며 과거 날짜의 목표·달성 상태는 유지합니다. 예전 기본값(50·50·0·0)을 그대로 쓰던 계정은 다음 접속 시 오늘 목표부터 한 번만 새 기본값으로 전환합니다. 이후 개인이 다시 변경한 목표는 그대로 유지합니다. 목표와 관계없이 실제 운동량으로 EXP를 얻습니다.
 - 날짜별 실제 횟수와 거리(0.1km 단위) 입력·수정·삭제. 달성 여부는 그 날짜에 저장된 목표로 계산합니다.
-- Google 로그인이 필수입니다. 운동 기록과 이름은 Firestore에 계정별로 저장하고, `localStorage`의 `saitama-training:v1:account:{uid}`에 동기화 기준과 함께 캐시합니다. 비로그인 기록을 자동으로 가져오지 않습니다.
+- Google 또는 카카오 로그인이 필수입니다. 운동 기록과 이름은 Firestore에 계정별로 저장하고, `localStorage`의 `saitama-training:v1:account:{uid}`에 동기화 기준과 함께 캐시합니다. 비로그인 기록을 자동으로 가져오지 않습니다.
 - 하단 메뉴는 훈련소·운동 기록·성장 도감·랭킹입니다. 설정과 백업은 상단에서 엽니다.
 - 이름 설정을 마친 로그인 사용자는 자동으로 랭킹에 등록됩니다. 캐릭터 이름, 레벨, EXP와 종목별 누적 운동량이 다른 로그인 사용자에게 공개됩니다. 누적(기본 탭)·주간(한국 시간 월요일 시작) EXP 상위 50명, 동점은 공동 순위입니다. 1~3위에는 금·은·동 트로피가 표시되며 레벨을 크게, EXP를 작게 표시합니다. 순위는 EXP 기준입니다. 사용자 행이나 내 캐릭터 요약을 누르면 캐릭터와 누적 운동량 팝업이 열립니다. 이메일과 날짜별 기록은 랭킹에 공개하지 않습니다.
 - JSON 백업: 내보내기, 유효성 검사, 합치기/전체 교체 미리보기. 합치기는 같은 날짜를 백업 내용으로 교체하고 현재 목표는 유지합니다.
@@ -66,7 +66,7 @@ GitHub Actions는 Firestore 규칙 테스트와 앱 테스트·빌드를 수행�
 
 프로젝트: `saitama-workout-ff2d5`, Spark, Firestore Standard 서울(`asia-northeast3`). 공개 웹 설정은 `src/cloud/firebaseConfig.js`에 있습니다. 공개 설정값은 인증 비밀키가 아니며 접근 권한은 `firestore.rules`로 제한합니다. 서비스 계정 키는 프런트엔드나 저장소에 넣지 않습니다.
 
-- Authentication: Google만 사용. 승인 도메인에 `saitama-workout.vercel.app`, `wkdeogh.github.io`, `localhost`를 등록합니다.
+- Authentication: Google 및 서버 검증 카카오 Custom Token을 사용합니다. 승인 도메인에 `saitama-workout.vercel.app`, `wkdeogh.github.io`, `localhost`를 등록합니다.
 - Firestore: `accounts/{uid}`는 본인만 읽고 쓸 수 있습니다. 원본 운동 기록은 검증된 JSON 문자열로 보관합니다(앱 동기화 상한 850KB).
 - `rankings/{uid}`는 로그인 사용자만 읽을 수 있고, 본인만 수정·삭제합니다. 계정 기록과 공개 요약은 한 트랜잭션으로 반영합니다. 참여/중단 선택은 제공하지 않으며, 기존 미참여 계정도 다음 접속 시 이름 설정 후 자동 등록됩니다.
 - `firestore.indexes.json`에 주간 순위용 복합 색인과 큰 payload 필드의 색인 제외를 정의했습니다. 규칙/색인 변경은 권한 있는 Firebase CLI 로그인 후 `npx firebase deploy --only firestore`로 별도 배포합니다. GitHub Actions는 앱 배포만 수행합니다.
@@ -85,3 +85,23 @@ npm run dev
 Google 로그인 팝업에 에뮬레이터 전용 가상 계정을 생성합니다. 테스트 후 `.env.local`을 제거하면 실제 프로젝트 설정을 사용합니다. 에뮬레이터 연결은 개발 모드에서만 허용됩니다.
 
 상단 설정 옆 ? 버튼에서 운동 기록, EXP와 감소 규칙, 랭킹, 백업 및 아이폰 Safari·갤럭시 Chrome/삼성 인터넷 홈 화면 추가 도움말을 확인할 수 있습니다.
+
+## 카카오 로그인 운영
+
+카카오 앱 ID: `1589345`. 로그인 사용 설정 ON, REST API 키의 리다이렉트 URI는 `https://saitama-workout.vercel.app/api/auth/kakao/callback`입니다. 이메일·닉네임 등 추가 동의항목 없이 카카오 회원번호만 사용합니다. 로그인 버튼은 [카카오 공식 리소스](https://developers.kakao.com/tool/resource/login)를 사용합니다.
+
+Vercel **Production 전용 Secret 환경 변수**:
+
+- `KAKAO_REST_API_KEY`: 카카오 REST API 키
+- `KAKAO_CLIENT_SECRET`: 해당 REST API 키의 카카오 로그인 Client Secret
+- `FIREBASE_SERVICE_ACCOUNT_JSON`: 같은 Firebase 프로젝트의 Admin SDK 서비스 계정 JSON 전체
+- `KAKAO_LOGIN_ENABLED`: `true` (키 등록과 Firestore 규칙 배포 후 활성화)
+- `AUTH_ORIGIN`: 생략 시 `https://saitama-workout.vercel.app` 고정. 다른 정식 주소로 이전할 때만 변경하고 카카오 리다이렉트도 함께 갱신합니다.
+
+위 값에는 `VITE_` 접두사를 붙이지 않습니다. 서비스 계정 JSON은 `.gitignore`로 제외하며 저장소에 커밋하지 않습니다. 키가 없거나 비활성화 상태이면 카카오 버튼은 준비 중으로 표시되고 Google 로그인은 유지됩니다. 환경 변수 변경 후 재배포해야 적용됩니다. Vite 로컬 서버에는 `/api`가 없으므로 전체 OAuth 검증은 정식 Vercel 배포에서 수행합니다.
+
+`api/auth/kakao/[action].js`와 `server/`에서 인가 코드 교환·회원번호 조회·Firebase Custom Token 발급을 처리합니다. OAuth state는 10분 유효한 서명된 Secure/HttpOnly/SameSite 쿠키에 묶이며, 토큰은 URL에 넣지 않고 60초 유효한 HttpOnly 쿠키를 same-origin POST로 교환합니다. 카카오 액세스/리프레시 토큰과 이메일·프로필은 보관하지 않습니다. 브라우저에서 받은 임의 UID나 이메일로 계정을 연결하지 않습니다.
+
+기존 Google 사용자는 **설정 → 카카오 계정 연결**에서 Google 재인증 후 카카오에 동의해야 같은 UID로 연결됩니다. 이미 다른 앱 계정에 연결된 카카오는 연결을 거절하며 기록 자동 병합은 하지 않습니다. `kakaoIdentities/{회원번호}`와 `authLinks/{uid}`는 서버만 접근하며 트랜잭션으로 일대일 연결을 보장합니다. 카카오로 먼저 가입하면 별도 계정이므로, 기존 기록을 사용할 사람은 Google 로그인부터 해야 합니다. 카카오 신규 계정에는 이후 Google 연결·계정 간 기록 병합 UI를 제공하지 않습니다.
+
+Firestore는 `google.com` 또는 서버가 발급한 `custom` 인증 + `kakao: true` 클레임만 허용합니다. 일반 custom/anonymous 인증과 다른 사용자의 기록 접근은 거절합니다. `npm test`는 OAuth state·origin·재인증·오류 흐름을 검증하고 `npm run test:rules`는 Google/Kakao 계정 격리를 검증합니다.

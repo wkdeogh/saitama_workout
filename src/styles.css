@@ -2956,3 +2956,38 @@ main {
   padding: 12px;
   font-weight: 700;
 }
+
+.login-options {
+  display: grid;
+  gap: 12px;
+  width: 100%;
+}
+.kakao-login {
+  width: 100%;
+  min-height: 48px;
+  display: grid;
+  place-items: center;
+  background: #fee500;
+  border: 0;
+  border-radius: 12px;
+  padding: 0;
+}
+.kakao-login img {
+  width: 224px;
+  height: 46px;
+  object-fit: contain;
+}
+.kakao-login:not(:disabled):hover {
+  box-shadow: 0 0 0 2px #171717;
+}
+.kakao-login:focus-visible {
+  outline: 3px solid #171717;
+  outline-offset: 3px;
+}
+.kakao-login:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+.account-link {
+  margin-top: 12px;
+}
