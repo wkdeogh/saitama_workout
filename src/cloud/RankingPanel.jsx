@@ -52,7 +52,7 @@ export function LoginScreen({ account }) {
           height="88"
         />
         <h1>싸이따마훈련소</h1>
-        <p>구글 계정으로 로그인하고 운동 기록을 저장하세요.</p>
+        <p>실제로 운동한 만큼만 입력 하세요. (속여서 입력시 불운+1)</p>
         {account.authLoading || (account.user && !account.ready) ? (
           <p role="status">계정과 기록을 불러오는 중…</p>
         ) : (
