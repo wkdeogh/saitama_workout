@@ -163,7 +163,9 @@ function WorkoutCard({ type, label, value, goal, onChange }) {
         >
           <Minus size={17} />
         </button>
-        <label className="count-field">
+        <label
+          className={`count-field ${String(value).length > 3 ? "count-long" : String(value).length > 2 ? "count-medium" : ""}`}
+        >
           <input
             aria-label={`${label} 횟수`}
             type="number"
@@ -813,6 +815,12 @@ export default function App() {
                       : `${summary.progressDays} / 10 DAYS`}{" "}
                     <span>· 운동한 날 기준</span>
                   </p>
+                  {summary.inactiveDays > 0 && summary.level > 1 && (
+                    <p className="decay-status">
+                      미기록 {summary.inactiveDays}일 · {summary.daysToDecay}일
+                      뒤 −1레벨
+                    </p>
+                  )}
                 </div>
                 <button
                   className="evolution-link"

@@ -2497,3 +2497,19 @@ main {
     font-size: 10px;
   }
 }
+.count-field.count-medium input {
+  font-size: 23px;
+}
+.count-field.count-long input {
+  font-size: 20px;
+  width: 62px;
+}
+.count-field.count-long > span {
+  display: none;
+}
+.hero-progress .decay-status {
+  font-size: 10px;
+  color: #b21d16;
+  text-align: left;
+  margin-top: 10px;
+}
