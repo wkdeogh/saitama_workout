@@ -21,9 +21,14 @@ import {
   ArrowRight,
 } from "lucide-react";
 import Character from "./Character";
+import useWorkoutAccount from "./cloud/useWorkoutAccount";
+import RankingPanel, {
+  LoginScreen,
+  AccountControls,
+} from "./cloud/RankingPanel";
+import { displayedLevel } from "./cloud/rankingModel";
 import { characterAppearance, VISUAL_UNLOCKS } from "./characterAppearance";
 import {
-  STORAGE_KEY,
   MAX_NAME_LENGTH,
   validateName,
   MAX_LEVEL,
@@ -32,7 +37,6 @@ import {
   recordExp,
   dateKey,
   parseDate,
-  initialData,
   isComplete,
   hasWorkout,
   stats,
@@ -50,18 +54,6 @@ const dateLabel = (key) =>
     day: "numeric",
     weekday: "long",
   });
-function readStore() {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    return { data: raw ? parseBackup(raw) : initialData(), error: "" };
-  } catch {
-    return {
-      data: initialData(),
-      error:
-        "저장된 기록을 불러오지 못했어요. 설정에서 원본을 백업하거나 정상 백업 파일을 가져와 주세요.",
-    };
-  }
-}
 function downloadJSON(data, name) {
   const url = URL.createObjectURL(
     new Blob(
@@ -144,6 +136,36 @@ function StageDialog({ stage, currentLevel, onClose }) {
           ? `LV. ${stage.level} 해금 · ${stage.level - currentLevel}레벨 남음`
           : "해금한 외형"}
       </p>
+    </Modal>
+  );
+}
+function RankingUserDialog({ entry, onClose }) {
+  const level = displayedLevel(entry),
+    appearance = characterAppearance(level);
+  return (
+    <Modal title={entry.characterName} onClose={onClose}>
+      <p className="ranking-user-level">LV. {level}</p>
+      <div
+        className="stage-reveal character-stage character-evolved stage-unlocked"
+        data-powered={appearance.aura}
+        style={{
+          "--aura-color": `#${appearance.auraColor.toString(16).padStart(6, "0")}`,
+        }}
+      >
+        <Character level={level} stage={stageIndex(level)} />
+      </div>
+      <div className="ranking-user-totals">
+        {EXERCISES.map(({ key, label, unit }) => (
+          <div key={key}>
+            <span>{label}</span>
+            <strong>
+              {number(entry.totals[key])}
+              <small>{unit}</small>
+            </strong>
+          </div>
+        ))}
+      </div>
+      <p className="hint">누적 운동량 · {number(entry.totalExp)} EXP</p>
     </Modal>
   );
 }
@@ -438,7 +460,16 @@ function Calendar({ data, selected, onSelect, today, month, setMonth }) {
     </section>
   );
 }
-function SettingsPanel({ data, persist, onClose, notify, error, setError }) {
+function SettingsPanel({
+  data,
+  persist,
+  onClose,
+  notify,
+  error,
+  setError,
+  storageKey,
+  account,
+}) {
   const [goals, setGoals] = useState(data.goals),
     [incoming, setIncoming] = useState(null),
     [replace, setReplace] = useState(false),
@@ -460,6 +491,7 @@ function SettingsPanel({ data, persist, onClose, notify, error, setError }) {
   }
   return (
     <Modal title="훈련소 설정" onClose={onClose}>
+      <AccountControls account={account} />
       <section className="settings-section">
         <CharacterNameForm
           initialName={data.characterName}
@@ -541,8 +573,8 @@ function SettingsPanel({ data, persist, onClose, notify, error, setError }) {
           기록 백업
         </h3>
         <p className="hint">
-          기록은 이 브라우저에 저장돼요. 기기를 바꾸거나 브라우저 데이터를
-          지우기 전에 백업해 주세요.
+          기록은 이 기기에 저장되고 로그인한 계정과 동기화됩니다. JSON 파일로도
+          백업할 수 있습니다.
         </p>
         <div className="backup-actions">
           <button
@@ -638,7 +670,7 @@ function SettingsPanel({ data, persist, onClose, notify, error, setError }) {
               onClick={() => {
                 try {
                   downloadJSON(
-                    localStorage.getItem(STORAGE_KEY) || "{}",
+                    localStorage.getItem(storageKey) || "{}",
                     `saitama-recovery-${dateKey()}.json`,
                   );
                 } catch {
@@ -666,9 +698,15 @@ function SettingsPanel({ data, persist, onClose, notify, error, setError }) {
   );
 }
 export default function App() {
-  const [loaded] = useState(readStore),
-    [data, setData] = useState(loaded.data),
-    [error, setError] = useState(loaded.error);
+  const {
+    data,
+    error,
+    setError,
+    persist: saveLocal,
+    storageKey,
+    account,
+  } = useWorkoutAccount();
+  const [rankingUser, setRankingUser] = useState(null);
   const [today, setToday] = useState(dateKey()),
     [selected, setSelected] = useState(dateKey()),
     [month, setMonth] = useState(new Date()),
@@ -692,31 +730,41 @@ export default function App() {
   );
   const progress = summary.level === MAX_LEVEL ? 100 : summary.progressExp;
   const expDelta = recordExp(draft) - recordExp(record);
+  useEffect(() => {
+    setSettings(false);
+    setRankingUser(null);
+    setStageDetail(null);
+    setDeleteOpen(false);
+    setTab("home");
+    setSelected(dateKey());
+    setDraft(emptyCounts());
+  }, [account.user?.uid]);
   function notify(text) {
     clearTimeout(toastTimer.current);
     setToast(text);
     toastTimer.current = setTimeout(() => setToast(""), 4000);
   }
   function persist(nextData, recover = false) {
-    if (error && !recover) {
-      notify("먼저 설정에서 저장된 기록을 복원해 주세요.");
-      return false;
-    }
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(nextData));
-      setData(nextData);
-      return true;
-    } catch {
-      notify("저장하지 못했어요. 브라우저의 저장 공간과 권한을 확인해 주세요.");
-      return false;
-    }
+    if (saveLocal(nextData, recover)) return true;
+    notify(
+      error ||
+        "기록을 저장하지 못했습니다. 연결 상태와 저장 공간을 확인해 주세요.",
+    );
+    return false;
   }
   useEffect(() => {
     setDraft(
       Object.fromEntries(EXERCISES.map(({ key }) => [key, record?.[key] || 0])),
     );
     setFormError("");
-  }, [selected, record]);
+  }, [
+    selected,
+    storageKey,
+    record?.pushups,
+    record?.squats,
+    record?.situps,
+    record?.runningKm,
+  ]);
   useEffect(() => {
     const refresh = () => setToday(dateKey());
     const timer = setInterval(refresh, 30000);
@@ -727,18 +775,6 @@ export default function App() {
       clearTimeout(toastTimer.current);
       clearTimeout(celebrateTimer.current);
     };
-  }, []);
-  useEffect(() => {
-    const sync = (e) => {
-      if (e.key === STORAGE_KEY) {
-        const loaded = readStore();
-        setData(loaded.data);
-        setError(loaded.error);
-        notify("다른 탭의 기록을 반영했어요.");
-      }
-    };
-    window.addEventListener("storage", sync);
-    return () => window.removeEventListener("storage", sync);
   }, []);
   useEffect(() => {
     const warn = (e) => {
@@ -812,7 +848,9 @@ export default function App() {
     ["home", Dumbbell, "훈련소"],
     ["calendar", CalendarDays, "운동 기록"],
     ["growth", Sparkles, "성장 도감"],
+    ["ranking", Trophy, "랭킹"],
   ];
+  if (!account.user || !account.ready) return <LoginScreen account={account} />;
   return (
     <>
       <header className="site-header">
@@ -860,9 +898,11 @@ export default function App() {
             <h1>
               {tab === "growth"
                 ? "캐릭터 성장"
-                : tab === "calendar"
-                  ? "운동 기록"
-                  : "훈련소"}
+                : tab === "ranking"
+                  ? "랭킹"
+                  : tab === "calendar"
+                    ? "운동 기록"
+                    : "훈련소"}
             </h1>
           </div>
           <div className="date-chip">
@@ -879,7 +919,7 @@ export default function App() {
           </button>
         )}
         <div
-          className={`dashboard ${tab === "growth" ? "growth-layout" : ""} ${tab === "calendar" ? "calendar-layout" : ""}`}
+          className={`dashboard ${tab === "growth" ? "growth-layout" : ""} ${tab === "ranking" ? "ranking-layout" : ""} ${tab === "calendar" ? "calendar-layout" : ""}`}
         >
           {tab === "home" && (
             <aside className="hero-column">
@@ -970,7 +1010,14 @@ export default function App() {
             </aside>
           )}
           <div className="content-column">
-            {tab !== "growth" && (
+            {tab === "ranking" && (
+              <RankingPanel
+                account={account}
+                data={data}
+                onUser={setRankingUser}
+              />
+            )}
+            {(tab === "home" || tab === "calendar") && (
               <>
                 <div className="stats-row">
                   <div>
@@ -1081,7 +1128,13 @@ export default function App() {
                     <div className="record-footer">
                       <span>
                         <ShieldCheck size={12} />
-                        {dirty ? "아직 저장하지 않은 기록이에요" : "로컬 저장"}
+                        {dirty
+                          ? "아직 저장하지 않은 기록이에요"
+                          : account.busy
+                            ? "동기화 중…"
+                            : account.pending
+                              ? "기기 저장 · 동기화 대기"
+                              : "계정에 저장됨"}
                       </span>
                       {record && (
                         <button
@@ -1165,7 +1218,7 @@ export default function App() {
         <footer className="page-footer">
           <span>
             <Zap size={12} />
-            로컬 저장 · JSON 백업 지원
+            계정 동기화 · JSON 백업 지원
           </span>
           <span>SAITAMA TRAINING © {new Date().getFullYear()}</span>
         </footer>
@@ -1181,11 +1234,13 @@ export default function App() {
             <span>{label}</span>
           </button>
         ))}
-        <button onClick={() => setSettings(true)}>
-          <Settings size={20} />
-          <span>설정</span>
-        </button>
       </nav>
+      {rankingUser && (
+        <RankingUserDialog
+          entry={rankingUser}
+          onClose={() => setRankingUser(null)}
+        />
+      )}
       {stageDetail && (
         <StageDialog
           stage={stageDetail}
@@ -1209,7 +1264,7 @@ export default function App() {
       )}
       {settings && (
         <SettingsPanel
-          {...{ data, persist, notify, error, setError }}
+          {...{ data, persist, notify, error, setError, storageKey, account }}
           onClose={() => setSettings(false)}
         />
       )}{" "}

@@ -3,3 +3,10 @@ dist/
 .DS_Store
 *.local
 .qa/
+
+.env
+.env.*
+!.env.example
+firebase-debug.log*
+firestore-debug.log*
+ui-debug.log*
