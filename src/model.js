@@ -117,6 +117,7 @@ export function initialData() {
   return {
     version: 2,
     characterName: "",
+    goalDefaultsVersion: 1,
     goals: { pushups: 100, squats: 100, situps: 100, runningKm: 10 },
     records: {},
   };
@@ -256,7 +257,13 @@ export function validateData(input, today = dateKey()) {
     input.characterName === undefined
       ? ""
       : validateName(input.characterName, true);
-  return { version: 2, characterName, goals, records };
+  return {
+    version: 2,
+    characterName,
+    goalDefaultsVersion: input.goalDefaultsVersion === 1 ? 1 : 0,
+    goals,
+    records,
+  };
 }
 export function parseBackup(text, today = dateKey()) {
   if (text.length > 2 * 1024 * 1024)
@@ -278,6 +285,7 @@ export function mergeBackup(current, incoming, replace = false) {
     : {
         version: 2,
         characterName: current.characterName || incoming.characterName || "",
+        goalDefaultsVersion: current.goalDefaultsVersion || 0,
         goals: current.goals,
         records: { ...current.records, ...incoming.records },
       };
@@ -306,4 +314,23 @@ export function monthCells(year, month) {
       dateKey(new Date(year, month, i + 1, 12)),
     ),
   ];
+}
+
+export function upgradeDefaultGoals(data, today = dateKey()) {
+  if (data.goalDefaultsVersion === 1) return data;
+  const oldDefault = (g) =>
+    g?.pushups === 50 &&
+    g?.squats === 50 &&
+    g?.situps === 0 &&
+    g?.runningKm === 0;
+  const next = { ...data, goalDefaultsVersion: 1 };
+  if (!oldDefault(data.goals)) return next;
+  next.goals = { ...initialData().goals };
+  if (data.records[today] && oldDefault(data.records[today].goals)) {
+    next.records = {
+      ...data.records,
+      [today]: { ...data.records[today], goals: { ...next.goals } },
+    };
+  }
+  return next;
 }

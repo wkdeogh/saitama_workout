@@ -1,6 +1,11 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { initialData, saveRecord, emptyCounts } from "../src/model.js";
+import {
+  initialData,
+  saveRecord,
+  emptyCounts,
+  upgradeDefaultGoals,
+} from "../src/model.js";
 import {
   weekStart,
   koreaDay,
@@ -125,4 +130,18 @@ test("automatic ranking registers existing opt-outs without changing workouts", 
     }),
     false,
   );
+});
+
+test("default goal migration survives cloud merge and later personal goal changes", () => {
+  const old = {
+    ...initialData(),
+    goalDefaultsVersion: 0,
+    goals: { pushups: 50, squats: 50, situps: 0, runningKm: 0 },
+  };
+  const upgraded = upgradeDefaultGoals(old, day);
+  const merged = mergeChanges(old, old, upgraded);
+  assert.deepEqual(merged.goals, initialData().goals);
+  assert.equal(merged.goalDefaultsVersion, 1);
+  const custom = { ...merged, goals: old.goals };
+  assert.deepEqual(mergeChanges(merged, custom, upgraded).goals, old.goals);
 });

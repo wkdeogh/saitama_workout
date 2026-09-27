@@ -6,6 +6,7 @@ import {
   Dumbbell,
   Sparkles,
   Settings,
+  CircleHelp,
   ChevronLeft,
   ChevronRight,
   Check,
@@ -106,6 +107,107 @@ function Modal({ title, onClose, children, dismissible = true }) {
         {children}
       </div>
     </dialog>
+  );
+}
+export function HelpDialog({ onClose }) {
+  return (
+    <Modal title="도움말" onClose={onClose}>
+      <div className="help-content">
+        <section>
+          <h3>운동 기록과 목표</h3>
+          <p>
+            기본 목표는 푸쉬업·스쿼트·윗몸일으키기 각 100개, 달리기 10km입니다.
+            상단 설정에서 개인 목표를 바꿀 수 있습니다.
+          </p>
+          <p>
+            실제로 한 횟수와 거리를 입력하고 ‘운동 기록 저장’을 누르세요.
+            캘린더에서 날짜를 선택해 기록을 수정하거나 삭제할 수 있습니다. 과거
+            기록의 목표는 당시 기준을 유지합니다.
+          </p>
+        </section>
+        <p className="help-honesty">
+          실제로 운동한 만큼만 입력 하세요.
+          <br />
+          속여서 입력하면 불행해집니다. (불운+1)
+        </p>
+        <section>
+          <h3>EXP와 캐릭터 성장</h3>
+          <p>
+            푸쉬업·스쿼트·윗몸일으키기 1개 = 1 EXP, 달리기 0.1km = 1 EXP. 목표
+            달성 여부와 관계없이 실제 운동량만큼 쌓입니다.
+          </p>
+          <p>
+            100 EXP마다 1레벨 상승하며 최대 1000레벨입니다. 연속 미기록 5일마다
+            5레벨 감소하고, 최저 1레벨까지 내려갑니다. 성장 도감에서 다음 단계의
+            실루엣을 확인할 수 있습니다.
+          </p>
+        </section>
+        <section>
+          <h3>랭킹</h3>
+          <p>
+            이름 설정 후 자동 등록됩니다. 누적·주간 EXP 기준 상위 50명을
+            표시하며 같은 EXP는 공동 순위입니다. 주간은 한국 시간 월요일
+            00시부터 계산합니다.
+          </p>
+          <p>
+            사용자나 내 캐릭터 카드를 누르면 캐릭터·레벨·종목별 누적 운동량을 볼
+            수 있습니다. 이메일과 날짜별 기록은 다른 사용자에게 공개되지
+            않습니다.
+          </p>
+        </section>
+        <section>
+          <h3>저장과 백업</h3>
+          <p>
+            같은 구글 계정으로 로그인하면 기록을 불러옵니다. 동기화 오류가 나면
+            설정의 ‘동기화’를 누르세요. JSON 내보내기·가져오기로 따로 백업할 수
+            있습니다.
+          </p>
+        </section>
+        <section>
+          <h3>아이폰 · 홈 화면에 추가</h3>
+          <ol>
+            <li>Safari에서 싸이따마훈련소를 엽니다.</li>
+            <li>공유 버튼을 누릅니다. 메뉴 안에 있을 수도 있습니다.</li>
+            <li>‘홈 화면에 추가’를 선택합니다.</li>
+            <li>‘웹 앱으로 열기’가 보이면 켜고 ‘추가’를 누릅니다.</li>
+          </ol>
+          <a
+            href="https://support.apple.com/ko-kr/guide/iphone/iphea86e5236/ios"
+            target="_blank"
+            rel="noreferrer"
+          >
+            Apple 안내
+          </a>
+        </section>
+        <section>
+          <h3>갤럭시 · 홈 화면에 추가</h3>
+          <p>
+            <strong>Chrome</strong>
+          </p>
+          <ol>
+            <li>Chrome에서 싸이따마훈련소를 엽니다.</li>
+            <li>오른쪽 위 ⋮ → ‘홈 화면에 추가’를 누릅니다.</li>
+            <li>‘설치’ 또는 ‘바로가기 만들기’를 선택하고 추가합니다.</li>
+          </ol>
+          <p>
+            <strong>삼성 인터넷</strong>: 메뉴 ☰ → ‘현재 페이지 추가’ → ‘홈
+            화면’ → ‘추가’. 버전에 따라 ‘홈 화면에 추가’로 표시될 수 있습니다.
+          </p>
+          <p>
+            카카오톡 등 앱 안에서는 추가 메뉴가 없을 수 있습니다.
+            Safari·Chrome·삼성 인터넷에서 다시 열어 주세요. 홈 화면 아이콘으로
+            실행한 뒤 로그인이 다시 필요할 수 있습니다.
+          </p>
+          <a
+            href="https://support.google.com/chrome/answer/15085120?co=GENIE.Platform%3DAndroid&hl=ko"
+            target="_blank"
+            rel="noreferrer"
+          >
+            Chrome 안내
+          </a>
+        </section>
+      </div>
+    </Modal>
   );
 }
 function StageDialog({ stage, currentLevel, onClose }) {
@@ -712,6 +814,7 @@ export default function App() {
     [month, setMonth] = useState(new Date()),
     [tab, setTab] = useState("home"),
     [settings, setSettings] = useState(false),
+    [helpOpen, setHelpOpen] = useState(false),
     [toast, setToast] = useState(""),
     [celebrate, setCelebrate] = useState(false),
     [stageDetail, setStageDetail] = useState(null),
@@ -732,6 +835,7 @@ export default function App() {
   const expDelta = recordExp(draft) - recordExp(record);
   useEffect(() => {
     setSettings(false);
+    setHelpOpen(false);
     setRankingUser(null);
     setStageDetail(null);
     setDeleteOpen(false);
@@ -879,14 +983,24 @@ export default function App() {
               </button>
             ))}
           </nav>
-          <button
-            className="settings-button"
-            onClick={() => setSettings(true)}
-            aria-label="설정 및 백업"
-          >
-            <Settings size={19} />
-            <span>설정</span>
-          </button>
+          <div className="header-actions">
+            <button
+              className="settings-button"
+              onClick={() => setSettings(true)}
+              aria-label="설정 및 백업"
+            >
+              <Settings size={19} />
+              <span>설정</span>
+            </button>
+            <button
+              className="help-button"
+              aria-label="도움말"
+              aria-haspopup="dialog"
+              onClick={() => setHelpOpen(true)}
+            >
+              <CircleHelp size={22} />
+            </button>
+          </div>
         </div>
       </header>
       <main>
@@ -1262,6 +1376,7 @@ export default function App() {
           </button>
         </Modal>
       )}
+      {helpOpen && <HelpDialog onClose={() => setHelpOpen(false)} />}
       {settings && (
         <SettingsPanel
           {...{ data, persist, notify, error, setError, storageKey, account }}

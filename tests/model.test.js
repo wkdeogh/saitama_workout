@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {
   initialData,
+  upgradeDefaultGoals,
   saveRecord,
   stats,
   isComplete,
@@ -368,4 +369,35 @@ test("new defaults do not replace existing personal or historical goals", () => 
   );
   assert.equal(isComplete(fresh.records[today]), true);
   assert.equal(recordExp(fresh.records[today]), 400);
+});
+
+test("legacy defaults upgrade once while preserving workouts and previous dates", () => {
+  let old = record(legacyGoals(), "2026-09-26");
+  old = record(old, today);
+  delete old.goalDefaultsVersion;
+  const next = upgradeDefaultGoals(
+    parseBackup(JSON.stringify(old), today),
+    today,
+  );
+  assert.deepEqual(next.goals, initialData().goals);
+  assert.deepEqual(next.records[today].goals, initialData().goals);
+  assert.equal(next.records[today].pushups, 50);
+  assert.deepEqual(next.records["2026-09-26"], old.records["2026-09-26"]);
+  assert.equal(stats(next, today).total, stats(old, today).total);
+  const custom = {
+    ...next,
+    goals: { pushups: 50, squats: 50, situps: 0, runningKm: 0 },
+  };
+  assert.deepEqual(
+    upgradeDefaultGoals(parseBackup(JSON.stringify(custom), today), today),
+    custom,
+  );
+});
+test("legacy personal goals are not overwritten by default migration", () => {
+  const old = {
+    ...initialData(),
+    goalDefaultsVersion: 0,
+    goals: { pushups: 25, squats: 40, situps: 15, runningKm: 1 },
+  };
+  assert.deepEqual(upgradeDefaultGoals(old, today).goals, old.goals);
 });

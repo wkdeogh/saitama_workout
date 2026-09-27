@@ -71,6 +71,10 @@ export function mergeChanges(base, local, remote) {
   return validateData(
     {
       version: 2,
+      goalDefaultsVersion: Math.max(
+        local.goalDefaultsVersion || 0,
+        remote.goalDefaultsVersion || 0,
+      ),
       records,
       goals: same(base.goals, local.goals) ? remote.goals : local.goals,
       characterName:

@@ -22,7 +22,7 @@ import {
   connectFirestoreEmulator,
 } from "firebase/firestore";
 import { firebaseConfig, firebaseConfigured } from "./firebaseConfig";
-import { initialData, parseBackup } from "../model";
+import { initialData, parseBackup, upgradeDefaultGoals } from "../model";
 import {
   mergeChanges,
   rankingSummary,
@@ -57,7 +57,7 @@ export async function fetchAccount(uid) {
   if (!snapshot.exists()) return { data: initialData(), participating: false };
   const value = snapshot.data();
   return {
-    data: parseBackup(value.payload),
+    data: upgradeDefaultGoals(parseBackup(value.payload)),
     participating: value.participating,
   };
 }
@@ -68,7 +68,9 @@ export async function syncAccount(uid, base, local) {
     const accountRef = doc(db, "accounts", uid);
     const snapshot = await transaction.get(accountRef);
     const previous = snapshot.exists() ? snapshot.data() : null;
-    const remote = previous ? parseBackup(previous.payload) : initialData();
+    const remote = previous
+      ? upgradeDefaultGoals(parseBackup(previous.payload))
+      : initialData();
     const merged = mergeChanges(base, local, remote);
     const payload = JSON.stringify(merged);
     if (new TextEncoder().encode(payload).length > 850000)

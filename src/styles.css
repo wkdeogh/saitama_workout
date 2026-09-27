@@ -2904,3 +2904,55 @@ main {
   font-size: 12px;
   margin-left: 4px;
 }
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+.help-button {
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  border-radius: 5px;
+  color: #171717;
+}
+.help-button:hover {
+  background: #ffdf48;
+}
+.help-content {
+  font-size: 14px;
+  line-height: 1.7;
+}
+.help-content section + section {
+  margin-top: 24px;
+  border-top: 1px solid #ddd;
+  padding-top: 20px;
+}
+.help-content h3 {
+  margin: 0 0 8px;
+  font-size: 16px;
+}
+.help-content p {
+  margin: 8px 0;
+}
+.help-content ol {
+  padding-left: 22px;
+  margin: 8px 0;
+}
+.help-content li {
+  margin: 5px 0;
+}
+.help-content a {
+  color: #8f271d;
+  text-decoration: underline;
+  font-size: 12px;
+}
+.help-honesty {
+  background: #ffdf48;
+  border-left: 4px solid #c7372b;
+  padding: 12px;
+  font-weight: 700;
+}
