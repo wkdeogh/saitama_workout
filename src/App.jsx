@@ -881,7 +881,7 @@ export default function App() {
         <div
           className={`dashboard ${tab === "growth" ? "growth-layout" : ""} ${tab === "calendar" ? "calendar-layout" : ""}`}
         >
-          {tab !== "calendar" && (
+          {tab === "home" && (
             <aside className="hero-column">
               <section className="hero-card">
                 <div className="hero-heading">

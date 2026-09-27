@@ -2607,3 +2607,7 @@ main {
   font-size: 14px;
   font-weight: 700;
 }
+
+.dashboard.growth-layout {
+  grid-template-columns: minmax(0, 1fr);
+}
