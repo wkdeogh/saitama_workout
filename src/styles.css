@@ -2527,3 +2527,33 @@ main {
     margin-top: 0;
   }
 }
+
+.name-form {
+  display: grid;
+  gap: 12px;
+}
+.name-form > label {
+  font-size: 14px;
+  font-weight: 800;
+}
+.name-form > input {
+  width: 100%;
+  min-width: 0;
+  min-height: 48px;
+  padding: 12px;
+  border: 2px solid #171717;
+  border-radius: 4px;
+  background: #fff;
+  color: #171717;
+  font-size: 16px;
+}
+.name-form .hint {
+  margin: 0;
+}
+.name-import {
+  width: 100%;
+  margin-top: 12px;
+}
+.hero-title h2 {
+  overflow-wrap: anywhere;
+}

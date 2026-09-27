@@ -1,5 +1,18 @@
 export const STORAGE_KEY = "saitama-training:v1";
 export const MAX_REPS = 10000;
+export const MAX_NAME_LENGTH = 20;
+export function validateName(value, allowEmpty = false) {
+  if (typeof value !== "string")
+    throw new Error("이름을 문자로 입력해 주세요.");
+  const name = value.trim();
+  if (
+    (!allowEmpty && !name) ||
+    name.length > MAX_NAME_LENGTH ||
+    /[\u0000-\u001f\u007f]/.test(name)
+  )
+    throw new Error("이름은 공백을 제외하고 1~20자로 입력해 주세요.");
+  return name;
+}
 export const MAX_LEVEL = 1000;
 export const EXP_PER_LEVEL = 100;
 export const EXERCISES = [
@@ -103,6 +116,7 @@ export function isDateKey(key) {
 export function initialData() {
   return {
     version: 2,
+    characterName: "",
     goals: { pushups: 50, squats: 50, situps: 0, runningKm: 0 },
     records: {},
   };
@@ -238,7 +252,11 @@ export function validateData(input, today = dateKey()) {
       goals: validateCounts(r?.goals, true, legacy),
     };
   }
-  return { version: 2, goals, records };
+  const characterName =
+    input.characterName === undefined
+      ? ""
+      : validateName(input.characterName, true);
+  return { version: 2, characterName, goals, records };
 }
 export function parseBackup(text, today = dateKey()) {
   if (text.length > 2 * 1024 * 1024)
@@ -253,9 +271,13 @@ export function parseBackup(text, today = dateKey()) {
 }
 export function mergeBackup(current, incoming, replace = false) {
   return replace
-    ? incoming
+    ? {
+        ...incoming,
+        characterName: incoming.characterName || current.characterName || "",
+      }
     : {
         version: 2,
+        characterName: current.characterName || incoming.characterName || "",
         goals: current.goals,
         records: { ...current.records, ...incoming.records },
       };

@@ -16,6 +16,7 @@ import {
   progression,
   emptyCounts,
   recordExp,
+  validateName,
 } from "../src/model.js";
 const today = "2026-09-27";
 const record = (data, day, pushups = 50, squats = 50) =>
@@ -295,4 +296,56 @@ test("level caps at 1000 with no banked EXP and still decays", () => {
   assert.equal(progression(r, "2026-09-16").level, 995);
   r["2026-09-17"] = entry(100);
   assert.equal(progression(r, "2026-09-17").level, 996);
+});
+
+test("character names survive saves and JSON roundtrips, with whitespace trimmed", () => {
+  const d = record(
+    { ...initialData(), characterName: "  우리 히어로  " },
+    today,
+  );
+  const restored = parseBackup(JSON.stringify(d), today);
+  assert.equal(restored.characterName, "우리 히어로");
+  assert.equal(
+    saveRecord(restored, today, { ...emptyCounts(), pushups: 100 }, today)
+      .characterName,
+    "우리 히어로",
+  );
+  assert.equal(stats(restored, today).total, 100);
+});
+test("older backups without names retain all workouts and request naming", () => {
+  for (const version of [1, 2]) {
+    const d = record(initialData(), today);
+    delete d.characterName;
+    d.version = version;
+    const restored = parseBackup(JSON.stringify(d), today);
+    assert.equal(restored.characterName, "");
+    assert.equal(stats(restored, today).total, 100);
+  }
+});
+test("backup merges keep the current name; replacement uses the backed-up name", () => {
+  const current = { ...initialData(), characterName: "현재 이름" };
+  const incoming = { ...initialData(), characterName: "백업 이름" };
+  assert.equal(mergeBackup(current, incoming).characterName, "현재 이름");
+  assert.equal(mergeBackup(current, incoming, true).characterName, "백업 이름");
+  assert.equal(
+    mergeBackup(current, initialData(), true).characterName,
+    "현재 이름",
+  );
+  assert.equal(mergeBackup(initialData(), incoming).characterName, "백업 이름");
+});
+test("invalid names are rejected without discarding existing data", () => {
+  for (const characterName of [null, 1, {}, "가".repeat(21), "이름\u0000오류"])
+    assert.throws(() =>
+      validateData({ ...initialData(), characterName }, today),
+    );
+  assert.equal(
+    validateData({ ...initialData(), characterName: "가".repeat(20) }, today)
+      .characterName.length,
+    20,
+  );
+});
+
+test("name entry requires nonblank text", () => {
+  for (const name of ["", "   ", "\t"]) assert.throws(() => validateName(name));
+  assert.equal(validateName("  사이타마  "), "사이타마");
 });

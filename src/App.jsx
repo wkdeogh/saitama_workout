@@ -25,7 +25,8 @@ import Character from "./Character";
 import { characterAppearance, VISUAL_UNLOCKS } from "./characterAppearance";
 import {
   STORAGE_KEY,
-  STAGES,
+  MAX_NAME_LENGTH,
+  validateName,
   MAX_LEVEL,
   EXERCISES,
   emptyCounts,
@@ -78,7 +79,7 @@ function downloadJSON(data, name) {
   a.remove();
   setTimeout(() => URL.revokeObjectURL(url), 60000);
 }
-function Modal({ title, onClose, children }) {
+function Modal({ title, onClose, children, dismissible = true }) {
   const ref = useRef(null);
   useEffect(() => {
     const previous = document.activeElement;
@@ -91,22 +92,80 @@ function Modal({ title, onClose, children }) {
     <dialog
       ref={ref}
       aria-label={title}
-      onCancel={onClose}
+      onCancel={(e) => {
+        e.preventDefault();
+        if (dismissible) onClose();
+      }}
       onClick={(e) => {
-        if (e.target === ref.current) onClose();
+        if (dismissible && e.target === ref.current) onClose();
       }}
       className="modal"
     >
       <div className="modal-inner">
         <div className="section-heading">
           <h2>{title}</h2>
-          <button className="icon-button" aria-label="닫기" onClick={onClose}>
-            <X size={21} />
-          </button>
+          {dismissible && (
+            <button className="icon-button" aria-label="닫기" onClick={onClose}>
+              <X size={21} />
+            </button>
+          )}
         </div>
         {children}
       </div>
     </dialog>
+  );
+}
+function CharacterNameForm({ initialName = "", onSave, autofocus = false }) {
+  const [name, setName] = useState(initialName);
+  const [message, setMessage] = useState("");
+  return (
+    <form
+      className="name-form"
+      onSubmit={(e) => {
+        e.preventDefault();
+        try {
+          const next = validateName(name);
+          if (onSave(next)) {
+            setName(next);
+            setMessage("");
+          } else
+            setMessage(
+              "이름을 저장하지 못했습니다. 저장 공간과 권한을 확인해 주세요.",
+            );
+        } catch (error) {
+          setMessage(error.message);
+        }
+      }}
+    >
+      <label htmlFor="character-name">캐릭터 이름</label>
+      <input
+        id="character-name"
+        type="text"
+        value={name}
+        maxLength={MAX_NAME_LENGTH}
+        autoFocus={autofocus}
+        autoComplete="off"
+        placeholder="이름 입력"
+        required
+        aria-describedby="character-name-hint"
+        aria-invalid={!!message}
+        onChange={(e) => {
+          setName(e.target.value);
+          setMessage("");
+        }}
+      />
+      <p id="character-name-hint" className="hint">
+        최대 20자 · 설정에서 변경 가능
+      </p>
+      {message && (
+        <p className="error-box" role="alert">
+          {message}
+        </p>
+      )}
+      <button type="submit" className="primary-button">
+        이름 저장
+      </button>
+    </form>
   );
 }
 function ExerciseIcon({ type }) {
@@ -370,6 +429,16 @@ function SettingsPanel({ data, persist, onClose, notify, error, setError }) {
   return (
     <Modal title="훈련소 설정" onClose={onClose}>
       <section className="settings-section">
+        <CharacterNameForm
+          initialName={data.characterName}
+          onSave={(characterName) => {
+            if (!persist({ ...data, characterName })) return false;
+            notify("캐릭터 이름을 저장했습니다.");
+            return true;
+          }}
+        />
+      </section>
+      <section className="settings-section">
         <h3>
           <Dumbbell size={18} />
           하루 운동 목표
@@ -582,8 +651,7 @@ export default function App() {
   const toastTimer = useRef(null),
     celebrateTimer = useRef(null);
   const workoutRef = useRef(null);
-  const summary = stats(data, today),
-    current = STAGES[summary.stage];
+  const summary = stats(data, today);
   const appearance = characterAppearance(preview ?? summary.level);
   const nextVisual = characterAppearance(summary.level).nextUnlock;
   const record = data.records[selected],
@@ -793,11 +861,7 @@ export default function App() {
                   </span>
                 </div>
                 <div className="hero-title">
-                  <h2>
-                    {preview !== null
-                      ? STAGES[stageIndex(preview)].name
-                      : current.name}
-                  </h2>
+                  <h2>{data.characterName || "캐릭터"}</h2>
                   <p>
                     {preview !== null
                       ? `LV. ${preview} 미리보기`
@@ -1157,6 +1221,20 @@ export default function App() {
           <span>설정</span>
         </button>
       </nav>
+      {!data.characterName && !error && !settings && (
+        <Modal title="캐릭터 이름 설정" dismissible={false}>
+          <CharacterNameForm
+            autofocus
+            onSave={(characterName) => persist({ ...data, characterName })}
+          />
+          <button
+            className="secondary-button name-import"
+            onClick={() => setSettings(true)}
+          >
+            <Upload size={17} /> 백업 가져오기
+          </button>
+        </Modal>
+      )}
       {settings && (
         <SettingsPanel
           {...{ data, persist, notify, error, setError }}
