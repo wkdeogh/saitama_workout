@@ -237,7 +237,7 @@ export function validateData(input, today = dateKey()) {
     Array.isArray(input.records)
   )
     throw new Error(
-      "사이타마훈련소 백업 파일이 아니거나 지원하지 않는 버전이에요.",
+      "싸이따마훈련소 백업 파일이 아니거나 지원하지 않는 버전이에요.",
     );
   const legacy = input.version === 1;
   const goals = validateCounts(input.goals, true, legacy),

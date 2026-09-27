@@ -660,7 +660,7 @@ function SettingsPanel({ data, persist, onClose, notify, error, setError }) {
       )}
       <p className="settings-footer">
         <Zap size={14} />
-        사이타마훈련소 <span>v1.0</span>
+        싸이따마훈련소 <span>v1.0</span>
       </p>
     </Modal>
   );
@@ -825,7 +825,7 @@ export default function App() {
               />
             </span>
             <span>
-              사이타마<span className="brand-thin">훈련소</span>
+              싸이따마<span className="brand-thin">훈련소</span>
               <small>SAITAMA TRAINING</small>
             </span>
           </button>
@@ -958,7 +958,6 @@ export default function App() {
                 <span className="streak-deco">↗</span>
               </div>
               <section className="training-poster" aria-label="사이타마 훈련법">
-                <h2>사이타마 훈련법</h2>
                 <img
                   src={`${import.meta.env.BASE_URL}images/training-manga.jpg`}
                   alt="사이타마 훈련법: 팔굽혀펴기 100회, 윗몸일으키기 100회, 스쿼트 100회, 10km 달리기를 매일 한다는 만화 장면"
