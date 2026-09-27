@@ -19,14 +19,18 @@ import {
   validateName,
 } from "../src/model.js";
 const today = "2026-09-27";
+const legacyGoals = () => ({
+  ...initialData(),
+  goals: { pushups: 50, squats: 50, situps: 0, runningKm: 0 },
+});
 const record = (data, day, pushups = 50, squats = 50) =>
   saveRecord(data, day, { ...emptyCounts(), pushups, squats }, today);
-test("defaults to 50 reps per exercise with no invented history", () => {
+test("defaults to 100 reps and 10km with no invented history", () => {
   assert.deepEqual(initialData().goals, {
-    pushups: 50,
-    squats: 50,
-    situps: 0,
-    runningKm: 0,
+    pushups: 100,
+    squats: 100,
+    situps: 100,
+    runningKm: 10,
   });
   assert.equal(stats(initialData(), today).total, 0);
 });
@@ -45,7 +49,7 @@ test("editing replaces counts and never awards duplicate reps", () => {
   assert.equal(stats(d, today).completed, 0);
 });
 test("goal changes preserve historical completion and apply to new records", () => {
-  let d = record(initialData(), "2026-09-26");
+  let d = record(legacyGoals(), "2026-09-26");
   d = { ...d, goals: { ...d.goals, pushups: 100, squats: 100 } };
   d = record(d, today);
   assert.equal(isComplete(d.records["2026-09-26"]), true);
@@ -54,7 +58,7 @@ test("goal changes preserve historical completion and apply to new records", () 
   assert.equal(d.records["2026-09-26"].goals.pushups, 50);
 });
 test("streak includes yesterday until today is completed", () => {
-  let d = record(initialData(), "2026-09-25");
+  let d = record(legacyGoals(), "2026-09-25");
   d = record(d, "2026-09-26");
   assert.equal(stats(d, today).streak, 2);
   d = record(d, today, 5, 0);
@@ -63,7 +67,7 @@ test("streak includes yesterday until today is completed", () => {
   assert.equal(stats(d, today).streak, 3);
 });
 test("streak resets after missed day and zero counts do not count as exercise", () => {
-  let d = record(initialData(), "2026-09-25");
+  let d = record(legacyGoals(), "2026-09-25");
   d = record(d, today, 0, 0);
   assert.equal(stats(d, today).streak, 0);
   assert.equal(stats(d, today).days, 1);
@@ -88,7 +92,7 @@ test("backup roundtrip is lossless", () => {
   );
 });
 test("backup merge preserves unrelated dates and replaces conflicts", () => {
-  let d = record(initialData(), "2026-09-25");
+  let d = record(legacyGoals(), "2026-09-25");
   d = record(d, today, 10, 20);
   const b = record(initialData(), today, 75, 80);
   const merged = mergeBackup(d, b);
@@ -230,7 +234,7 @@ test("legacy storage and JSON convert losslessly, preserving historical goal com
   assert.deepEqual(legacy.records[today].goals, { pushups: 50, squats: 50 });
 });
 test("new optional goals do not change past completion and all four roundtrip", () => {
-  let d = record(initialData(), "2026-09-26");
+  let d = record(legacyGoals(), "2026-09-26");
   d.goals = { ...d.goals, situps: 50, runningKm: 5 };
   d = saveRecord(
     d,
@@ -348,4 +352,20 @@ test("invalid names are rejected without discarding existing data", () => {
 test("name entry requires nonblank text", () => {
   for (const name of ["", "   ", "\t"]) assert.throws(() => validateName(name));
   assert.equal(validateName("  사이타마  "), "사이타마");
+});
+
+test("new defaults do not replace existing personal or historical goals", () => {
+  const existing = record(legacyGoals(), today);
+  const restored = parseBackup(JSON.stringify(existing), today);
+  assert.deepEqual(restored.goals, existing.goals);
+  assert.deepEqual(restored.records[today].goals, existing.goals);
+  assert.equal(isComplete(restored.records[today]), true);
+  const fresh = saveRecord(
+    initialData(),
+    today,
+    { pushups: 100, squats: 100, situps: 100, runningKm: 10 },
+    today,
+  );
+  assert.equal(isComplete(fresh.records[today]), true);
+  assert.equal(recordExp(fresh.records[today]), 400);
 });

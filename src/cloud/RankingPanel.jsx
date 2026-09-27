@@ -1,5 +1,12 @@
 import { useEffect, useRef, useState } from "react";
-import { Trophy, RefreshCw, LogOut, Cloud, UserRound } from "lucide-react";
+import {
+  Trophy,
+  RefreshCw,
+  LogOut,
+  Cloud,
+  UserRound,
+  ChevronRight,
+} from "lucide-react";
 import { fetchRanking, cloudError } from "./firebaseClient";
 import {
   displayedLevel,
@@ -114,7 +121,7 @@ export function AccountControls({ account }) {
   );
 }
 export default function RankingPanel({ account, data, onUser }) {
-  const [period, setPeriod] = useState("week"),
+  const [period, setPeriod] = useState("all"),
     [entries, setEntries] = useState([]),
     [loading, setLoading] = useState(false);
   const [error, setError] = useState(""),
@@ -162,16 +169,16 @@ export default function RankingPanel({ account, data, onUser }) {
       </div>
       <div className="ranking-period" role="group" aria-label="랭킹 기간">
         <button
-          aria-pressed={period === "week"}
-          onClick={() => setPeriod("week")}
-        >
-          이번 주
-        </button>
-        <button
           aria-pressed={period === "all"}
           onClick={() => setPeriod("all")}
         >
           누적
+        </button>
+        <button
+          aria-pressed={period === "week"}
+          onClick={() => setPeriod("week")}
+        >
+          주간
         </button>
       </div>
       <div className="ranking-toolbar">
@@ -189,15 +196,88 @@ export default function RankingPanel({ account, data, onUser }) {
           <RefreshCw size={18} />
         </button>
       </div>
-      <div className="my-ranking">
+      <button
+        className="my-ranking"
+        aria-haspopup="dialog"
+        aria-label={`${data.characterName} 내 캐릭터 상세 보기`}
+        onClick={() => onUser({ ...summary, uid: account.user.uid })}
+      >
         <div>
           <strong>{data.characterName}</strong>
-          <span>내 {period === "week" ? "주간" : "누적"} EXP</span>
+          <span>내 캐릭터</span>
         </div>
-        <b>
-          {summary[field].toLocaleString("ko-KR")} <small>EXP</small>
-        </b>
-      </div>
+        <div className="my-ranking-score">
+          <b>LV. {summary.level}</b>
+          <small>{summary[field].toLocaleString("ko-KR")} EXP</small>
+        </div>
+        <ChevronRight size={18} aria-hidden="true" />
+      </button>
+      {account.message && (
+        <p className="error-box" role="alert">
+          {account.message}
+        </p>
+      )}
+      {error ? (
+        <p className="error-box" role="alert">
+          {error}
+        </p>
+      ) : loading ? (
+        <p className="ranking-empty" role="status">
+          랭킹을 불러오는 중…
+        </p>
+      ) : entries.length === 0 ? (
+        <p className="ranking-empty">아직 등록된 훈련 기록이 없습니다.</p>
+      ) : (
+        <div className="ranking-table">
+          <div className="ranking-table-head" aria-hidden="true">
+            <span>순위</span>
+            <span>훈련생</span>
+            <span>레벨 / EXP</span>
+            <span />
+          </div>
+          <ol className="ranking-list">
+            {entries.map((entry) => (
+              <li key={entry.uid}>
+                <button
+                  className={`ranking-row ${entry.uid === account.user.uid ? "is-me" : ""}`}
+                  onClick={() => onUser(entry)}
+                  aria-haspopup="dialog"
+                  aria-label={`${entry.rank}위 ${entry.characterName}, 레벨 ${displayedLevel(entry)}, 상세 보기`}
+                >
+                  <span className={`rank-number rank-${entry.rank}`}>
+                    {entry.rank <= 3 && <Trophy size={24} aria-hidden="true" />}
+                    <b>
+                      {entry.rank}
+                      <small>위</small>
+                    </b>
+                  </span>
+                  <span className="rank-user">
+                    <strong>
+                      {entry.characterName}
+                      {entry.uid === account.user.uid && <em>나</em>}
+                    </strong>
+                  </span>
+                  <span className="rank-score">
+                    <strong>LV. {displayedLevel(entry)}</strong>
+                    <small>{entry[field].toLocaleString("ko-KR")} EXP</small>
+                  </span>
+                  <ChevronRight
+                    className="rank-open"
+                    size={17}
+                    aria-hidden="true"
+                  />
+                </button>
+              </li>
+            ))}
+          </ol>
+        </div>
+      )}
+      <p className="hint ranking-footnote">
+        상위 50명 · 같은 EXP는 공동 순위
+        {updated
+          ? ` · ${updated.toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit" })} 갱신`
+          : ""}
+      </p>
       <div className="ranking-membership">
         <p className="hint">
           {account.participating
@@ -218,55 +298,6 @@ export default function RankingPanel({ account, data, onUser }) {
               : "랭킹 참여"}
         </button>
       </div>
-      {account.message && (
-        <p className="error-box" role="alert">
-          {account.message}
-        </p>
-      )}
-      {error ? (
-        <p className="error-box" role="alert">
-          {error}
-        </p>
-      ) : loading ? (
-        <p className="ranking-empty" role="status">
-          랭킹을 불러오는 중…
-        </p>
-      ) : entries.length === 0 ? (
-        <p className="ranking-empty">아직 등록된 훈련 기록이 없습니다.</p>
-      ) : (
-        <ol className="ranking-list">
-          {entries.map((entry) => (
-            <li key={entry.uid}>
-              <button
-                className={`ranking-row ${entry.uid === account.user.uid ? "is-me" : ""}`}
-                onClick={() => onUser(entry)}
-                aria-haspopup="dialog"
-              >
-                <span className={`rank-number rank-${entry.rank}`}>
-                  {entry.rank}
-                </span>
-                <span className="rank-user">
-                  <strong>
-                    {entry.characterName}
-                    {entry.uid === account.user.uid && <em>나</em>}
-                  </strong>
-                  <small>LV. {displayedLevel(entry)}</small>
-                </span>
-                <span className="rank-exp">
-                  {entry[field].toLocaleString("ko-KR")}
-                  <small>EXP</small>
-                </span>
-              </button>
-            </li>
-          ))}
-        </ol>
-      )}
-      <p className="hint ranking-footnote">
-        상위 50명 · 같은 EXP는 공동 순위
-        {updated
-          ? ` · ${updated.toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit" })} 갱신`
-          : ""}
-      </p>
       <AccountControls account={account} />
     </section>
   );

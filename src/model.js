@@ -117,7 +117,7 @@ export function initialData() {
   return {
     version: 2,
     characterName: "",
-    goals: { pushups: 50, squats: 50, situps: 0, runningKm: 0 },
+    goals: { pushups: 100, squats: 100, situps: 100, runningKm: 10 },
     records: {},
   };
 }
