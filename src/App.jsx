@@ -22,6 +22,7 @@ import {
   ArrowRight,
 } from "lucide-react";
 import Character from "./Character";
+import { characterAppearance, VISUAL_UNLOCKS } from "./characterAppearance";
 import {
   STORAGE_KEY,
   STAGES,
@@ -557,8 +558,9 @@ export default function App() {
     celebrateTimer = useRef(null);
   const workoutRef = useRef(null);
   const summary = stats(data, today),
-    current = STAGES[summary.stage],
-    next = STAGES[summary.stage + 1];
+    current = STAGES[summary.stage];
+  const appearance = characterAppearance(preview ?? summary.level);
+  const nextVisual = characterAppearance(summary.level).nextUnlock;
   const record = data.records[selected],
     goals = record?.goals || data.goals;
   const dirty =
@@ -769,7 +771,11 @@ export default function App() {
                       : `LV. ${summary.level} / 200`}
                   </p>
                 </div>
-                <div className={`character-stage aura-stage-${summary.stage}`}>
+                <div
+                  className={`character-stage character-evolved`}
+                  data-powered={appearance.aura}
+                  data-awakened={appearance.awakened}
+                >
                   <div className="character-orbit" />
                   <Character
                     stage={
@@ -791,6 +797,27 @@ export default function App() {
                     </button>
                   )}
                 </div>
+                {tab === "growth" && (
+                  <div className="preview-stepper">
+                    <button
+                      aria-label="이전 레벨 미리보기"
+                      disabled={appearance.level === 1}
+                      onClick={() => setPreview(appearance.level - 1)}
+                    >
+                      <ChevronLeft size={18} />
+                    </button>
+                    <span>
+                      미리보기 <strong>LV. {appearance.level}</strong>
+                    </span>
+                    <button
+                      aria-label="다음 레벨 미리보기"
+                      disabled={appearance.level === 200}
+                      onClick={() => setPreview(appearance.level + 1)}
+                    >
+                      <ChevronRight size={18} />
+                    </button>
+                  </div>
+                )}
                 <div className="hero-progress">
                   <div>
                     <strong>
@@ -827,9 +854,9 @@ export default function App() {
                   onClick={() => navigate("growth")}
                 >
                   <Sparkles size={16} />
-                  {next
-                    ? `LV. ${next.at} · ${next.name}`
-                    : "원펀치의 경지에 도달했어요"}
+                  {nextVisual
+                    ? `다음 외형 · LV. ${nextVisual.level} ${nextVisual.name}`
+                    : "모든 외형 해금 완료"}
                   <ArrowUpRight size={17} />
                 </button>
               </section>
@@ -1012,7 +1039,14 @@ export default function App() {
                     <span className="eyebrow">EVOLUTION ROADMAP</span>
                     <h2>성장 단계</h2>
                   </div>
-                  <span className="month-badge">{summary.stage + 1} / 6</span>
+                  <span className="month-badge">
+                    {
+                      VISUAL_UNLOCKS.filter(
+                        (unlock) => unlock.level <= summary.level,
+                      ).length
+                    }{" "}
+                    / {VISUAL_UNLOCKS.length}
+                  </span>
                 </div>
                 <p className="growth-description">
                   운동 10일마다 +1레벨 · 매 레벨 외형 변화
@@ -1043,35 +1077,29 @@ export default function App() {
                   </div>
                 </div>
                 <div className="stage-list">
-                  {STAGES.map((s, i) => (
+                  {VISUAL_UNLOCKS.map((s, i) => (
                     <button
                       key={s.name}
-                      className={`evolution-card ${i <= summary.stage ? "unlocked" : ""} ${i === summary.stage ? "current" : ""} ${preview === s.at ? "previewing" : ""}`}
+                      className={`evolution-card ${s.level <= summary.level ? "unlocked" : ""} ${s.level <= summary.level && (!VISUAL_UNLOCKS[i + 1] || VISUAL_UNLOCKS[i + 1].level > summary.level) ? "current" : ""} ${preview === s.level ? "previewing" : ""}`}
                       onClick={() => {
-                        setPreview(s.at);
+                        setPreview(s.level);
                         if (window.innerWidth < 760)
                           window.scrollTo({ top: 100, behavior: "smooth" });
                       }}
                     >
-                      <span
-                        className="evolution-number"
-                        style={{ "--stage-color": s.color }}
-                      >
-                        {i <= summary.stage ? (
+                      <span className="evolution-number">
+                        {s.level <= summary.level ? (
                           <Zap size={21} />
                         ) : (
                           <LockKeyhole size={19} />
                         )}
                       </span>
                       <span>
-                        <small>
-                          STAGE 0{i + 1} · LV. {s.at}
-                        </small>
+                        <small>LV. {s.level}</small>
                         <strong>
                           {s.name}
-                          {i === summary.stage && <em>현재</em>}
+                          {s.level <= summary.level && <em>해금</em>}
                         </strong>
-                        <span>{s.reward}</span>
                       </span>
                       <ChevronRight size={18} />
                     </button>

@@ -1,9 +1,414 @@
 import { useEffect, useRef, useState } from "react";
 import * as THREE from "three";
+import { characterAppearance } from "./characterAppearance";
+
+function disposeGroup(group) {
+  const geometries = new Set(),
+    materials = new Set();
+  group.traverse((node) => {
+    if (node.geometry) geometries.add(node.geometry);
+    if (node.material)
+      (Array.isArray(node.material) ? node.material : [node.material]).forEach(
+        (m) => materials.add(m),
+      );
+  });
+  geometries.forEach((g) => g.dispose());
+  materials.forEach((m) => m.dispose());
+}
+
+function createFigure(p) {
+  const root = new THREE.Group();
+  const geometry = new THREE.SphereGeometry(1, 28, 20);
+  const skin = new THREE.MeshStandardMaterial({
+    color: 0xeab68a,
+    roughness: 0.57,
+  });
+  const skinLight = new THREE.MeshStandardMaterial({
+    color: 0xf0c298,
+    roughness: 0.52,
+  });
+  const dark = new THREE.MeshStandardMaterial({
+    color: 0x342920,
+    roughness: 0.8,
+  });
+  const white = new THREE.MeshStandardMaterial({ color: 0xfffaf0 });
+  const red = new THREE.MeshStandardMaterial({
+    color: 0xd62e25,
+    roughness: 0.7,
+  });
+  const sphere = (parent, material, pos, scale) => {
+    const mesh = new THREE.Mesh(geometry, material);
+    mesh.position.set(...pos);
+    mesh.scale.set(...scale);
+    mesh.castShadow = true;
+    mesh.receiveShadow = true;
+    parent.add(mesh);
+    return mesh;
+  };
+  const limb = (from, to, radius, material = skin) => {
+    const a = new THREE.Vector3(...from),
+      b = new THREE.Vector3(...to),
+      delta = b.clone().sub(a);
+    const mesh = new THREE.Mesh(
+      new THREE.CapsuleGeometry(
+        radius,
+        Math.max(0.01, delta.length() - radius * 2),
+        6,
+        16,
+      ),
+      material,
+    );
+    mesh.position.copy(a.add(b).multiplyScalar(0.5));
+    mesh.quaternion.setFromUnitVectors(
+      new THREE.Vector3(0, 1, 0),
+      delta.normalize(),
+    );
+    mesh.castShadow = true;
+    root.add(mesh);
+    return mesh;
+  };
+  const g = p.growth,
+    waist = p.waist,
+    chest = p.shoulder;
+  // A tapered torso keeps high-level shoulders broad without turning the waist into a sphere.
+  const outline = [
+    [0, 1.22],
+    [waist * 0.7, 1.23],
+    [waist, 1.31],
+    [waist * 1.04, 1.48],
+    [waist + (chest - waist) * 0.45, 1.73],
+    [chest * 0.94, 1.96],
+    [chest, 2.04],
+    [chest * 0.76, 2.15],
+    [0.08 + g * 0.1, 2.22],
+    [0, 2.23],
+  ];
+  const torso = new THREE.Mesh(
+    new THREE.LatheGeometry(
+      outline.map(([x, y]) => new THREE.Vector2(x, y)),
+      40,
+    ),
+    skin,
+  );
+  torso.scale.z = 0.62;
+  torso.castShadow = true;
+  torso.receiveShadow = true;
+  root.add(torso);
+  if (p.chest > 0)
+    for (const side of [-1, 1]) {
+      sphere(
+        root,
+        skinLight,
+        [side * chest * 0.47, 1.98, chest * 0.49],
+        [chest * 0.51, 0.12 + 0.1 * p.chest, 0.01 + 0.16 * p.chest],
+      );
+    }
+  if (p.abs > 0)
+    for (let row = 0; row < 3; row++)
+      for (const side of [-1, 1]) {
+        const y = 1.76 - row * 0.16;
+        const depth =
+          (waist +
+            (chest - waist) * (row === 0 ? 0.5 : row === 1 ? 0.25 : 0.05)) *
+          0.62;
+        sphere(
+          root,
+          skinLight,
+          [side * (0.062 + g * 0.068), y, depth],
+          [0.054 + g * 0.071, 0.064 + 0.019 * g, 0.008 + 0.06 * p.abs],
+        );
+      }
+  if (p.back > 0)
+    for (const side of [-1, 1]) {
+      sphere(
+        root,
+        skin,
+        [side * (0.17 + 0.12 * g), 2.1, -0.045],
+        [0.09 + 0.18 * p.back, 0.075 + 0.08 * p.back, 0.12 + 0.04 * g],
+      );
+      sphere(
+        root,
+        skin,
+        [side * chest * 0.46, 1.91, -chest * 0.45],
+        [chest * 0.43, 0.23, 0.04 + 0.1 * p.back],
+      );
+    }
+  const hip = waist * 1.12;
+  sphere(root, red, [0, 1.2, 0], [hip, 0.225, 0.145 + 0.13 * g]);
+  const belt = new THREE.Mesh(
+    new THREE.CylinderGeometry(hip, hip, 0.06, 40),
+    white,
+  );
+  belt.scale.z = (0.145 + 0.13 * g) / hip;
+  belt.position.y = 1.34;
+  root.add(belt);
+  const fists = [];
+  for (const side of [-1, 1]) {
+    const shoulder = [side * (chest * 0.96), 2.04, 0];
+    const elbow = [side * (chest + 0.08 + 0.1 * g), 1.67, 0.005];
+    const hand = [side * (chest + 0.1 + 0.18 * g), 1.29, 0.14 * g];
+    limb(shoulder, elbow, p.arm);
+    limb(elbow, hand, p.arm * 0.8);
+    if (g > 0.015)
+      sphere(root, skinLight, shoulder, [
+        0.066 + 0.21 * g,
+        0.105 + 0.13 * g,
+        0.068 + 0.19 * g,
+      ]);
+    sphere(root, skin, hand, [
+      0.08 + 0.11 * g,
+      0.11 + 0.07 * g,
+      0.085 + 0.08 * g,
+    ]);
+    if (p.level >= 30)
+      for (let finger = 0; finger < 3; finger++) {
+        sphere(
+          root,
+          skinLight,
+          [
+            hand[0] + (finger - 1) * (0.035 + g * 0.012),
+            hand[1] - 0.045,
+            hand[2] + 0.075 + 0.08 * g,
+          ],
+          [0.024, 0.045, 0.024],
+        );
+      }
+    const hipJoint = [side * (0.09 + 0.105 * g), 1.12, 0];
+    const knee = [side * (0.12 + 0.14 * g), 0.67, 0.025];
+    const ankle = [side * (0.12 + 0.2 * g), 0.31, 0];
+    limb(hipJoint, knee, 0.064 + 0.15 * g);
+    limb(knee, ankle, 0.046 + 0.12 * g);
+    sphere(
+      root,
+      skin,
+      [ankle[0], 0.285, 0.1],
+      [0.09 + 0.08 * g, 0.075 + 0.025 * g, 0.15 + 0.11 * g],
+    );
+    if (p.fists) {
+      const glow = new THREE.Mesh(
+        geometry,
+        new THREE.MeshBasicMaterial({
+          color: p.auraEdge,
+          transparent: true,
+          opacity: 0.14,
+          depthWrite: false,
+          blending: THREE.AdditiveBlending,
+        }),
+      );
+      glow.position.set(...hand);
+      glow.scale.setScalar(0.27);
+      root.add(glow);
+      fists.push(glow);
+      const cuff = new THREE.Mesh(
+        new THREE.TorusGeometry(0.23, 0.014, 6, 36),
+        new THREE.MeshBasicMaterial({ color: p.auraColor }),
+      );
+      cuff.position.set(...hand);
+      cuff.rotation.x = 0.5;
+      root.add(cuff);
+      fists.push(cuff);
+    }
+  }
+  sphere(root, skin, [0, 2.23, 0], [0.085 + 0.095 * g, 0.19, 0.09 + 0.09 * g]);
+  const head = new THREE.Group();
+  head.position.set(0, 2.84, 0);
+  root.add(head);
+  const headWidth = 0.6 + 0.04 * g;
+  sphere(head, skinLight, [0, 0, 0], [headWidth, 0.69, 0.55]);
+  const eyeGlow = new THREE.MeshBasicMaterial({ color: 0xffec90 });
+  for (const side of [-1, 1]) {
+    sphere(head, skin, [side * headWidth, -0.12, 0], [0.085, 0.135, 0.075]);
+    sphere(
+      head,
+      white,
+      [side * 0.225, -0.12, 0.49],
+      [0.145, 0.1 - g * 0.025, 0.047],
+    );
+    sphere(
+      head,
+      p.eyes ? eyeGlow : dark,
+      [side * 0.225, -0.13, 0.533],
+      [p.eyes ? 0.07 : 0.032, 0.045, 0.019],
+    );
+    const brow = new THREE.Mesh(
+      new THREE.CapsuleGeometry(0.016, 0.19, 4, 8),
+      dark,
+    );
+    brow.position.set(side * 0.235, 0.015, 0.524);
+    brow.rotation.z = Math.PI / 2 + side * (-0.22 + g * 0.55);
+    head.add(brow);
+  }
+  sphere(head, skin, [0, -0.24, 0.55], [0.045, 0.058, 0.043]);
+  const mouth = new THREE.Mesh(
+    new THREE.CapsuleGeometry(0.012, 0.075, 4, 8),
+    dark,
+  );
+  mouth.position.set(0, -0.39, 0.47);
+  mouth.rotation.z = Math.PI / 2;
+  head.add(mouth);
+  const eyeFlames = [];
+  if (p.eyes)
+    for (const side of [-1, 1])
+      for (let layer = 0; layer < 3; layer++) {
+        const shape = new THREE.Shape();
+        shape.moveTo(-0.11, 0);
+        shape.bezierCurveTo(-0.22, 0.18, -0.08, 0.36, -0.1, 0.57);
+        shape.bezierCurveTo(0.14, 0.37, 0.01, 0.26, 0.14, 0.19);
+        shape.bezierCurveTo(0.2, 0.05, 0.04, -0.08, -0.11, 0);
+        const flame = new THREE.Mesh(
+          new THREE.ShapeGeometry(shape, 14),
+          new THREE.MeshBasicMaterial({
+            color: [0xf33b0b, 0xffb817, 0xfff5be][layer],
+            side: THREE.DoubleSide,
+            transparent: true,
+            opacity: 0.92,
+            depthWrite: false,
+          }),
+        );
+        flame.position.set(side * 0.225, -0.13, 0.58 + layer * 0.014);
+        flame.scale.setScalar(1 - layer * 0.24);
+        flame.rotation.z = -side * 0.19;
+        head.add(flame);
+        eyeFlames.push({ mesh: flame, scale: 1 - layer * 0.24 });
+      }
+  root.scale.setScalar(p.height);
+  // Feet remain on the platform while the whole silhouette grows from 64% to 100% height.
+  const floorOffset = 0.21 * (1 - p.height);
+  root.position.y = floorOffset;
+  return { root, floorOffset, eyeFlames, fists };
+}
+
+const auraVertex = `varying vec2 vUv; void main(){vUv=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);}`;
+const auraFragment = `
+  varying vec2 vUv;
+  uniform float time; uniform float power; uniform vec3 tint; uniform vec3 edge;
+  void main(){
+    float y=vUv.y; float x=vUv.x*2.0-1.0;
+    float warp=sin(y*20.0-time*2.3)*.025+sin(y*37.0-time*3.1)*.015;
+    float w=(.36+.31*sin(y*3.14159))*(1.0-smoothstep(.72,1.0,y));
+    w+=sin(y*31.0-time*1.8)*.025;
+    float d=abs(x+warp);
+    float outer=1.0-smoothstep(w-.025,w+.09,d);
+    float inner=1.0-smoothstep(w-.22,w-.08,d);
+    float shell=max(0.0,outer-inner*.83);
+    float tongues=.8+.2*sin(x*36.0+y*16.0-time*3.0);
+    float alpha=shell*smoothstep(0.0,.08,y)*(1.0-smoothstep(.91,1.0,y))*tongues;
+    vec3 color=mix(tint,edge,smoothstep(w-.16,w,d));
+    gl_FragColor=vec4(color,alpha*(.65+power*.28));
+  }`;
+function createEnergy(p) {
+  const root = new THREE.Group(),
+    rings = [],
+    bolts = [];
+  let flame = null,
+    particles = null;
+  if (!p.aura) return { root, rings, bolts, flame, particles };
+  const uniforms = {
+    time: { value: 0 },
+    power: { value: p.auraPower },
+    tint: { value: new THREE.Color(p.auraColor) },
+    edge: { value: new THREE.Color(p.auraEdge) },
+  };
+  flame = new THREE.Mesh(
+    new THREE.PlaneGeometry(4.6, 4.2),
+    new THREE.ShaderMaterial({
+      uniforms,
+      vertexShader: auraVertex,
+      fragmentShader: auraFragment,
+      transparent: true,
+      depthWrite: false,
+      side: THREE.DoubleSide,
+      blending: THREE.AdditiveBlending,
+    }),
+  );
+  flame.position.set(0, 2.1, -0.56);
+  root.add(flame);
+  const count = 40 + Math.round(p.growth * 48),
+    positions = new Float32Array(count * 3);
+  const particleGeo = new THREE.BufferGeometry();
+  particleGeo.setAttribute("position", new THREE.BufferAttribute(positions, 3));
+  const particleMat = new THREE.ShaderMaterial({
+    uniforms: { tint: { value: new THREE.Color(p.auraEdge) } },
+    transparent: true,
+    depthWrite: false,
+    blending: THREE.AdditiveBlending,
+    vertexShader: `void main(){vec4 mv=modelViewMatrix*vec4(position,1.0);gl_PointSize=clamp(42.0/-mv.z,2.0,10.0);gl_Position=projectionMatrix*mv;}`,
+    fragmentShader: `uniform vec3 tint;void main(){float r=length(gl_PointCoord-.5);float a=1.0-smoothstep(.04,.5,r);gl_FragColor=vec4(tint,a);}`,
+  });
+  particles = new THREE.Points(particleGeo, particleMat);
+  particles.frustumCulled = false;
+  root.add(particles);
+  for (let i = 0; i < p.rings; i++) {
+    const ring = new THREE.Mesh(
+      new THREE.TorusGeometry(
+        1.08 + i * 0.16,
+        0.015 + (p.awakened ? 0.006 : 0),
+        6,
+        96,
+      ),
+      new THREE.MeshBasicMaterial({
+        color: i % 2 ? p.auraEdge : p.auraColor,
+        transparent: true,
+        opacity: 0.8,
+        depthWrite: false,
+        blending: THREE.AdditiveBlending,
+      }),
+    );
+    ring.position.y = 0.75 + i * 0.7;
+    ring.rotation.set(1.15, 0, (i % 2 ? 1 : -1) * 0.4);
+    root.add(ring);
+    rings.push(ring);
+  }
+  const ground = new THREE.Mesh(
+    new THREE.TorusGeometry(1.1, 0.025, 8, 80),
+    new THREE.MeshBasicMaterial({ color: p.auraColor }),
+  );
+  ground.rotation.x = Math.PI / 2;
+  ground.position.y = 0.23;
+  root.add(ground);
+  if (p.lightning)
+    for (let i = 0; i < (p.awakened ? 8 : 4); i++) {
+      const side = i % 2 ? 1 : -1,
+        layer = Math.floor(i / 2);
+      const points = Array.from(
+        { length: 8 },
+        (_, j) =>
+          new THREE.Vector3(
+            side * (0.95 + layer * 0.09 + Math.sin(j * 2.5 + i) * 0.15),
+            0.45 + j * 0.4,
+            -0.25 + layer * 0.12,
+          ),
+      );
+      const line = new THREE.Mesh(
+        new THREE.TubeGeometry(
+          new THREE.CatmullRomCurve3(points, false, "catmullrom", 0.01),
+          42,
+          0.009,
+          4,
+          false,
+        ),
+        new THREE.MeshBasicMaterial({
+          color: p.auraEdge,
+          transparent: true,
+          opacity: 0.85,
+          depthWrite: false,
+          blending: THREE.AdditiveBlending,
+        }),
+      );
+      root.add(line);
+      bolts.push(line);
+    }
+  return { root, rings, bolts, flame, particles };
+}
 
 export default function Character({ stage = 0, level = 1, celebrate = false }) {
-  const mount = useRef(null);
+  const mount = useRef(null),
+    runtime = useRef(null),
+    celebration = useRef(celebrate);
   const [fallback, setFallback] = useState(false);
+  useEffect(() => {
+    celebration.current = celebrate;
+  }, [celebrate]);
   useEffect(() => {
     const host = mount.current;
     let renderer;
@@ -26,277 +431,41 @@ export default function Character({ stage = 0, level = 1, celebrate = false }) {
     const scene = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera(31, 1, 0.1, 100);
     camera.position.set(0, 2.9, 9.3);
-    camera.lookAt(0, 1.8, 0);
-    scene.add(new THREE.HemisphereLight(0xfff8e8, 0xa8876e, 2.2));
-    const light = new THREE.DirectionalLight(0xffffff, 2.8);
-    light.position.set(-3, 7, 5);
+    camera.lookAt(0, 1.85, 0);
+    scene.add(new THREE.HemisphereLight(0xfff5e6, 0x695c70, 2.1));
+    const light = new THREE.DirectionalLight(0xffffff, 2.9);
+    light.position.set(-3, 6, 5);
     light.castShadow = true;
     light.shadow.mapSize.set(1024, 1024);
     scene.add(light);
-    const rim = new THREE.DirectionalLight(0xffbf71, 2);
-    rim.position.set(3, 4, -3);
+    const rim = new THREE.DirectionalLight(0xffcf85, 2);
+    rim.position.set(3, 3, -2);
     scene.add(rim);
-    const skin = new THREE.MeshStandardMaterial({
-      color: 0xf2bf90,
-      roughness: 0.52,
-    });
-    const skinLight = new THREE.MeshStandardMaterial({
-      color: 0xf7c79e,
-      roughness: 0.55,
-    });
-    const pants = new THREE.MeshStandardMaterial({
-      color: stage >= 5 ? 0x7661a9 : 0xe2633e,
-      roughness: 0.8,
-    });
-    const cream = new THREE.MeshStandardMaterial({
-      color: 0xffeed4,
-      roughness: 0.8,
-    });
-    const dark = new THREE.MeshStandardMaterial({
-      color: 0x3e302c,
-      roughness: 0.75,
-    });
-    const white = new THREE.MeshStandardMaterial({ color: 0xfff9ed });
-    const hero = new THREE.Group();
-    scene.add(hero);
-    const sphere = (parent, mat, x, y, z, sx, sy, sz) => {
-      const mesh = new THREE.Mesh(new THREE.SphereGeometry(1, 32, 24), mat);
-      mesh.position.set(x, y, z);
-      mesh.scale.set(sx, sy, sz);
-      mesh.castShadow = true;
-      mesh.receiveShadow = true;
-      parent.add(mesh);
-      return mesh;
-    };
-    const muscle = ((level - 1) / 199) * 0.48;
-    sphere(
-      hero,
-      skin,
-      0,
-      1.64,
-      0,
-      0.42 + muscle * 0.58,
-      0.62,
-      0.29 + muscle * 0.12,
-    );
-    if (level >= 2)
-      for (const side of [-1, 1])
-        sphere(
-          hero,
-          skinLight,
-          side * (0.19 + muscle * 0.45),
-          1.99,
-          0.25 + muscle * 0.13,
-          0.23 + muscle * 0.4,
-          0.2 + muscle * 0.15,
-          0.035 + muscle * 0.35,
-        );
-    if (level >= 10)
-      for (let i = 0; i < 3; i++)
-        for (const side of [-1, 1])
-          sphere(
-            hero,
-            skinLight,
-            side * 0.13,
-            1.77 - i * 0.17,
-            0.3 + muscle * 0.15,
-            0.119,
-            0.087,
-            0.008 + muscle * 0.16,
-          );
-    sphere(hero, pants, 0, 1.18, 0.025, 0.405 + muscle * 0.22, 0.26, 0.285);
-    const belt = new THREE.Mesh(
-      new THREE.CylinderGeometry(
-        0.41 + muscle * 0.22,
-        0.41 + muscle * 0.22,
-        0.105,
-        48,
-      ),
-      cream,
-    );
-    belt.position.set(0, 1.31, 0.025);
-    belt.scale.z = 0.69;
-    hero.add(belt);
-    for (const side of [-1, 1]) {
-      const leg = new THREE.Group();
-      leg.position.set(side * 0.235, 1.1, 0);
-      leg.rotation.z = side * 0.08;
-      hero.add(leg);
-      sphere(leg, skin, 0, -0.28, 0, 0.165 + muscle * 0.33, 0.35, 0.19);
-      sphere(leg, skinLight, 0, -0.59, 0.035, 0.13 + muscle * 0.2, 0.23, 0.15);
-      sphere(leg, skin, side * 0.01, -0.79, 0.14, 0.19, 0.115, 0.29);
-      const arm = new THREE.Group();
-      arm.position.set(side * (0.42 + muscle * 0.72), 2.1, 0);
-      arm.rotation.z = side * 0.22;
-      hero.add(arm);
-      sphere(
-        arm,
-        skin,
-        side * 0.09,
-        -0.16,
-        0,
-        0.17 + muscle * 0.65,
-        0.265,
-        0.18 + muscle * 0.45,
-      );
-      sphere(
-        arm,
-        skinLight,
-        side * 0.16,
-        -0.46,
-        0.045,
-        0.135 + muscle * 0.35,
-        0.23,
-        0.15 + muscle * 0.2,
-      );
-      sphere(
-        arm,
-        skin,
-        side * 0.18,
-        -0.65,
-        0.085,
-        0.16 + muscle * 0.2,
-        0.18,
-        0.17,
-      );
-      for (let finger = 0; finger < 3; finger++)
-        sphere(
-          arm,
-          skinLight,
-          side * 0.18 + (finger - 1) * 0.066,
-          -0.72,
-          0.205,
-          0.035,
-          0.051,
-          0.025,
-        );
-    }
-    sphere(hero, skin, 0, 2.25, 0, 0.19, 0.22, 0.19);
-    const head = new THREE.Group();
-    head.position.y = 2.88;
-    hero.add(head);
-    sphere(head, skinLight, 0, 0, 0, 0.64, 0.69, 0.55);
-    for (const side of [-1, 1]) {
-      sphere(head, skin, side * 0.625, -0.12, 0, 0.11, 0.17, 0.09);
-      sphere(head, white, side * 0.225, -0.12, 0.495, 0.145, 0.104, 0.046);
-      sphere(head, dark, side * 0.225, -0.13, 0.534, 0.038, 0.054, 0.019);
-      const brow = new THREE.Mesh(
-        new THREE.CapsuleGeometry(0.018, 0.19, 4, 8),
-        dark,
-      );
-      brow.position.set(side * 0.235, 0.035, 0.52);
-      brow.rotation.z = Math.PI / 2 + side * (stage >= 2 ? 0.16 : 0);
-      head.add(brow);
-    }
-    sphere(head, skin, -0.018, -0.23, 0.557, 0.062, 0.065, 0.055);
-    const mouth = new THREE.Mesh(
-      new THREE.CapsuleGeometry(0.013, 0.105, 4, 8),
-      dark,
-    );
-    mouth.position.set(0, -0.39, 0.47);
-    mouth.rotation.z = Math.PI / 2;
-    head.add(mouth);
-    sphere(
-      head,
+    const platform = new THREE.Mesh(
+      new THREE.CylinderGeometry(1.08, 1.16, 0.16, 64),
       new THREE.MeshStandardMaterial({
-        color: 0xffdab1,
-        transparent: true,
-        opacity: 0.5,
+        color: 0xddd6c6,
+        roughness: 0.65,
+        metalness: 0.15,
       }),
-      -0.22,
-      0.36,
-      0.449,
-      0.16,
-      0.09,
-      0.025,
     );
-    const pedestal = new THREE.Mesh(
-      new THREE.CylinderGeometry(1.1, 1.18, 0.16, 64),
-      new THREE.MeshStandardMaterial({ color: 0xe7d9b9, roughness: 0.85 }),
-    );
-    pedestal.position.y = 0.13;
-    pedestal.receiveShadow = true;
-    scene.add(pedestal);
-    const ring = new THREE.Mesh(
-      new THREE.TorusGeometry(1.12, 0.014, 8, 80),
-      new THREE.MeshStandardMaterial({ color: 0xc4b590 }),
-    );
-    ring.rotation.x = Math.PI / 2;
-    ring.position.y = 0.22;
-    scene.add(ring);
+    platform.position.y = 0.13;
+    platform.receiveShadow = true;
+    scene.add(platform);
     const floor = new THREE.Mesh(
-      new THREE.PlaneGeometry(30, 30),
-      new THREE.ShadowMaterial({ opacity: 0.12 }),
+      new THREE.PlaneGeometry(20, 20),
+      new THREE.ShadowMaterial({ opacity: 0.15 }),
     );
     floor.rotation.x = -Math.PI / 2;
-    floor.receiveShadow = true;
     floor.position.y = 0.035;
+    floor.receiveShadow = true;
     scene.add(floor);
-    const aura = new THREE.Group();
-    scene.add(aura);
-    if (stage >= 3) {
-      for (let i = 0; i < 16; i++) {
-        const angle = (i / 16) * Math.PI * 2;
-        const mat = new THREE.MeshBasicMaterial({
-          color: stage >= 5 ? 0xc5a2ff : 0xffc65b,
-          transparent: true,
-          opacity: 0.11,
-          depthWrite: false,
-          side: THREE.DoubleSide,
-        });
-        const ray = new THREE.Mesh(
-          new THREE.ConeGeometry(0.22, 0.8 + (i % 4) * 0.38, 5),
-          mat,
-        );
-        ray.position.set(
-          Math.cos(angle) * 1.05,
-          1.8 + Math.sin(angle) * 1.1,
-          -0.45,
-        );
-        ray.rotation.z = -angle + Math.PI / 2;
-        aura.add(ray);
-      }
-      for (let i = 0; i < 26; i++) {
-        const p = sphere(
-          aura,
-          new THREE.MeshBasicMaterial({
-            color: stage >= 5 ? 0xb09aff : 0xffb229,
-          }),
-          Math.sin(i * 3) * 1.15,
-          0.4 + (i % 9) * 0.36,
-          Math.cos(i * 3) * 0.5,
-          0.021,
-          0.045,
-          0.021,
-        );
-        p.userData.offset = i;
-      }
-    }
-    const flames = [];
-    if (stage >= 4)
-      for (const side of [-1, 1])
-        for (let i = 0; i < 3; i++) {
-          const flame = new THREE.Mesh(
-            new THREE.ConeGeometry(0.07 - i * 0.015, 0.28 + i * 0.06, 7),
-            new THREE.MeshBasicMaterial({
-              color: i === 2 ? 0xfff1a0 : i === 1 ? 0xffa528 : 0xf65a2e,
-              transparent: true,
-              opacity: 0.9,
-            }),
-          );
-          flame.position.set(
-            side * 0.225 + (i - 1) * 0.03,
-            -0.05,
-            0.56 + i * 0.017,
-          );
-          flame.rotation.z = -side * 0.2;
-          head.add(flame);
-          flames.push(flame);
-        }
+    const state = { scene, figure: null, energy: null, rotation: -0.16 };
+    runtime.current = state;
     let dragging = false,
       startX = 0,
-      rotation = -0.16,
-      visible = true;
+      visible = true,
+      last = 0;
     const down = (e) => {
       dragging = true;
       startX = e.clientX;
@@ -304,7 +473,7 @@ export default function Character({ stage = 0, level = 1, celebrate = false }) {
     };
     const move = (e) => {
       if (dragging) {
-        rotation += (e.clientX - startX) * 0.012;
+        state.rotation += (e.clientX - startX) * 0.012;
         startX = e.clientX;
       }
     };
@@ -317,6 +486,7 @@ export default function Character({ stage = 0, level = 1, celebrate = false }) {
     host.addEventListener("pointercancel", up);
     const resize = new ResizeObserver(() => {
       const { width, height } = host.getBoundingClientRect();
+      if (!width || !height) return;
       renderer.setSize(width, height);
       camera.aspect = width / height;
       camera.updateProjectionMatrix();
@@ -326,26 +496,51 @@ export default function Character({ stage = 0, level = 1, celebrate = false }) {
       visible = entry.isIntersecting;
     });
     observer.observe(host);
-    const reduced = window.matchMedia(
-      "(prefers-reduced-motion: reduce)",
-    ).matches;
-    let last = 0;
+    const motion = window.matchMedia("(prefers-reduced-motion: reduce)");
     renderer.setAnimationLoop((time) => {
       if (document.hidden || !visible || time - last < 32) return;
       last = time;
-      const t = time * 0.001;
-      hero.rotation.y = rotation + (reduced ? 0 : Math.sin(t * 0.7) * 0.075);
-      hero.position.y = reduced ? 0 : Math.sin(t * 2) * 0.018;
-      if (celebrate && !reduced)
-        hero.position.y += Math.abs(Math.sin(t * 5)) * 0.14;
-      aura.rotation.y = reduced ? 0 : Math.sin(t * 0.6) * 0.1;
-      aura.children.forEach((p, i) => {
-        if (i >= 16 && !reduced)
-          p.position.y = 0.5 + ((t * 0.35 + i * 0.17) % 3);
-      });
-      flames.forEach((f, i) => {
-        f.scale.y = reduced ? 1 : 1 + Math.sin(t * 10 + i) * 0.2;
-      });
+      const reduced = motion.matches,
+        t = reduced ? 0 : time * 0.001,
+        figure = state.figure,
+        energy = state.energy;
+      if (figure) {
+        figure.root.rotation.y =
+          state.rotation + (reduced ? 0 : Math.sin(t * 0.7) * 0.05);
+        figure.root.position.y =
+          figure.floorOffset + (reduced ? 0 : Math.sin(t * 1.8) * 0.01);
+        if (celebration.current && !reduced)
+          figure.root.position.y += Math.abs(Math.sin(t * 4)) * 0.13;
+        figure.eyeFlames.forEach(({ mesh, scale }, i) => {
+          mesh.scale.y =
+            scale * (1 + (reduced ? 0 : Math.sin(t * 5 + i) * 0.12));
+        });
+        figure.fists.forEach((mesh, i) => {
+          if (i % 2) mesh.rotation.z = t * 0.8;
+        });
+      }
+      if (energy) {
+        if (energy.flame) energy.flame.material.uniforms.time.value = t;
+        energy.rings.forEach((ring, i) => {
+          ring.rotation.z = (i % 2 ? -1 : 1) * (0.4 + t * 0.4);
+          ring.rotation.y = Math.sin(t * 0.6 + i) * 0.3;
+        });
+        energy.bolts.forEach((bolt, i) => {
+          bolt.material.opacity = 0.5 + Math.sin(t * 2 + i) * 0.25;
+        });
+        if (energy.particles) {
+          const array = energy.particles.geometry.attributes.position.array;
+          for (let i = 0; i < array.length / 3; i++) {
+            const a = i * 2.399 + t * 0.12;
+            const r = 0.85 + (i % 7) * 0.085;
+            array[i * 3] = Math.cos(a) * r;
+            array[i * 3 + 1] =
+              0.3 + ((i * 0.137 + t * (0.23 + (i % 3) * 0.09)) % 3.5);
+            array[i * 3 + 2] = Math.sin(a) * 0.65;
+          }
+          energy.particles.geometry.attributes.position.needsUpdate = true;
+        }
+      }
       renderer.render(scene, camera);
     });
     return () => {
@@ -356,18 +551,32 @@ export default function Character({ stage = 0, level = 1, celebrate = false }) {
       host.removeEventListener("pointermove", move);
       host.removeEventListener("pointerup", up);
       host.removeEventListener("pointercancel", up);
-      scene.traverse((o) => {
-        o.geometry?.dispose();
-        if (o.material) {
-          (Array.isArray(o.material) ? o.material : [o.material]).forEach((m) =>
-            m.dispose(),
-          );
-        }
-      });
+      disposeGroup(scene);
       renderer.dispose();
+      renderer.forceContextLoss();
       renderer.domElement.remove();
+      runtime.current = null;
     };
-  }, [stage, level, celebrate]);
+  }, []);
+  useEffect(() => {
+    const state = runtime.current;
+    if (!state) return;
+    const p = characterAppearance(level),
+      figure = createFigure(p),
+      energy = createEnergy(p);
+    state.figure = figure;
+    state.energy = energy;
+    state.scene.add(figure.root, energy.root);
+    return () => {
+      state.scene.remove(figure.root, energy.root);
+      disposeGroup(figure.root);
+      disposeGroup(energy.root);
+      if (state.figure === figure) {
+        state.figure = null;
+        state.energy = null;
+      }
+    };
+  }, [level]);
   return (
     <div
       ref={mount}
@@ -376,7 +585,13 @@ export default function Character({ stage = 0, level = 1, celebrate = false }) {
       aria-label={`${level}레벨, 성장 ${stage + 1}단계, 빤쓰를 입은 빡빡이 3D 캐릭터. 좌우로 드래그하면 회전해요.`}
     >
       {fallback && (
-        <div className={`fallback-character stage-${stage}`}>
+        <div
+          className={`fallback-character stage-${stage}`}
+          style={{
+            scale: characterAppearance(level).height,
+            transformOrigin: "bottom center",
+          }}
+        >
           <div className="fallback-head">
             <span>• •</span>
             <small>―</small>

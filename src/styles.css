@@ -2513,3 +2513,77 @@ main {
   text-align: left;
   margin-top: 10px;
 }
+/* Character-only presentation changes: bright training stage, dark energy backdrop. */
+.character-stage.character-evolved {
+  background: radial-gradient(ellipse at 50% 80%, #fff3b8 0%, #ffd61f 65%);
+  transition: background-color 0.3s;
+}
+.character-stage.character-evolved[data-powered="true"] {
+  background: radial-gradient(
+    ellipse at 50% 75%,
+    #443020 0%,
+    #19151d 48%,
+    #0c0c14 100%
+  );
+  border-block: 2px solid #171717;
+  margin-top: 16px;
+}
+.character-evolved[data-powered="true"] .character-orbit {
+  border-color: #ffffff16;
+}
+.character-evolved[data-powered="true"] .character-orbit:after {
+  border-color: #ffffff16;
+}
+.character-evolved[data-powered="true"] .drag-label {
+  color: #d1d1d1;
+}
+.character-evolved[data-powered="true"] .preview-exit {
+  border: 1px solid #ffd61f;
+  background: #171717;
+}
+.character-evolved[data-awakened="true"] {
+  box-shadow: inset 0 0 26px #ffd61f24;
+}
+.preview-stepper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+  padding: 8px 20px;
+  border-bottom: 1px solid #17171733;
+}
+.preview-stepper button {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border: 1px solid #171717;
+  border-radius: 4px;
+  background: #fff;
+  color: #171717;
+}
+.preview-stepper button:hover:not(:disabled) {
+  background: #eee;
+}
+.preview-stepper span {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+}
+.preview-stepper strong {
+  font-size: 15px;
+  min-width: 53px;
+}
+.character-evolved .character-canvas {
+  z-index: 1;
+}
+.character-evolved .drag-label,
+.character-evolved .preview-exit {
+  z-index: 2;
+}
+@media (prefers-reduced-motion: reduce) {
+  .character-stage.character-evolved {
+    transition: none;
+  }
+}

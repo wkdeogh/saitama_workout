@@ -5,7 +5,7 @@ export const STAGES = [
     name: "평범한 빡빡이",
     tag: "모든 히어로의 시작",
     at: 1,
-    reward: "기본 체형",
+    reward: "작고 마른 체형",
     color: "#8f9c80",
   },
   {
@@ -26,7 +26,7 @@ export const STAGES = [
     name: "한계 돌파",
     tag: "심상치 않은 기운",
     at: 60,
-    reward: "황금색 오라 해금",
+    reward: "황금 불꽃 오라",
     color: "#f49634",
   },
   {
@@ -40,7 +40,7 @@ export const STAGES = [
     name: "원펀치의 경지",
     tag: "강함에는 끝이 없다",
     at: 200,
-    reward: "보라색 오라 · 최대 체격",
+    reward: "최종 각성 · 삼중 링",
     color: "#9674c6",
   },
 ];
