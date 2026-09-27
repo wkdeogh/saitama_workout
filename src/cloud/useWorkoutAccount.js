@@ -9,7 +9,7 @@ import {
   cloudError,
   firebaseConfigured,
 } from "./firebaseClient";
-import { mergeChanges } from "./rankingModel";
+import { mergeChanges, needsAccountSync } from "./rankingModel";
 
 export const accountKey = (uid) =>
   uid ? `${STORAGE_KEY}:account:${uid}` : STORAGE_KEY;
@@ -128,44 +128,48 @@ export default function useWorkoutAccount() {
     },
     [publish],
   );
-  const synchronize = useCallback(
-    async (participation) => {
-      const current = live.current;
-      if (!current.uid || current.error || !readyRef.current || syncing.current)
-        return false;
-      const ticket = generation.current;
-      syncing.current = true;
-      setBusy(true);
-      setMessage("");
-      try {
-        const result = await withTimeout(
-          syncAccount(current.uid, current.base, current.data, participation),
-        );
-        if (ticket !== generation.current) return false;
-        // Preserve edits made while the transaction was in flight.
-        const data = mergeChanges(current.data, live.current.data, result.data);
-        const next = {
-          ...live.current,
-          data,
-          base: result.data,
-          participating: result.participating,
-        };
-        storeLocal(next);
-        publish(next);
-        setLastSync(new Date());
-        return true;
-      } catch (error) {
-        if (ticket === generation.current) setMessage(cloudError(error));
-        return false;
-      } finally {
-        if (ticket === generation.current) {
-          syncing.current = false;
-          setBusy(false);
-        }
+  const synchronize = useCallback(async () => {
+    const current = live.current;
+    if (
+      !current.uid ||
+      !current.data.characterName ||
+      current.error ||
+      !readyRef.current ||
+      syncing.current
+    )
+      return false;
+    const ticket = generation.current;
+    syncing.current = true;
+    setBusy(true);
+    setMessage("");
+    try {
+      const result = await withTimeout(
+        syncAccount(current.uid, current.base, current.data),
+      );
+      if (ticket !== generation.current) return false;
+      // Preserve edits made while the transaction was in flight.
+      const data = mergeChanges(current.data, live.current.data, result.data);
+      const next = {
+        ...live.current,
+        data,
+        base: result.data,
+        participating: result.participating,
+        needsPublication: false,
+      };
+      storeLocal(next);
+      publish(next);
+      setLastSync(new Date());
+      return true;
+    } catch (error) {
+      if (ticket === generation.current) setMessage(cloudError(error));
+      return false;
+    } finally {
+      if (ticket === generation.current) {
+        syncing.current = false;
+        setBusy(false);
       }
-    },
-    [publish],
-  );
+    }
+  }, [publish]);
   useEffect(
     () =>
       observeAccount(async (account) => {
@@ -192,6 +196,7 @@ export default function useWorkoutAccount() {
               data,
               base: remote.data,
               participating: remote.participating,
+              needsPublication: true,
             };
             storeLocal(next);
             publish(next);
@@ -208,13 +213,7 @@ export default function useWorkoutAccount() {
     [publish],
   );
   useEffect(() => {
-    if (
-      !scope.uid ||
-      !ready ||
-      scope.error ||
-      busy ||
-      JSON.stringify(scope.data) === JSON.stringify(scope.base)
-    )
+    if (!scope.uid || !ready || scope.error || busy || !needsAccountSync(scope))
       return;
     // An explicit retry is required after failure, preventing quota-draining loops.
     if (message) return;
@@ -270,7 +269,7 @@ export default function useWorkoutAccount() {
       login,
       logout,
       synchronize,
-      pending: JSON.stringify(scope.data) !== JSON.stringify(scope.base),
+      pending: needsAccountSync(scope),
     },
   };
 }

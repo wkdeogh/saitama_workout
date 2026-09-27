@@ -61,7 +61,7 @@ export async function fetchAccount(uid) {
     participating: value.participating,
   };
 }
-export async function syncAccount(uid, base, local, participation) {
+export async function syncAccount(uid, base, local) {
   if (auth?.currentUser?.uid !== uid)
     throw new Error("로그인 계정이 변경되었습니다.");
   return runTransaction(db, async (transaction) => {
@@ -75,7 +75,7 @@ export async function syncAccount(uid, base, local, participation) {
       throw new Error(
         "기록 용량이 동기화 한도를 넘었습니다. JSON 백업으로 보관해 주세요.",
       );
-    const participating = participation ?? previous?.participating ?? false;
+    const participating = true;
     const summary = rankingSummary(merged);
     transaction.set(accountRef, {
       payload,

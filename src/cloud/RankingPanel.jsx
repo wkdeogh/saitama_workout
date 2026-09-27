@@ -73,7 +73,7 @@ export function LoginScreen({ account }) {
             {account.message}
           </p>
         )}
-        <small>운동 기록은 로그인한 계정에 저장됩니다.</small>
+        <small>캐릭터 이름·레벨·누적 운동량은 랭킹에 공개됩니다.</small>
       </section>
     </main>
   );
@@ -154,10 +154,7 @@ export default function RankingPanel({ account, data, onUser }) {
     return () => {
       sequence.current++;
     };
-  }, [period, week, account.user.uid]);
-  async function participation(value) {
-    if (await account.synchronize(value)) await refresh();
-  }
+  }, [period, week, account.user.uid, account.lastSync]);
   return (
     <section className="panel ranking-panel">
       <div className="section-heading">
@@ -278,26 +275,6 @@ export default function RankingPanel({ account, data, onUser }) {
           ? ` · ${updated.toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit" })} 갱신`
           : ""}
       </p>
-      <div className="ranking-membership">
-        <p className="hint">
-          {account.participating
-            ? "랭킹 참여 중 · 캐릭터 이름, 레벨, 종목별 누적 운동량 공개"
-            : "참여하면 캐릭터 이름, 레벨, 종목별 누적 운동량이 공개됩니다."}
-        </p>
-        <button
-          className={
-            account.participating ? "secondary-button" : "primary-button"
-          }
-          disabled={account.busy || !account.ready || !data.characterName}
-          onClick={() => participation(!account.participating)}
-        >
-          {account.busy
-            ? "동기화 중…"
-            : account.participating
-              ? "랭킹 참여 중단"
-              : "랭킹 참여"}
-        </button>
-      </div>
       <AccountControls account={account} />
     </section>
   );

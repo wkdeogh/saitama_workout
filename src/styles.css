@@ -2726,13 +2726,6 @@ main {
 .my-ranking small {
   font-size: 10px;
 }
-.ranking-membership {
-  margin: 18px 0;
-}
-.ranking-membership > button {
-  width: 100%;
-  margin-top: 10px;
-}
 .ranking-table {
   margin-top: 20px;
   border: 2px solid #171717;

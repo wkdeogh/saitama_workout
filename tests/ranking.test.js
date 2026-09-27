@@ -8,6 +8,7 @@ import {
   displayedLevel,
   mergeChanges,
   rankedEntries,
+  needsAccountSync,
 } from "../src/cloud/rankingModel.js";
 const day = "2026-09-27";
 const add = (d, date, counts) =>
@@ -89,5 +90,39 @@ test("rankings use competition ranks for tied EXP", () => {
       "totalExp",
     ).map((e) => e.rank),
     [1, 1, 3],
+  );
+});
+
+test("automatic ranking registers existing opt-outs without changing workouts", () => {
+  const data = { ...initialData(), characterName: "기존회원" };
+  assert.equal(
+    needsAccountSync({ data, base: data, participating: false }),
+    true,
+  );
+  assert.equal(
+    needsAccountSync({
+      data,
+      base: data,
+      participating: true,
+      needsPublication: true,
+    }),
+    true,
+  );
+  assert.equal(
+    needsAccountSync({
+      data,
+      base: data,
+      participating: true,
+      needsPublication: false,
+    }),
+    false,
+  );
+  assert.equal(
+    needsAccountSync({
+      data: initialData(),
+      base: initialData(),
+      participating: false,
+    }),
+    false,
   );
 });

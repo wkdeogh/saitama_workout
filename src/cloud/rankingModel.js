@@ -90,3 +90,12 @@ export function rankedEntries(rows, field) {
     return { ...row, rank };
   });
 }
+
+export function needsAccountSync(scope) {
+  return (
+    !!scope.data.characterName &&
+    (!!scope.needsPublication ||
+      !scope.participating ||
+      JSON.stringify(scope.data) !== JSON.stringify(scope.base))
+  );
+}
