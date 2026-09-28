@@ -142,7 +142,7 @@ export function AccountControls({ account, showLink = false }) {
               ? "동기화 완료"
               : "이 기기에 저장됨"}
       </p>
-      <div className="backup-actions">
+      <div className="action-buttons">
         <button
           className="secondary-button"
           disabled={account.busy || !account.ready}

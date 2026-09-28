@@ -4,7 +4,6 @@ import {
   Sparkles,
   Trophy,
   Camera,
-  Download,
   Smartphone,
   ChevronLeft,
   ChevronRight,
@@ -124,35 +123,6 @@ const pages = [
           </li>
         </ol>
         <p>공유 메시지에는 닉네임, 날짜, 운동량과 앱 주소가 함께 들어갑니다.</p>
-      </>
-    ),
-  },
-  {
-    title: "계정 저장과 백업",
-    icon: Download,
-    content: (
-      <>
-        <ul>
-          <li>
-            <strong>같은 계정으로 로그인</strong>하면 저장한 운동 기록을
-            불러옵니다.
-          </li>
-          <li>
-            동기화 오류가 나면 설정에서 <strong>동기화</strong>를 누르세요.
-          </li>
-          <li>
-            <strong>JSON 내보내기·가져오기</strong>로 기록을 따로 백업하거나
-            복원할 수 있습니다.
-          </li>
-        </ul>
-        <p>
-          Google 계정에 카카오를 연결하려면 설정의{" "}
-          <strong>카카오 계정 연결</strong>을 사용하세요.
-        </p>
-        <p>
-          이 가이드는 상단의 <strong>? 버튼</strong>으로 언제든 다시 볼 수
-          있습니다.
-        </p>
       </>
     ),
   },

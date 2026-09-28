@@ -83,7 +83,7 @@ export async function syncAccount(uid, base, local) {
     const payload = JSON.stringify(merged);
     if (new TextEncoder().encode(payload).length > 850000)
       throw new Error(
-        "기록 용량이 동기화 한도를 넘었습니다. JSON 백업으로 보관해 주세요.",
+        "기록 용량이 동기화 한도를 넘어 서버에 저장하지 못했습니다.",
       );
     const participating = true;
     const summary = rankingSummary(merged);

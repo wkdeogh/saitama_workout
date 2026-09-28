@@ -237,9 +237,7 @@ export function validateData(input, today = dateKey()) {
     typeof input.records !== "object" ||
     Array.isArray(input.records)
   )
-    throw new Error(
-      "싸이따마훈련소 백업 파일이 아니거나 지원하지 않는 버전이에요.",
-    );
+    throw new Error("운동 기록의 형식이나 버전을 확인할 수 없습니다.");
   const legacy = input.version === 1;
   const goals = validateCounts(input.goals, true, legacy),
     records = {};
@@ -267,12 +265,12 @@ export function validateData(input, today = dateKey()) {
 }
 export function parseBackup(text, today = dateKey()) {
   if (text.length > 2 * 1024 * 1024)
-    throw new Error("백업 파일은 2MB 이하로 선택해 주세요.");
+    throw new Error("운동 기록 데이터가 처리 가능한 용량을 초과했습니다.");
   let data;
   try {
     data = JSON.parse(text);
   } catch {
-    throw new Error("JSON 파일을 읽을 수 없어요. 파일을 확인해 주세요.");
+    throw new Error("운동 기록 데이터를 읽을 수 없습니다.");
   }
   return validateData(data, today);
 }

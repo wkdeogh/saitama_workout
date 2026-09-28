@@ -13,8 +13,6 @@ import {
   Plus,
   Minus,
   X,
-  Download,
-  Upload,
   ShieldCheck,
   Trophy,
   LockKeyhole,
@@ -45,9 +43,7 @@ import {
   isComplete,
   hasWorkout,
   stats,
-  parseBackup,
   validateData,
-  mergeBackup,
   saveRecord,
   updateGoals,
   monthCells,
@@ -60,22 +56,6 @@ const dateLabel = (key) =>
     day: "numeric",
     weekday: "long",
   });
-function downloadJSON(data, name) {
-  const url = URL.createObjectURL(
-    new Blob(
-      [typeof data === "string" ? data : JSON.stringify(data, null, 2)],
-      { type: "application/json" },
-    ),
-  );
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = name;
-  a.style.display = "none";
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  setTimeout(() => URL.revokeObjectURL(url), 60000);
-}
 function Modal({
   title,
   onClose,
@@ -482,38 +462,17 @@ function Calendar({ data, selected, onSelect, today, month, setMonth }) {
     </section>
   );
 }
-function SettingsPanel({
-  data,
-  persist,
-  onClose,
-  notify,
-  error,
-  setError,
-  storageKey,
-  account,
-}) {
+function SettingsPanel({ data, persist, onClose, notify, error, account }) {
   const [goals, setGoals] = useState(data.goals),
-    [incoming, setIncoming] = useState(null),
-    [replace, setReplace] = useState(false),
     [message, setMessage] = useState("");
-  const file = useRef(null);
-  async function importFile(e) {
-    const f = e.target.files?.[0];
-    e.target.value = "";
-    if (!f) return;
-    try {
-      if (f.size > 2 * 1024 * 1024)
-        throw new Error("백업 파일은 2MB 이하로 선택해 주세요.");
-      setIncoming(parseBackup(await f.text()));
-      setReplace(!!error);
-      setMessage("");
-    } catch (e) {
-      setMessage(e.message);
-    }
-  }
   return (
     <Modal title="훈련소 설정" onClose={onClose}>
       <AccountControls account={account} showLink />
+      {error && (
+        <p className="error-box" role="alert">
+          {error}
+        </p>
+      )}
       <section className="settings-section">
         <CharacterNameForm
           initialName={data.characterName}
@@ -589,124 +548,6 @@ function SettingsPanel({
           목표 저장
         </button>
       </section>
-      <section className="settings-section">
-        <h3>
-          <ShieldCheck size={18} />
-          기록 백업
-        </h3>
-        <p className="hint">
-          기록은 이 기기에 저장되고 로그인한 계정과 동기화됩니다. JSON 파일로도
-          백업할 수 있습니다.
-        </p>
-        <div className="backup-actions">
-          <button
-            className="secondary-button"
-            onClick={() => {
-              downloadJSON(
-                { ...data, exportedAt: new Date().toISOString() },
-                `saitama-backup-${dateKey()}.json`,
-              );
-              notify("백업 파일을 내보냈어요.");
-            }}
-            disabled={!!error}
-          >
-            <Download size={17} />
-            JSON 내보내기
-          </button>
-          <button
-            className="secondary-button"
-            onClick={() => file.current.click()}
-          >
-            <Upload size={17} />
-            JSON 가져오기
-          </button>
-        </div>
-        <input
-          ref={file}
-          type="file"
-          accept="application/json,.json"
-          hidden
-          onChange={importFile}
-        />
-        {incoming && (
-          <div className="import-preview">
-            <strong>
-              백업에서 {Object.keys(incoming.records).length}일의 기록을
-              찾았어요.
-            </strong>
-            <p>
-              총 {number(stats(incoming).total)} EXP · 겹치는 날짜{" "}
-              {
-                Object.keys(incoming.records).filter((k) => data.records[k])
-                  .length
-              }
-              일
-            </p>
-            <label className="radio-row">
-              <input
-                type="radio"
-                name="import"
-                checked={!replace}
-                disabled={!!error}
-                onChange={() => setReplace(false)}
-              />
-              합치기 · 겹치는 날짜는 백업 기록 사용
-            </label>
-            <label className="radio-row">
-              <input
-                type="radio"
-                name="import"
-                checked={replace}
-                onChange={() => setReplace(true)}
-              />
-              전체 교체 · 목표와 모든 기록을 백업으로 변경
-            </label>
-            <div className="backup-actions">
-              <button
-                className="secondary-button"
-                onClick={() => setIncoming(null)}
-              >
-                취소
-              </button>
-              <button
-                className="primary-button"
-                onClick={() => {
-                  const next = mergeBackup(data, incoming, replace);
-                  if (persist(next, true)) {
-                    setError("");
-                    notify("백업 기록을 복원했어요.");
-                    onClose();
-                  }
-                }}
-              >
-                복원하기
-              </button>
-            </div>
-          </div>
-        )}
-        {error && (
-          <div className="error-box">
-            <p>{error}</p>
-            <button
-              className="secondary-button"
-              onClick={() => {
-                try {
-                  downloadJSON(
-                    localStorage.getItem(storageKey) || "{}",
-                    `saitama-recovery-${dateKey()}.json`,
-                  );
-                } catch {
-                  setMessage(
-                    "브라우저의 저장 공간에 접근할 수 없어요. 사이트 저장 권한을 확인해 주세요.",
-                  );
-                }
-              }}
-            >
-              저장된 원본 내보내기
-            </button>
-          </div>
-        )}
-      </section>
       {message && (
         <p role="alert" className="error-box">
           {message}
@@ -723,7 +564,6 @@ export default function App() {
   const {
     data,
     error,
-    setError,
     persist: saveLocal,
     storageKey,
     account,
@@ -832,8 +672,8 @@ export default function App() {
     setToast(text);
     toastTimer.current = setTimeout(() => setToast(""), 4000);
   }
-  function persist(nextData, recover = false) {
-    if (saveLocal(nextData, recover)) return true;
+  function persist(nextData) {
+    if (saveLocal(nextData)) return true;
     notify(
       error ||
         "기록을 저장하지 못했습니다. 연결 상태와 저장 공간을 확인해 주세요.",
@@ -991,7 +831,7 @@ export default function App() {
             <button
               className="settings-button"
               onClick={() => setSettings(true)}
-              aria-label="설정 및 백업"
+              aria-label="설정"
             >
               <Settings size={19} />
               <span>설정</span>
@@ -1351,7 +1191,7 @@ export default function App() {
         <footer className="page-footer">
           <span>
             <Zap size={12} />
-            계정 동기화 · JSON 백업 지원
+            계정 동기화
           </span>
           <span>SAITAMA TRAINING © {new Date().getFullYear()}</span>
         </footer>
@@ -1395,12 +1235,6 @@ export default function App() {
             autofocus
             onSave={(characterName) => persist({ ...data, characterName })}
           />
-          <button
-            className="secondary-button name-import"
-            onClick={() => setSettings(true)}
-          >
-            <Upload size={17} /> 백업 가져오기
-          </button>
         </Modal>
       )}
       {helpOpen && <HelpDialog onClose={() => setHelpOpen(false)} />}
@@ -1415,7 +1249,7 @@ export default function App() {
       )}
       {settings && (
         <SettingsPanel
-          {...{ data, persist, notify, error, setError, storageKey, account }}
+          {...{ data, persist, notify, error, account }}
           onClose={() => setSettings(false)}
         />
       )}{" "}
@@ -1428,7 +1262,7 @@ export default function App() {
             {dateLabel(selected)} 기록이 삭제되고 캐릭터의 누적 성장에도
             반영돼요.
           </p>
-          <div className="backup-actions">
+          <div className="action-buttons">
             <button
               className="secondary-button"
               onClick={() => setDeleteOpen(false)}
