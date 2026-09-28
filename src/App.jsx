@@ -24,6 +24,8 @@ import {
 } from "lucide-react";
 import Character from "./Character";
 import WorkoutProofCard from "./WorkoutProofCard";
+import OnboardingGuide from "./OnboardingGuide";
+import { claimOnboarding } from "./onboardingModel";
 import { workoutProof } from "./workoutProofModel";
 import useWorkoutAccount from "./cloud/useWorkoutAccount";
 import FriendsPanel from "./cloud/FriendsPanel";
@@ -122,108 +124,8 @@ function Modal({
 }
 export function HelpDialog({ onClose }) {
   return (
-    <Modal title="도움말" onClose={onClose}>
-      <div className="help-content">
-        <section>
-          <h3>운동 기록과 목표</h3>
-          <p>
-            기본 목표는 푸쉬업·스쿼트·윗몸일으키기 각 100개, 달리기 10km입니다.
-            상단 설정에서 개인 목표를 바꿀 수 있습니다.
-          </p>
-          <p>
-            실제로 한 횟수와 거리를 입력하고 ‘운동 기록 저장’을 누르세요.
-            캘린더에서 날짜를 선택해 기록을 수정하거나 삭제할 수 있습니다. 과거
-            기록의 목표는 당시 기준을 유지합니다.
-          </p>
-        </section>
-        <p className="help-honesty">
-          실제로 운동한 만큼만 입력 하세요.
-          <br />
-          속여서 입력하면 불행해집니다. (불운+1)
-        </p>
-        <section>
-          <h3>EXP와 캐릭터 성장</h3>
-          <p>
-            푸쉬업·스쿼트·윗몸일으키기 1개 = 1 EXP, 달리기 0.1km = 2 EXP. 목표
-            달성 여부와 관계없이 실제 운동량만큼 쌓입니다.
-          </p>
-          <p>
-            100 EXP마다 1레벨 상승하며 최대 1000레벨입니다. 연속 미기록 5일마다
-            5레벨 감소하고, 최저 1레벨까지 내려갑니다. 성장 도감에서 다음 단계의
-            실루엣을 확인할 수 있습니다.
-          </p>
-        </section>
-        <section>
-          <h3>친구와 랭킹</h3>
-          <p>
-            이름 설정 후 자동 등록됩니다. 누적·주간 EXP 기준 상위 50명을
-            표시하며 같은 EXP는 공동 순위입니다. 주간은 한국 시간 월요일
-            00시부터 계산합니다.
-          </p>
-          <p>
-            친구 탭에서 닉네임 앞부분 또는 계정 태그로 검색하고 요청을 보낼 수
-            있습니다. 받은 요청을 수락하면 친구 랭킹에 함께 표시됩니다. 친구
-            요청 알림은 ‘알림 켜기’에서 허용하세요.
-          </p>
-          <p>
-            사용자나 내 캐릭터 카드를 누르면 캐릭터·레벨·종목별 누적 운동량을 볼
-            수 있습니다. 이메일과 날짜별 기록은 다른 사용자에게 공개되지
-            않습니다.
-          </p>
-        </section>
-        <section>
-          <h3>저장과 백업</h3>
-          <p>
-            같은 계정으로 로그인하면 기록을 불러옵니다. Google 계정에 카카오를
-            연결하려면 설정의 ‘카카오 계정 연결’을 사용하세요. 동기화 오류가
-            나면 설정의 ‘동기화’를 누르세요. JSON 내보내기·가져오기로 따로
-            백업할 수 있습니다.
-          </p>
-        </section>
-        <section>
-          <h3>아이폰 · 홈 화면에 추가</h3>
-          <ol>
-            <li>Safari에서 싸이따마훈련소를 엽니다.</li>
-            <li>공유 버튼을 누릅니다. 메뉴 안에 있을 수도 있습니다.</li>
-            <li>‘홈 화면에 추가’를 선택합니다.</li>
-            <li>‘웹 앱으로 열기’가 보이면 켜고 ‘추가’를 누릅니다.</li>
-          </ol>
-          <a
-            href="https://support.apple.com/ko-kr/guide/iphone/iphea86e5236/ios"
-            target="_blank"
-            rel="noreferrer"
-          >
-            Apple 안내
-          </a>
-        </section>
-        <section>
-          <h3>갤럭시 · 홈 화면에 추가</h3>
-          <p>
-            <strong>Chrome</strong>
-          </p>
-          <ol>
-            <li>Chrome에서 싸이따마훈련소를 엽니다.</li>
-            <li>오른쪽 위 ⋮ → ‘홈 화면에 추가’를 누릅니다.</li>
-            <li>‘설치’ 또는 ‘바로가기 만들기’를 선택하고 추가합니다.</li>
-          </ol>
-          <p>
-            <strong>삼성 인터넷</strong>: 메뉴 ☰ → ‘현재 페이지 추가’ → ‘홈
-            화면’ → ‘추가’. 버전에 따라 ‘홈 화면에 추가’로 표시될 수 있습니다.
-          </p>
-          <p>
-            카카오톡 등 앱 안에서는 추가 메뉴가 없을 수 있습니다.
-            Safari·Chrome·삼성 인터넷에서 다시 열어 주세요. 홈 화면 아이콘으로
-            실행한 뒤 로그인이 다시 필요할 수 있습니다.
-          </p>
-          <a
-            href="https://support.google.com/chrome/answer/15085120?co=GENIE.Platform%3DAndroid&hl=ko"
-            target="_blank"
-            rel="noreferrer"
-          >
-            Chrome 안내
-          </a>
-        </section>
-      </div>
+    <Modal title="사용 가이드" onClose={onClose}>
+      <OnboardingGuide onClose={onClose} />
     </Modal>
   );
 }
@@ -844,6 +746,7 @@ export default function App() {
   const toastTimer = useRef(null),
     celebrateTimer = useRef(null);
   const workoutRef = useRef(null);
+  const onboardingSeen = useRef(new Set());
   const summary = stats(data, today);
   const appearance = characterAppearance(summary.level);
   const record = data.records[selected],
@@ -887,6 +790,43 @@ export default function App() {
     return () =>
       navigator.serviceWorker?.removeEventListener("message", handler);
   }, [account.user?.uid, account.ready]);
+  useEffect(() => {
+    if (
+      !account.user ||
+      !account.ready ||
+      !data.characterName ||
+      error ||
+      settings ||
+      helpOpen ||
+      proof ||
+      rankingUser ||
+      stageDetail ||
+      deleteOpen
+    )
+      return;
+    const timer = setTimeout(() => {
+      let storage;
+      try {
+        storage = window.localStorage;
+      } catch {
+        /* Session-only fallback. */
+      }
+      if (claimOnboarding(account.user.uid, storage, onboardingSeen.current))
+        setHelpOpen(true);
+    }, 0);
+    return () => clearTimeout(timer);
+  }, [
+    account.user?.uid,
+    account.ready,
+    data.characterName,
+    error,
+    settings,
+    helpOpen,
+    proof,
+    rankingUser,
+    stageDetail,
+    deleteOpen,
+  ]);
   function notify(text) {
     clearTimeout(toastTimer.current);
     setToast(text);
