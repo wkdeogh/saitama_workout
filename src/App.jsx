@@ -74,7 +74,13 @@ function downloadJSON(data, name) {
   a.remove();
   setTimeout(() => URL.revokeObjectURL(url), 60000);
 }
-function Modal({ title, onClose, children, dismissible = true }) {
+function Modal({
+  title,
+  onClose,
+  children,
+  dismissible = true,
+  hideTitle = false,
+}) {
   const ref = useRef(null);
   useEffect(() => {
     const previous = document.activeElement;
@@ -99,8 +105,10 @@ function Modal({ title, onClose, children, dismissible = true }) {
       className="modal"
     >
       <div className="modal-inner">
-        <div className="section-heading">
-          <h2>{title}</h2>
+        <div
+          className={`section-heading${hideTitle ? " modal-close-only" : ""}`}
+        >
+          <h2 className={hideTitle ? "sr-only" : undefined}>{title}</h2>
           {dismissible && (
             <button className="icon-button" aria-label="닫기" onClick={onClose}>
               <X size={21} />
@@ -1457,7 +1465,11 @@ export default function App() {
       )}
       {helpOpen && <HelpDialog onClose={() => setHelpOpen(false)} />}
       {proof && (
-        <Modal title="오운완 인증" onClose={() => setProof(null)}>
+        <Modal
+          title="오늘의 훈련 완료 공유"
+          hideTitle
+          onClose={() => setProof(null)}
+        >
           <WorkoutProofCard proof={proof} />
         </Modal>
       )}

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import * as THREE from "three";
 import { characterAppearance } from "./characterAppearance";
-import { armPose } from "./workoutProofModel.js";
+import { armPose, legPose, bodyPose } from "./workoutProofModel.js";
 
 function disposeGroup(group) {
   const geometries = new Set(),
@@ -195,15 +195,13 @@ function createFigure(p, pose = "idle") {
           [0.024, 0.045, 0.024],
         );
       }
-    const hipJoint = [side * (0.09 + 0.105 * g), 1.12, 0];
-    const knee = [side * (0.12 + 0.14 * g), 0.67, 0.025];
-    const ankle = [side * (0.12 + 0.2 * g), 0.31, 0];
+    const { hip: hipJoint, knee, ankle } = legPose(p, side, pose);
     limb(hipJoint, knee, 0.064 + 0.15 * g);
     limb(knee, ankle, 0.046 + 0.12 * g);
     sphere(
       root,
       skin,
-      [ankle[0], 0.285, 0.1],
+      [ankle[0], ankle[1] - 0.025, ankle[2] + 0.1],
       [0.09 + 0.08 * g, 0.075 + 0.025 * g, 0.15 + 0.11 * g],
     );
     if (p.wraps)
@@ -220,19 +218,24 @@ function createFigure(p, pose = "idle") {
     if (p.shorts)
       limb(hipJoint, knee, 0.082 + 0.17 * g, p.pants ? orange : navy);
     if (p.pants) {
-      limb(knee, [ankle[0], 0.45, 0], 0.065 + 0.15 * g, orange);
-      limb([ankle[0], 0.51, 0], ankle, 0.058 + 0.13 * g, navy);
+      const shinPoint = (fraction) =>
+        ankle.map((v, i) => v + (knee[i] - v) * fraction);
+      limb(knee, shinPoint(0.39), 0.065 + 0.15 * g, orange);
+      limb(shinPoint(0.56), ankle, 0.058 + 0.13 * g, navy);
       sphere(
         root,
         navy,
-        [ankle[0], 0.285, 0.12],
+        [ankle[0], ankle[1] - 0.025, ankle[2] + 0.12],
         [0.12 + 0.08 * g, 0.105, 0.18 + 0.11 * g],
       );
-      sphere(
-        root,
-        orange,
-        [ankle[0], 0.49, 0],
-        [0.065 + 0.14 * g, 0.035, 0.065 + 0.14 * g],
+      const cuff = sphere(root, orange, shinPoint(0.5), [
+        0.065 + 0.14 * g,
+        0.035,
+        0.065 + 0.14 * g,
+      ]);
+      cuff.quaternion.setFromUnitVectors(
+        new THREE.Vector3(0, 1, 0),
+        new THREE.Vector3(...knee).sub(new THREE.Vector3(...ankle)).normalize(),
       );
     }
     if (p.fists) {
@@ -551,7 +554,8 @@ export function characterPortrait(level, pose, width = 960, height = 820) {
     renderer.outputColorSpace = THREE.SRGBColorSpace;
     const p = characterAppearance(level);
     const figure = createFigure(p, pose);
-    figure.root.rotation.y = pose === "archer" ? -0.25 : -0.08;
+    figure.root.rotation.y = bodyPose(pose).turn;
+    figure.root.position.y -= bodyPose(pose).drop * p.height;
     const energy = createEnergy(p);
     if (energy.flame) energy.flame.material.uniforms.time.value = 2;
     scene.add(figure.root, energy.root);

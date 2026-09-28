@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Download, Share2, Shuffle, Link, RotateCcw } from "lucide-react";
+import { Download, Share2, Shuffle, RotateCcw } from "lucide-react";
 import { characterPortrait } from "./Character";
 import { EXERCISES, recordExp } from "./model";
 import {
@@ -154,7 +154,7 @@ export default function WorkoutProofCard({ proof }) {
     const payload = proofShareData(proof, image.file);
     if (!navigator.share || !navigator.canShare?.(payload)) {
       setMessage(
-        "이 브라우저는 이미지 공유를 지원하지 않습니다. 이미지를 저장하고 앱 링크를 복사해 공유해 주세요.",
+        "이 브라우저는 이미지 공유를 지원하지 않습니다. 이미지를 저장해 공유해 주세요.",
       );
       return;
     }
@@ -164,19 +164,9 @@ export default function WorkoutProofCard({ proof }) {
       await navigator.share(payload);
     } catch (e) {
       if (e.name !== "AbortError")
-        setMessage(
-          "공유창을 열지 못했습니다. 이미지 저장과 링크 복사를 이용해 주세요.",
-        );
+        setMessage("공유창을 열지 못했습니다. 이미지를 저장해 공유해 주세요.");
     } finally {
       setSharing(false);
-    }
-  }
-  async function copyLink() {
-    try {
-      await navigator.clipboard.writeText(APP_SHARE_URL);
-      setMessage("앱 링크를 복사했습니다.");
-    } catch {
-      setMessage(`앱 링크: ${APP_SHARE_URL}`);
     }
   }
   return (
@@ -232,15 +222,6 @@ export default function WorkoutProofCard({ proof }) {
           {sharing ? "공유 중…" : "공유"}
         </button>
       </div>
-      <div className="proof-link">
-        <span>공유창에서 카카오톡 등 앱 선택</span>
-        <button onClick={copyLink}>
-          <Link size={15} />앱 링크 복사
-        </button>
-      </div>
-      <p className="proof-note">
-        공유 앱에 따라 링크가 빠질 수 있어 이미지에도 주소를 넣었습니다.
-      </p>
       {message && (
         <p className="proof-message" role="status">
           {message}

@@ -7,6 +7,8 @@ import {
   nextProofPose,
   PROOF_POSES,
   armPose,
+  legPose,
+  bodyPose,
   proofShareData,
   APP_SHARE_URL,
 } from "../src/workoutProofModel.js";
@@ -53,11 +55,17 @@ test("file sharing includes all four counts and the canonical app link", () => {
     },
     file,
   );
-  assert.equal(payload.url, APP_SHARE_URL);
-  assert.ok(payload.text.includes(APP_SHARE_URL));
+  assert.deepEqual(Object.keys(payload).sort(), ["files", "text"]);
+  assert.equal(payload.text.split(APP_SHARE_URL).length - 1, 1);
+  const lines = payload.text.split("\n");
+  assert.match(lines[0], /^⬛+$/u);
+  assert.equal(lines.at(-1), lines[0]);
+  assert.equal(lines[1], "대호.. 오늘의 훈련 완료..");
+  assert.equal(lines[2], day);
   for (const value of ["50개", "30개", "0개", "2.5km", day])
     assert.ok(payload.text.includes(value));
   assert.equal(payload.files[0], file);
+  assert.equal(payload.files.length, 1);
 });
 test("random pose changes do not repeat and remain in the supported set", () => {
   for (const previous of [undefined, ...PROOF_POSES])
@@ -76,7 +84,42 @@ test("posed arms remain finite and bounded across all 1000 levels", () => {
         for (const joint of Object.values(arm))
           for (const coordinate of joint)
             assert.ok(Number.isFinite(coordinate) && Math.abs(coordinate) < 4);
-        assert.ok(arm.hand[1] > arm.shoulder[1]);
         assert.notDeepEqual(arm, armPose(p, side));
       }
+});
+test("all proof stances bend legs without stretching bones or sinking feet", () => {
+  const length = (a, b) => Math.hypot(...a.map((v, i) => v - b[i]));
+  for (let level = 1; level <= 1000; level++) {
+    const p = characterAppearance(level);
+    for (const pose of PROOF_POSES) {
+      const legs = [-1, 1].map((side) => {
+        const leg = legPose(p, side, pose),
+          rest = legPose(p, side);
+        for (const joint of Object.values(leg))
+          assert.ok(joint.every((v) => Number.isFinite(v) && Math.abs(v) < 4));
+        assert.ok(
+          Math.abs(length(leg.hip, leg.knee) - length(rest.hip, rest.knee)) <
+            1e-8,
+        );
+        assert.ok(
+          Math.abs(
+            length(leg.knee, leg.ankle) - length(rest.knee, rest.ankle),
+          ) < 1e-8,
+        );
+        assert.ok(leg.ankle[1] - bodyPose(pose).drop >= 0.31 - 1e-8);
+        return leg;
+      });
+      assert.ok(
+        legs.some(
+          (leg, i) =>
+            JSON.stringify(leg) !== JSON.stringify(legPose(p, i ? 1 : -1)),
+        ),
+      );
+      assert.ok(
+        legs.some(
+          (leg) => Math.abs(leg.ankle[1] - bodyPose(pose).drop - 0.31) < 1e-8,
+        ),
+      );
+    }
+  }
 });

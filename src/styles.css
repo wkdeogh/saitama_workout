@@ -995,6 +995,14 @@ main {
   font-size: 20px;
   margin: 0;
 }
+.modal .modal-close-only {
+  justify-content: flex-end;
+  margin-bottom: 8px;
+}
+.modal-close-only .icon-button {
+  width: 44px;
+  height: 44px;
+}
 .settings-section {
   margin-top: 23px;
 }
@@ -3074,33 +3082,11 @@ main {
   opacity: 0.4;
   cursor: default;
 }
-.proof-link {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 4px 10px;
-  margin-top: 8px;
-  font-size: 11px;
-  color: #555;
-}
-.proof-link button {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  min-height: 44px;
-  font-size: 12px;
-  text-decoration: underline;
-}
-.proof-note,
 .proof-message {
   font-size: 12px;
   line-height: 1.6;
   overflow-wrap: anywhere;
   margin: 4px 0 0;
-}
-.proof-note {
-  color: #555;
 }
 .proof-message {
   padding: 10px;
