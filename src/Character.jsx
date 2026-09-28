@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import * as THREE from "three";
 import { characterAppearance } from "./characterAppearance";
+import { armPose } from "./workoutProofModel.js";
 
 function disposeGroup(group) {
   const geometries = new Set(),
@@ -16,7 +17,7 @@ function disposeGroup(group) {
   materials.forEach((m) => m.dispose());
 }
 
-function createFigure(p) {
+function createFigure(p, pose = "idle") {
   const root = new THREE.Group();
   const geometry = new THREE.SphereGeometry(1, 28, 20);
   const skin = new THREE.MeshStandardMaterial({
@@ -167,9 +168,7 @@ function createFigure(p) {
   root.add(belt);
   const fists = [];
   for (const side of [-1, 1]) {
-    const shoulder = [side * (chest * 0.96), 2.04, 0];
-    const elbow = [side * (chest + 0.08 + 0.1 * g), 1.67, 0.005];
-    const hand = [side * (chest + 0.1 + 0.18 * g), 1.29, 0.14 * g];
+    const { shoulder, elbow, hand } = armPose(p, side, pose);
     limb(shoulder, elbow, p.arm);
     limb(elbow, hand, p.arm * 0.8);
     if (g > 0.015)
@@ -209,8 +208,12 @@ function createFigure(p) {
     );
     if (p.wraps)
       limb(
-        [hand[0] - side * 0.025, hand[1] + 0.1, hand[2] * 0.8],
-        [hand[0] - side * 0.05, hand[1] + 0.22, hand[2] * 0.5],
+        pose === "idle"
+          ? [hand[0] - side * 0.025, hand[1] + 0.1, hand[2] * 0.8]
+          : hand.map((v, i) => v + (elbow[i] - v) * 0.2),
+        pose === "idle"
+          ? [hand[0] - side * 0.05, hand[1] + 0.22, hand[2] * 0.5]
+          : hand.map((v, i) => v + (elbow[i] - v) * 0.5),
         p.arm * 0.84,
         navy,
       );
@@ -536,6 +539,51 @@ function createEnergy(p) {
       bolts.push(line);
     }
   return { root, rings, bolts, flame, particles };
+}
+
+// Render and copy in the same frame; no persistent WebGL buffer or animation loop.
+export function characterPortrait(level, pose, width = 960, height = 820) {
+  const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
+  const scene = new THREE.Scene();
+  try {
+    renderer.setSize(width, height);
+    renderer.setPixelRatio(1);
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+    const p = characterAppearance(level);
+    const figure = createFigure(p, pose);
+    figure.root.rotation.y = pose === "archer" ? -0.25 : -0.08;
+    const energy = createEnergy(p);
+    if (energy.flame) energy.flame.material.uniforms.time.value = 2;
+    scene.add(figure.root, energy.root);
+    scene.add(new THREE.HemisphereLight(0xfff5e6, 0x695c70, 2.1));
+    const light = new THREE.DirectionalLight(0xffffff, 2.9);
+    light.position.set(-3, 6, 5);
+    scene.add(light);
+    const rim = new THREE.DirectionalLight(0xffcf85, 2);
+    rim.position.set(3, 3, -2);
+    scene.add(rim);
+    const box = new THREE.Box3().setFromObject(figure.root);
+    const size = box.getSize(new THREE.Vector3());
+    const center = box.getCenter(new THREE.Vector3());
+    const camera = new THREE.PerspectiveCamera(31, width / height, 0.1, 100);
+    const distance =
+      Math.max(3.7, size.y * 1.18, (size.x / camera.aspect) * 1.18) /
+      (2 * Math.tan(THREE.MathUtils.degToRad(15.5)));
+    camera.position.set(0, center.y + 0.3, distance + size.z / 2);
+    camera.lookAt(0, center.y, 0);
+    renderer.render(scene, camera);
+    const copy = document.createElement("canvas");
+    copy.width = width;
+    copy.height = height;
+    const context = copy.getContext("2d");
+    if (!context) throw new Error("이미지를 만들 수 없습니다.");
+    context.drawImage(renderer.domElement, 0, 0);
+    return copy;
+  } finally {
+    disposeGroup(scene);
+    renderer.dispose();
+    renderer.forceContextLoss();
+  }
 }
 
 export default function Character({

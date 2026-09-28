@@ -20,8 +20,11 @@ import {
   LockKeyhole,
   RotateCcw,
   ArrowRight,
+  Camera,
 } from "lucide-react";
 import Character from "./Character";
+import WorkoutProofCard from "./WorkoutProofCard";
+import { workoutProof } from "./workoutProofModel";
 import useWorkoutAccount from "./cloud/useWorkoutAccount";
 import RankingPanel, {
   LoginScreen,
@@ -811,6 +814,7 @@ export default function App() {
     account,
   } = useWorkoutAccount();
   const [rankingUser, setRankingUser] = useState(null);
+  const [proof, setProof] = useState(null);
   const [today, setToday] = useState(dateKey()),
     [selected, setSelected] = useState(dateKey()),
     [month, setMonth] = useState(new Date()),
@@ -839,6 +843,7 @@ export default function App() {
     setSettings(false);
     setHelpOpen(false);
     setRankingUser(null);
+    setProof(null);
     setStageDetail(null);
     setDeleteOpen(false);
     setTab("home");
@@ -913,7 +918,7 @@ export default function App() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
   function save(e) {
-    e.preventDefault();
+    e?.preventDefault();
     try {
       if (EXERCISES.some(({ key }) => draft[key] === ""))
         throw new Error(
@@ -945,7 +950,19 @@ export default function App() {
               ? "운동 기록 저장 완료. 설정한 목표를 달성했습니다."
               : "운동 기록을 저장했습니다.",
         );
+        return nextData;
       }
+    } catch (e) {
+      setFormError(e.message);
+    }
+    return null;
+  }
+  function openProof() {
+    try {
+      const day = dateKey();
+      if (selected !== day) throw new Error("오늘 날짜를 선택해 주세요.");
+      const saved = dirty || !record ? save() : data;
+      if (saved) setProof(workoutProof(saved, day));
     } catch (e) {
       setFormError(e.message);
     }
@@ -1223,24 +1240,38 @@ export default function App() {
                         {formError}
                       </p>
                     )}
-                    <button
-                      className={`primary-button save-button ${isComplete(record) && !dirty ? "saved" : ""}`}
-                      type="submit"
-                      disabled={!!error || (!dirty && !!record)}
-                    >
-                      <Check size={18} />
-                      {!dirty && record
-                        ? "기록 저장 완료"
-                        : record
-                          ? "변경한 기록 저장"
-                          : "운동 기록 저장"}
-                      {dirty && (
-                        <span>
-                          {expDelta >= 0 ? "+" : ""}
-                          {number(expDelta)} EXP
-                        </span>
+                    <div className="workout-save-actions">
+                      <button
+                        className={`primary-button save-button ${isComplete(record) && !dirty ? "saved" : ""}`}
+                        type="submit"
+                        disabled={!!error || (!dirty && !!record)}
+                      >
+                        <Check size={18} />
+                        {!dirty && record
+                          ? "기록 저장 완료"
+                          : record
+                            ? "변경한 기록 저장"
+                            : "운동 기록 저장"}
+                        {dirty && (
+                          <span>
+                            {expDelta >= 0 ? "+" : ""}
+                            {number(expDelta)} EXP
+                          </span>
+                        )}
+                      </button>
+                      {selected === today && (
+                        <button
+                          type="button"
+                          className="proof-button"
+                          onClick={openProof}
+                          disabled={!!error || !hasWorkout(draft)}
+                          aria-haspopup="dialog"
+                        >
+                          <Camera size={19} />
+                          오운완
+                        </button>
                       )}
-                    </button>
+                    </div>
                     <div className="record-footer">
                       <span>
                         <ShieldCheck size={12} />
@@ -1379,6 +1410,11 @@ export default function App() {
         </Modal>
       )}
       {helpOpen && <HelpDialog onClose={() => setHelpOpen(false)} />}
+      {proof && (
+        <Modal title="오운완 인증" onClose={() => setProof(null)}>
+          <WorkoutProofCard proof={proof} />
+        </Modal>
+      )}
       {settings && (
         <SettingsPanel
           {...{ data, persist, notify, error, setError, storageKey, account }}
