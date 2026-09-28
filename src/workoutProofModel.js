@@ -38,15 +38,17 @@ export function workoutProof(data, day) {
   };
 }
 export function proofShareData(proof, file) {
-  const frame = "⬛".repeat(10);
+  const frame = "=============";
+  const icons = { pushups: "👊", squats: "🏋️", situps: "🔥", runningKm: "🏃" };
   return {
     text: [
       frame,
-      `${proof.name}.. 오늘의 훈련 완료..`,
+      `💪 ${proof.name}.. 오늘의 훈련 완료..`,
       proof.day,
       "",
       ...EXERCISES.map(
-        ({ key, label, unit }) => `${label} ${proof.counts[key]}${unit}`,
+        ({ key, label, unit }) =>
+          `${icons[key]} ${label} ${proof.counts[key]}${unit}`,
       ),
       "",
       `싸이따마훈련소 ${APP_SHARE_URL}`,

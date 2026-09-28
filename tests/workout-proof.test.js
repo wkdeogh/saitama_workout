@@ -58,9 +58,9 @@ test("file sharing includes all four counts and the canonical app link", () => {
   assert.deepEqual(Object.keys(payload).sort(), ["files", "text"]);
   assert.equal(payload.text.split(APP_SHARE_URL).length - 1, 1);
   const lines = payload.text.split("\n");
-  assert.match(lines[0], /^⬛+$/u);
+  assert.equal(lines[0], "=============");
   assert.equal(lines.at(-1), lines[0]);
-  assert.equal(lines[1], "대호.. 오늘의 훈련 완료..");
+  assert.equal(lines[1], "💪 대호.. 오늘의 훈련 완료..");
   assert.equal(lines[2], day);
   for (const value of ["50개", "30개", "0개", "2.5km", day])
     assert.ok(payload.text.includes(value));
