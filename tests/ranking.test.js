@@ -38,8 +38,8 @@ test("weekly EXP excludes previous weeks; lifetime exercise totals include them"
   let d = add(initialData(), "2026-09-20", { pushups: 100 });
   d = add(d, "2026-09-21", { squats: 50, situps: 25, runningKm: 2.5 });
   const summary = rankingSummary(d, day);
-  assert.equal(summary.totalExp, 200);
-  assert.equal(summary.weeklyExp, 100);
+  assert.equal(summary.totalExp, 225);
+  assert.equal(summary.weeklyExp, 125);
   assert.deepEqual(summary.totals, {
     pushups: 100,
     squats: 50,

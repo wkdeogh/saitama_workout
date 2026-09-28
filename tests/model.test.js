@@ -209,18 +209,19 @@ test("all four activities earn EXP, including exact tenths of a kilometer", () =
     { pushups: 50, squats: 50, situps: 50, runningKm: 5 },
     today,
   );
-  assert.equal(stats(d, today).total, 200);
+  assert.equal(stats(d, today).total, 250);
   assert.equal(stats(d, today).level, 3);
   for (const [km, exp] of [
-    [0.1, 1],
-    [0.3, 3],
-    [1.1, 11],
-    [5, 50],
+    [0.1, 2],
+    [0.3, 6],
+    [1.1, 22],
+    [5, 100],
+    [10, 200],
   ])
     assert.equal(recordExp({ ...emptyCounts(), runningKm: km }), exp);
   assert.equal(
     progression({ [today]: { ...emptyCounts(), runningKm: 10 } }, today).level,
-    2,
+    3,
   );
 });
 test("running validation allows tenths but rejects finer distances and malformed new fields", () => {
@@ -393,7 +394,7 @@ test("new defaults do not replace existing personal or historical goals", () => 
     today,
   );
   assert.equal(isComplete(fresh.records[today]), true);
-  assert.equal(recordExp(fresh.records[today]), 400);
+  assert.equal(recordExp(fresh.records[today]), 500);
 });
 
 test("legacy defaults upgrade once while preserving workouts and previous dates", () => {

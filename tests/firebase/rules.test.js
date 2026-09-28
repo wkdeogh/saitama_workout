@@ -170,3 +170,18 @@ test("identity mapping is inaccessible to all client providers", async () => {
     }
   }
 });
+
+test("running earns two EXP per tenth in rankings, including the weekly maximum", async () => {
+  const db = authed("runner");
+  await assertSucceeds(setDoc(doc(db, "accounts", "runner"), account()));
+  const ref = doc(db, "rankings", "runner");
+  for (const [km, exp] of [[0.1, 2], [0.3, 6], [5, 100], [10, 200]]) {
+    const value = { ...entry(), totals: { pushups: 0, squats: 0, situps: 0, runningKm: km }, totalExp: exp, weeklyExp: exp };
+    await assertSucceeds(setDoc(ref, value));
+    await assertFails(setDoc(ref, { ...value, totalExp: exp / 2, weeklyExp: exp / 2 }));
+  }
+  await assertSucceeds(setDoc(ref, {
+    ...entry(), totals: { pushups: 70000, squats: 70000, situps: 70000, runningKm: 7000 },
+    totalExp: 350000, weeklyExp: 350000, level: 1000,
+  }));
+});

@@ -134,7 +134,7 @@ export function HelpDialog({ onClose }) {
         <section>
           <h3>EXP와 캐릭터 성장</h3>
           <p>
-            푸쉬업·스쿼트·윗몸일으키기 1개 = 1 EXP, 달리기 0.1km = 1 EXP. 목표
+            푸쉬업·스쿼트·윗몸일으키기 1개 = 1 EXP, 달리기 0.1km = 2 EXP. 목표
             달성 여부와 관계없이 실제 운동량만큼 쌓입니다.
           </p>
           <p>
@@ -381,7 +381,7 @@ function WorkoutCard({ type, label, value, goal, onChange }) {
           <span>
             {goal > 0 ? `목표 ${goal}${unit}` : "선택 운동"}
             <br />
-            {running ? "0.1km" : "1개"}=1 EXP
+            {running ? "0.1km=2 EXP" : "1개=1 EXP"}
           </span>
         </div>
         <button
@@ -1294,7 +1294,7 @@ export default function App() {
                 </p>
                 <div className="growth-rules">
                   <span>푸쉬업 · 스쿼트 · 윗몸일으키기 1개 = 1 EXP</span>
-                  <span>달리기 0.1km = 1 EXP · 하루 여러 레벨 상승 가능</span>
+                  <span>달리기 0.1km = 2 EXP · 하루 여러 레벨 상승 가능</span>
                   <span>미기록 10일은 −10레벨 · 최저 1레벨</span>
                 </div>
                 <div className="stage-list">

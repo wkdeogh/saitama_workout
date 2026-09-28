@@ -29,8 +29,8 @@ service cloud.firestore {
         && request.resource.data.keys().hasOnly(['characterName','totalExp','weeklyExp','weekStart','level','calculatedOn','lastWorkout','totals','updatedAt'])
         && request.resource.data.characterName is string
         && request.resource.data.characterName.size() >= 1 && request.resource.data.characterName.size() <= 20
-        && whole(request.resource.data.totalExp,1600000000)
-        && whole(request.resource.data.weeklyExp,280000)
+        && whole(request.resource.data.totalExp,2000000000)
+        && whole(request.resource.data.weeklyExp,350000)
         && request.resource.data.weeklyExp <= request.resource.data.totalExp
         && whole(request.resource.data.level,1000) && request.resource.data.level >= 1
         && day(request.resource.data.weekStart) && day(request.resource.data.calculatedOn) && day(request.resource.data.lastWorkout)
@@ -42,7 +42,7 @@ service cloud.firestore {
         && whole(request.resource.data.totals.situps,400000000)
         && request.resource.data.totals.runningKm is number
         && request.resource.data.totals.runningKm >= 0 && request.resource.data.totals.runningKm <= 40000000
-        && request.resource.data.totalExp == request.resource.data.totals.pushups + request.resource.data.totals.squats + request.resource.data.totals.situps + int(request.resource.data.totals.runningKm * 10 + 0.5)
+        && request.resource.data.totalExp == request.resource.data.totals.pushups + request.resource.data.totals.squats + request.resource.data.totals.situps + int(request.resource.data.totals.runningKm * 10 + 0.5) * 2
         && request.resource.data.updatedAt == request.time;
     }
     match /{document=**} { allow read, write: if false; }

@@ -29,7 +29,7 @@ export const recordExp = (record) =>
     : (Number(record.pushups) || 0) +
       (Number(record.squats) || 0) +
       (Number(record.situps) || 0) +
-      Math.round((Number(record.runningKm) || 0) * 10);
+      Math.round((Number(record.runningKm) || 0) * 10) * 2;
 export const STAGES = [
   {
     name: "평범한 빡빡이",
