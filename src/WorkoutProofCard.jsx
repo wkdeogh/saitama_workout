@@ -40,7 +40,7 @@ export async function createProofImage(proof, pose) {
   ctx.fillRect(0, 0, 1080, 198);
   ctx.fillStyle = "#ffdf48";
   ctx.fillRect(0, 0, 16, 198);
-  text(ctx, "오운완", 54, 140, 108, "#ffdf48", 900);
+  text(ctx, "오늘의 훈련 완료", 54, 135, 68, "#ffdf48", 900, 650);
   ctx.textAlign = "right";
   text(ctx, proof.day.replaceAll("-", "."), 1026, 84, 38, "#ffffff");
   text(ctx, "싸이따마훈련소", 1026, 141, 32, "#ffffff", 600);
