@@ -282,7 +282,6 @@ export default function RankingPanel({ account, data, onUser, friends }) {
       >
         <div>
           <strong>{data.characterName}</strong>
-          <span>{friends?.me ? `#${friends.me.tag}` : "내 캐릭터"}</span>
         </div>
         <div className="my-ranking-score">
           <b>LV. {summary.level}</b>
@@ -334,9 +333,6 @@ export default function RankingPanel({ account, data, onUser, friends }) {
                       {entry.characterName}
                       {entry.uid === account.user.uid && <em>나</em>}
                     </strong>
-                    {entry.tag && (
-                      <small className="rank-tag">#{entry.tag}</small>
-                    )}
                   </span>
                   <span className="rank-score">
                     <strong>LV. {displayedLevel(entry)}</strong>

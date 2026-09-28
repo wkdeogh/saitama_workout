@@ -44,6 +44,17 @@ test("existing accounts receive stable unique tags, including concurrent setup a
   const result = await service.search(b.uid, "바뀐");
   assert.equal(result[0].tag, a.tag);
   assert.equal((await service.search(b.uid, "#" + a.tag))[0].uid, a.uid);
+  assert.ok(
+    (await service.search(b.uid, "#" + a.tag.slice(0, 6).toLowerCase())).some(
+      (p) => p.uid === a.uid,
+    ),
+  );
+  assert.ok(
+    (await service.search(a.uid, a.tag.slice(0, 6))).every(
+      (p) => p.uid !== a.uid,
+    ),
+  );
+  assert.deepEqual(await service.search(b.uid, "ST-"), []);
 });
 test("duplicate and opposing requests cannot duplicate pushes or bypass recipient acceptance", async () => {
   const a = await user("sender"),

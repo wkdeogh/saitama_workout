@@ -1189,10 +1189,6 @@ export default function App() {
           </div>
         </div>
         <footer className="page-footer">
-          <span>
-            <Zap size={12} />
-            계정 동기화
-          </span>
           <span>SAITAMA TRAINING © {new Date().getFullYear()}</span>
         </footer>
       </main>

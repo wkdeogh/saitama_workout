@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Search,
   UserPlus,
@@ -14,27 +14,46 @@ import { friendApi } from "./friendsClient";
 export default function FriendsPanel({ account, data, onUser, friends }) {
   const [section, setSection] = useState("search"),
     [query, setQuery] = useState(""),
+    [composing, setComposing] = useState(false),
     [results, setResults] = useState([]),
     [searched, setSearched] = useState(false),
     [searching, setSearching] = useState(false),
     [working, setWorking] = useState(""),
     [message, setMessage] = useState(""),
     [error, setError] = useState("");
-  const sequence = useRef(0);
-  async function search(e) {
-    e.preventDefault();
+  const sequence = useRef(0),
+    searchTimer = useRef(null);
+  const runSearch = useCallback(async (value) => {
     const ticket = ++sequence.current;
     setSearching(true);
     setError("");
     setSearched(true);
     try {
-      const result = await friendApi("search", { query });
+      const result = await friendApi("search", { query: value });
       if (ticket === sequence.current) setResults(result);
     } catch (e) {
       if (ticket === sequence.current) setError(e.message);
     } finally {
       if (ticket === sequence.current) setSearching(false);
     }
+  }, []);
+  useEffect(() => {
+    setResults([]);
+    setSearched(false);
+    const value = query.trim();
+    setSearching(!!value && !composing && section === "search");
+    if (value && !composing && section === "search")
+      searchTimer.current = setTimeout(() => runSearch(value), 300);
+    return () => {
+      clearTimeout(searchTimer.current);
+      sequence.current++;
+    };
+  }, [query, composing, section, account.user.uid, runSearch]);
+  function search(e) {
+    e.preventDefault();
+    if (composing || !query.trim()) return;
+    clearTimeout(searchTimer.current);
+    runSearch(query.trim());
   }
   async function action(key, endpoint, body, success) {
     setWorking(key);
@@ -150,12 +169,26 @@ export default function FriendsPanel({ account, data, onUser, friends }) {
                 maxLength={32}
                 placeholder="닉네임 또는 #ST-계정태그"
                 autoComplete="off"
+                aria-controls="friend-search-results"
+                onCompositionStart={() => {
+                  sequence.current++;
+                  setComposing(true);
+                }}
+                onCompositionEnd={() => setComposing(false)}
+                onKeyDown={(e) => {
+                  if (
+                    e.key === "Enter" &&
+                    (composing || e.nativeEvent.isComposing)
+                  )
+                    e.preventDefault();
+                }}
                 onChange={(e) => {
                   setQuery(e.target.value);
                   sequence.current++;
                   setResults([]);
                   setSearching(false);
                   setSearched(false);
+                  setError("");
                 }}
               />
               <button
@@ -168,12 +201,24 @@ export default function FriendsPanel({ account, data, onUser, friends }) {
               </button>
             </form>
             <p className="hint">
-              닉네임의 앞부분 또는 전체 계정 태그로 검색하세요.
+              닉네임이나 계정 태그를 입력하면 자동으로 검색됩니다.
             </p>
             {searched && !searching && !error && results.length === 0 && (
               <p className="ranking-empty">검색 결과가 없습니다.</p>
             )}
-            <ul className="friend-list">
+            <p className="sr-only" role="status">
+              {searching
+                ? "검색 중"
+                : searched
+                  ? `${results.length}명 검색됨`
+                  : ""}
+            </p>
+            <ul
+              id="friend-search-results"
+              className="friend-list"
+              aria-label="친구 검색 결과"
+              aria-busy={searching}
+            >
               {results.map((user) => (
                 <li key={user.uid}>
                   {identity(user)}

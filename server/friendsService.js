@@ -109,13 +109,16 @@ export function friendsService(db, messaging) {
     const own = await ensureProfile(uid);
     let profiles;
     if (/^#?st-/i.test(value)) {
-      try {
-        const id = await resolveTag(value);
-        profiles = [profileView(await profileRef(id).get())];
-      } catch (error) {
-        if (error instanceof FriendError) return [];
-        throw error;
-      }
+      const prefix = value.replace(/^#/, "").toUpperCase();
+      if (!/^ST-[A-HJ-NP-Z2-9]{1,8}$/.test(prefix)) return [];
+      const result = await db
+        .collection("socialProfiles")
+        .orderBy("tag")
+        .startAt(prefix)
+        .endAt(prefix + "\uf8ff")
+        .limit(20)
+        .get();
+      profiles = result.docs.map(profileView);
     } else {
       const result = await db
         .collection("socialProfiles")
