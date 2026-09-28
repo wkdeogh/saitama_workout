@@ -7,6 +7,7 @@ import {
   UserRound,
   ChevronRight,
 } from "lucide-react";
+import { friendApi } from "./friendsClient";
 import { fetchRanking, cloudError } from "./firebaseClient";
 import {
   displayedLevel,
@@ -167,7 +168,8 @@ export function AccountControls({ account, showLink = false }) {
     </section>
   );
 }
-export default function RankingPanel({ account, data, onUser }) {
+export default function RankingPanel({ account, data, onUser, friends }) {
+  const [scope, setScope] = useState("all");
   const [period, setPeriod] = useState("all"),
     [entries, setEntries] = useState([]),
     [loading, setLoading] = useState(false);
@@ -182,7 +184,19 @@ export default function RankingPanel({ account, data, onUser }) {
     setLoading(true);
     setError("");
     try {
-      const rows = await fetchRanking(period);
+      const rows =
+        scope === "friends"
+          ? await friendApi("ranking", { period })
+          : await fetchRanking(period);
+      if (scope === "all") {
+        const labels = await friendApi("labels", {
+          ids: rows.map((row) => row.uid),
+        });
+        const tags = new Map(labels.map((p) => [p.uid, p.tag]));
+        rows.forEach((row) => {
+          row.tag = tags.get(row.uid);
+        });
+      }
       if (ticket === sequence.current) {
         setEntries(rows);
         setUpdated(new Date());
@@ -201,7 +215,14 @@ export default function RankingPanel({ account, data, onUser }) {
     return () => {
       sequence.current++;
     };
-  }, [period, week, account.user.uid, account.lastSync]);
+  }, [
+    period,
+    scope,
+    week,
+    account.user.uid,
+    account.lastSync,
+    friends?.revision,
+  ]);
   return (
     <section className="panel ranking-panel">
       <div className="section-heading">
@@ -210,6 +231,17 @@ export default function RankingPanel({ account, data, onUser }) {
           <h2>훈련 랭킹</h2>
         </div>
         <Trophy size={24} />
+      </div>
+      <div className="ranking-scope" role="group" aria-label="랭킹 범위">
+        <button aria-pressed={scope === "all"} onClick={() => setScope("all")}>
+          전체 랭킹
+        </button>
+        <button
+          aria-pressed={scope === "friends"}
+          onClick={() => setScope("friends")}
+        >
+          친구 랭킹
+        </button>
       </div>
       <div className="ranking-period" role="group" aria-label="랭킹 기간">
         <button
@@ -244,11 +276,13 @@ export default function RankingPanel({ account, data, onUser }) {
         className="my-ranking"
         aria-haspopup="dialog"
         aria-label={`${data.characterName} 내 캐릭터 상세 보기`}
-        onClick={() => onUser({ ...summary, uid: account.user.uid })}
+        onClick={() =>
+          onUser({ ...summary, uid: account.user.uid, tag: friends?.me?.tag })
+        }
       >
         <div>
           <strong>{data.characterName}</strong>
-          <span>내 캐릭터</span>
+          <span>{friends?.me ? `#${friends.me.tag}` : "내 캐릭터"}</span>
         </div>
         <div className="my-ranking-score">
           <b>LV. {summary.level}</b>
@@ -300,6 +334,9 @@ export default function RankingPanel({ account, data, onUser }) {
                       {entry.characterName}
                       {entry.uid === account.user.uid && <em>나</em>}
                     </strong>
+                    {entry.tag && (
+                      <small className="rank-tag">#{entry.tag}</small>
+                    )}
                   </span>
                   <span className="rank-score">
                     <strong>LV. {displayedLevel(entry)}</strong>
@@ -317,7 +354,8 @@ export default function RankingPanel({ account, data, onUser }) {
         </div>
       )}
       <p className="hint ranking-footnote">
-        상위 50명 · 같은 EXP는 공동 순위
+        {scope === "friends" ? "나와 친구들의 순위" : "상위 50명"} · 같은 EXP는
+        공동 순위
         {updated
           ? ` · ${updated.toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit" })} 갱신`
           : ""}

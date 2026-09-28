@@ -26,10 +26,9 @@ import Character from "./Character";
 import WorkoutProofCard from "./WorkoutProofCard";
 import { workoutProof } from "./workoutProofModel";
 import useWorkoutAccount from "./cloud/useWorkoutAccount";
-import RankingPanel, {
-  LoginScreen,
-  AccountControls,
-} from "./cloud/RankingPanel";
+import FriendsPanel from "./cloud/FriendsPanel";
+import useFriends from "./cloud/useFriends";
+import { LoginScreen, AccountControls } from "./cloud/RankingPanel";
 import { displayedLevel } from "./cloud/rankingModel";
 import { characterAppearance, VISUAL_UNLOCKS } from "./characterAppearance";
 import {
@@ -147,11 +146,16 @@ export function HelpDialog({ onClose }) {
           </p>
         </section>
         <section>
-          <h3>랭킹</h3>
+          <h3>친구와 랭킹</h3>
           <p>
             이름 설정 후 자동 등록됩니다. 누적·주간 EXP 기준 상위 50명을
             표시하며 같은 EXP는 공동 순위입니다. 주간은 한국 시간 월요일
             00시부터 계산합니다.
+          </p>
+          <p>
+            친구 탭에서 닉네임 앞부분 또는 계정 태그로 검색하고 요청을 보낼 수
+            있습니다. 받은 요청을 수락하면 친구 랭킹에 함께 표시됩니다. 친구
+            요청 알림은 ‘알림 켜기’에서 허용하세요.
           </p>
           <p>
             사용자나 내 캐릭터 카드를 누르면 캐릭터·레벨·종목별 누적 운동량을 볼
@@ -252,6 +256,7 @@ function RankingUserDialog({ entry, onClose }) {
   return (
     <Modal title={entry.characterName} onClose={onClose}>
       <p className="ranking-user-level">LV. {level}</p>
+      {entry.tag && <p className="friend-profile-tag">#{entry.tag}</p>}
       <div
         className="stage-reveal character-stage character-evolved stage-unlocked"
         data-powered={appearance.aura}
@@ -813,6 +818,7 @@ export default function App() {
     storageKey,
     account,
   } = useWorkoutAccount();
+  const friends = useFriends(account);
   const [rankingUser, setRankingUser] = useState(null);
   const [proof, setProof] = useState(null);
   const [today, setToday] = useState(dateKey()),
@@ -850,6 +856,29 @@ export default function App() {
     setSelected(dateKey());
     setDraft(emptyCounts());
   }, [account.user?.uid]);
+  useEffect(() => {
+    if (!account.user || !account.ready) return;
+    const open = () => {
+      setTab("ranking");
+      setStageDetail(null);
+    };
+    if (new URLSearchParams(window.location.search).get("view") === "friends") {
+      open();
+      const url = new URL(window.location.href);
+      url.searchParams.delete("view");
+      window.history.replaceState(
+        null,
+        "",
+        url.pathname + url.search + url.hash,
+      );
+    }
+    const handler = (event) => {
+      if (event.data?.type === "OPEN_FRIENDS") open();
+    };
+    navigator.serviceWorker?.addEventListener("message", handler);
+    return () =>
+      navigator.serviceWorker?.removeEventListener("message", handler);
+  }, [account.user?.uid, account.ready]);
   function notify(text) {
     clearTimeout(toastTimer.current);
     setToast(text);
@@ -971,7 +1000,7 @@ export default function App() {
     ["home", Dumbbell, "훈련소"],
     ["calendar", CalendarDays, "운동 기록"],
     ["growth", Sparkles, "성장 도감"],
-    ["ranking", Trophy, "랭킹"],
+    ["ranking", Trophy, "친구"],
   ];
   if (!account.user || !account.ready) return <LoginScreen account={account} />;
   return (
@@ -999,6 +1028,14 @@ export default function App() {
               >
                 <Icon size={17} />
                 {label}
+                {id === "ranking" && friends.pending > 0 && (
+                  <span
+                    className="friend-badge"
+                    aria-label={`${friends.pending}개 친구 요청`}
+                  >
+                    {friends.pending}
+                  </span>
+                )}
               </button>
             ))}
           </nav>
@@ -1032,7 +1069,7 @@ export default function App() {
               {tab === "growth"
                 ? "캐릭터 성장"
                 : tab === "ranking"
-                  ? "랭킹"
+                  ? "친구"
                   : tab === "calendar"
                     ? "운동 기록"
                     : "훈련소"}
@@ -1144,7 +1181,8 @@ export default function App() {
           )}
           <div className="content-column">
             {tab === "ranking" && (
-              <RankingPanel
+              <FriendsPanel
+                friends={friends}
                 account={account}
                 data={data}
                 onUser={setRankingUser}
@@ -1379,6 +1417,14 @@ export default function App() {
           >
             <Icon size={20} />
             <span>{label}</span>
+            {id === "ranking" && friends.pending > 0 && (
+              <span
+                className="friend-badge"
+                aria-label={`${friends.pending}개 친구 요청`}
+              >
+                {friends.pending}
+              </span>
+            )}
           </button>
         ))}
       </nav>

@@ -175,13 +175,54 @@ test("running earns two EXP per tenth in rankings, including the weekly maximum"
   const db = authed("runner");
   await assertSucceeds(setDoc(doc(db, "accounts", "runner"), account()));
   const ref = doc(db, "rankings", "runner");
-  for (const [km, exp] of [[0.1, 2], [0.3, 6], [5, 100], [10, 200]]) {
-    const value = { ...entry(), totals: { pushups: 0, squats: 0, situps: 0, runningKm: km }, totalExp: exp, weeklyExp: exp };
+  for (const [km, exp] of [
+    [0.1, 2],
+    [0.3, 6],
+    [5, 100],
+    [10, 200],
+  ]) {
+    const value = {
+      ...entry(),
+      totals: { pushups: 0, squats: 0, situps: 0, runningKm: km },
+      totalExp: exp,
+      weeklyExp: exp,
+    };
     await assertSucceeds(setDoc(ref, value));
-    await assertFails(setDoc(ref, { ...value, totalExp: exp / 2, weeklyExp: exp / 2 }));
+    await assertFails(
+      setDoc(ref, { ...value, totalExp: exp / 2, weeklyExp: exp / 2 }),
+    );
   }
-  await assertSucceeds(setDoc(ref, {
-    ...entry(), totals: { pushups: 70000, squats: 70000, situps: 70000, runningKm: 7000 },
-    totalExp: 350000, weeklyExp: 350000, level: 1000,
-  }));
+  await assertSucceeds(
+    setDoc(ref, {
+      ...entry(),
+      totals: { pushups: 70000, squats: 70000, situps: 70000, runningKm: 7000 },
+      totalExp: 350000,
+      weeklyExp: 350000,
+      level: 1000,
+    }),
+  );
+});
+
+test("friend inbox belongs to its recipient and social identities are server controlled", async () => {
+  await env.withSecurityRulesDisabled(async (context) => {
+    await setDoc(doc(context.firestore(), "friendInbox", "owner"), {
+      pending: 1,
+    });
+  });
+  await assertSucceeds(getDoc(doc(authed("owner"), "friendInbox", "owner")));
+  await assertFails(getDoc(doc(authed("other"), "friendInbox", "owner")));
+  await assertFails(
+    setDoc(doc(authed("owner"), "friendInbox", "owner"), { pending: 0 }),
+  );
+  for (const path of [
+    "socialProfiles/owner",
+    "socialTags/ST-ABCDEFGH",
+    "friendRequests/request",
+    "friendLists/owner",
+    "friendCooldowns/pair",
+    "pushDevices/token",
+  ]) {
+    await assertFails(getDoc(doc(authed("owner"), path)));
+    await assertFails(setDoc(doc(authed("owner"), path), { uid: "owner" }));
+  }
 });

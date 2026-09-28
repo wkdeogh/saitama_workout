@@ -9,7 +9,7 @@
     "preview": "vite preview --host 0.0.0.0",
     "test": "node --test tests/*.test.js",
     "check": "npm test && npm run build",
-    "test:rules": "firebase emulators:exec --project demo-saitama --only firestore 'node --test tests/firebase/rules.test.js'",
+    "test:rules": "firebase emulators:exec --project demo-saitama --only firestore 'node --test tests/firebase/*.test.js'",
     "emulators": "firebase emulators:start --project demo-saitama --only auth,firestore"
   },
   "dependencies": {

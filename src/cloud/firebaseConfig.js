@@ -1,5 +1,6 @@
 // Public web-app configuration; Firestore rules protect access, not this config.
 export const firebaseConfig = {
+  messagingSenderId: "1093654679193",
   apiKey:
     import.meta.env.VITE_FIREBASE_API_KEY ||
     "AIzaSyAIJsfzZLBTYTKoPcf__wyVTX30q84XC0Y",

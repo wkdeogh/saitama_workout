@@ -45,6 +45,7 @@ service cloud.firestore {
         && request.resource.data.totalExp == request.resource.data.totals.pushups + request.resource.data.totals.squats + request.resource.data.totals.situps + int(request.resource.data.totals.runningKm * 10 + 0.5) * 2
         && request.resource.data.updatedAt == request.time;
     }
+    match /friendInbox/{uid} { allow get: if owner(uid); allow list, write: if false; }
     match /{document=**} { allow read, write: if false; }
   }
 }

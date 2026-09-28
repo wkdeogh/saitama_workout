@@ -10,6 +10,7 @@ import {
   firebaseConfigured,
 } from "./firebaseClient";
 import { mergeChanges, needsAccountSync } from "./rankingModel";
+import { disablePush, setPushIdentity } from "./pushClient";
 import { kakaoStatus, startKakao, finishKakao } from "./kakaoClient";
 
 export const accountKey = (uid) =>
@@ -178,6 +179,7 @@ export default function useWorkoutAccount() {
   useEffect(
     () =>
       observeAccount(async (account) => {
+        setPushIdentity(null).catch(() => {});
         const ticket = ++generation.current;
         readyRef.current = false;
         setReady(false);
@@ -277,7 +279,11 @@ export default function useWorkoutAccount() {
   async function logout() {
     setMessage("");
     try {
-      await logoutGoogle();
+      try {
+        await disablePush({ forget: true });
+      } finally {
+        await logoutGoogle();
+      }
     } catch (error) {
       setMessage(cloudError(error));
     }

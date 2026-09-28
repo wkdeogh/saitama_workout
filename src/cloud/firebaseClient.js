@@ -11,6 +11,7 @@ import {
   getFirestore,
   doc,
   getDocFromServer,
+  onSnapshot,
   getDocsFromServer,
   query,
   collection,
@@ -39,7 +40,14 @@ if (emulator && app) {
   connectAuthEmulator(auth, "http://127.0.0.1:9099", { disableWarnings: true });
   connectFirestoreEmulator(db, "127.0.0.1", 8080);
 }
-export { firebaseConfigured, auth };
+export { firebaseConfigured, auth, app };
+export function observeFriendInbox(uid, listener, onError) {
+  return onSnapshot(
+    doc(db, "friendInbox", uid),
+    (snapshot) => listener(snapshot.data() || { pending: 0 }),
+    onError,
+  );
+}
 export function observeAccount(listener) {
   return auth ? onAuthStateChanged(auth, listener) : (listener(null), () => {});
 }

@@ -3,7 +3,7 @@ import { getAuth } from "firebase-admin/auth";
 import { getFirestore, FieldValue } from "firebase-admin/firestore";
 import { AuthError } from "./kakaoAuth.js";
 
-export function getServices() {
+export function getAdminApp() {
   let app = getApps().find((a) => a.name === "kakao-server");
   if (!app) {
     const account = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_JSON);
@@ -11,6 +11,11 @@ export function getServices() {
       throw new Error("Invalid Firebase project");
     app = initializeApp({ credential: cert(account) }, "kakao-server");
   }
+  return app;
+}
+
+export function getServices() {
+  const app = getAdminApp();
   const auth = getAuth(app),
     db = getFirestore(app);
   return {
