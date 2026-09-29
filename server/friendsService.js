@@ -15,6 +15,7 @@ import {
   rankedEntries,
 } from "../src/cloud/rankingModel.js";
 import { parseBackup } from "../src/model.js";
+import { dailyActivity } from "../src/cloud/dailyActivity.js";
 
 const stamp = () => FieldValue.serverTimestamp();
 const profileView = (snap) =>
@@ -306,13 +307,18 @@ export function friendsService(db, messaging) {
     const profiles = await db.getAll(...ids.map(profileRef));
     const tags = new Map(profiles.map((p) => [p.id, p.data()?.tag]));
     const field = period === "week" ? "weeklyExp" : "totalExp";
+    const day = koreaDay();
     const rows = accounts
       .filter((a) => a.exists && a.data().participating)
-      .map((a) => ({
-        uid: a.id,
-        tag: tags.get(a.id),
-        ...rankingSummary(parseBackup(a.data().payload, koreaDay())),
-      }))
+      .map((a) => {
+        const data = parseBackup(a.data().payload, day);
+        return {
+          uid: a.id,
+          tag: tags.get(a.id),
+          ...rankingSummary(data, day),
+          ...dailyActivity(data, day),
+        };
+      })
       .filter((r) => r.characterName);
     rows.sort((a, b) => b[field] - a[field] || a.uid.localeCompare(b.uid));
     return rankedEntries(rows, field);
@@ -364,8 +370,21 @@ export function friendsService(db, messaging) {
     )
       throw new FriendError("사용자 목록을 확인해 주세요.");
     if (!ids.length) return [];
-    return (await db.getAll(...[...new Set(ids)].map(profileRef)))
-      .map(profileView)
+    const unique = [...new Set(ids)],
+      day = koreaDay();
+    const [profiles, accounts] = await Promise.all([
+      db.getAll(...unique.map(profileRef)),
+      db.getAll(...unique.map((id) => db.doc(`accounts/${id}`))),
+    ]);
+    return profiles
+      .map((profile, index) => {
+        const identity = profileView(profile),
+          account = accounts[index];
+        if (!identity || !account.exists || !account.data().participating)
+          return null;
+        const data = parseBackup(account.data().payload, day);
+        return { ...identity, ...dailyActivity(data, day) };
+      })
       .filter(Boolean);
   }
   return {

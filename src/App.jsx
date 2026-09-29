@@ -30,6 +30,8 @@ import FriendsPanel from "./cloud/FriendsPanel";
 import useFriends from "./cloud/useFriends";
 import { LoginScreen, AccountControls } from "./cloud/RankingPanel";
 import { displayedLevel } from "./cloud/rankingModel";
+import { displayedDailyActivity, dailyExpColor } from "./cloud/dailyActivity";
+import useKoreaDay from "./cloud/useKoreaDay";
 import { characterAppearance, VISUAL_UNLOCKS } from "./characterAppearance";
 import {
   MAX_NAME_LENGTH,
@@ -141,7 +143,9 @@ function StageDialog({ stage, currentLevel, onClose }) {
   );
 }
 function RankingUserDialog({ entry, onClose }) {
-  const level = displayedLevel(entry),
+  const day = useKoreaDay();
+  const { todayCounts, todayExp } = displayedDailyActivity(entry, day);
+  const level = displayedLevel(entry, day),
     appearance = characterAppearance(level);
   return (
     <Modal title={entry.characterName} onClose={onClose}>
@@ -164,6 +168,13 @@ function RankingUserDialog({ entry, onClose }) {
               {number(entry.totals[key])}
               <small>{unit}</small>
             </strong>
+            <small
+              className="daily-count"
+              style={{ color: dailyExpColor(todayExp) }}
+            >
+              오늘 ▲ {number(todayCounts[key])}
+              {unit}
+            </small>
           </div>
         ))}
       </div>

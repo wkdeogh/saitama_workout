@@ -124,3 +124,18 @@ test("push failure preserves requests and token deletion cannot affect another o
   assert.equal(result.push.failed, 1);
   assert.equal((await service.state(b.uid)).incoming.length, 1);
 });
+
+test("public ranking activity is calculated from today's saved account records only", async () => {
+  const a = await user("daily", "오늘훈련", 2.5);
+  const labels = await service.labels(a.uid, [a.uid]);
+  assert.equal(labels[0].activityDay, koreaDay());
+  assert.equal(labels[0].todayExp, 50);
+  assert.deepEqual(labels[0].todayCounts, { ...emptyCounts(), runningKm: 2.5 });
+  assert.equal(labels[0].payload, undefined);
+  assert.equal(labels[0].records, undefined);
+  const rankings = await service.ranking(a.uid, "all");
+  assert.equal(rankings[0].todayExp, 50);
+  assert.equal(rankings[0].todayCounts.runningKm, 2.5);
+  await user("daily", "오늘훈련", 0.1);
+  assert.equal((await service.labels(a.uid, [a.uid]))[0].todayExp, 2);
+});

@@ -3358,3 +3358,20 @@ main {
   margin-left: 34px;
   margin-top: -3px;
 }
+
+.rank-user .daily-exp,
+.my-ranking .daily-exp {
+  display: block;
+  margin-top: 4px;
+  font-size: 11px;
+  line-height: 1.5;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.ranking-user-totals .daily-count {
+  display: block;
+  margin-top: 5px;
+  font-size: 11px;
+  line-height: 1.5;
+  font-weight: 700;
+}

@@ -9,12 +9,28 @@ import {
 } from "lucide-react";
 import { friendApi } from "./friendsClient";
 import { fetchRanking, cloudError } from "./firebaseClient";
+import { displayedLevel, rankingSummary, weekStart } from "./rankingModel";
+
 import {
-  displayedLevel,
-  rankingSummary,
-  weekStart,
-  koreaDay,
-} from "./rankingModel";
+  dailyActivity,
+  displayedDailyActivity,
+  dailyExpColor,
+} from "./dailyActivity";
+import useKoreaDay from "./useKoreaDay";
+
+function DailyExp({ entry, day, dark = false }) {
+  const { todayExp } = displayedDailyActivity(entry, day);
+  return (
+    <span
+      className="daily-exp"
+      style={{ color: dailyExpColor(todayExp, dark) }}
+      aria-label={`오늘 획득 ${todayExp.toLocaleString("ko-KR")} EXP`}
+      title="오늘 획득 EXP · 한국 시간 기준"
+    >
+      ▲ {todayExp.toLocaleString("ko-KR")} EXP
+    </span>
+  );
+}
 
 export function GoogleLoginButton({ onClick, disabled }) {
   return (
@@ -97,7 +113,9 @@ export function LoginScreen({ account }) {
             {account.message}
           </p>
         )}
-        <small>캐릭터 이름·레벨·누적 운동량은 랭킹에 공개됩니다.</small>
+        <small>
+          캐릭터 이름·레벨·누적 운동량·오늘 운동량은 랭킹에 공개됩니다.
+        </small>
       </section>
     </main>
   );
@@ -180,9 +198,10 @@ export default function RankingPanel({ account, data, onUser, friends }) {
   const [error, setError] = useState(""),
     [updated, setUpdated] = useState(null);
   const sequence = useRef(0);
-  const summary = rankingSummary(data),
+  const day = useKoreaDay();
+  const summary = { ...rankingSummary(data, day), ...dailyActivity(data, day) },
     field = period === "week" ? "weeklyExp" : "totalExp";
-  const week = weekStart(koreaDay());
+  const week = weekStart(day);
   async function refresh() {
     const ticket = ++sequence.current;
     setLoading(true);
@@ -196,9 +215,16 @@ export default function RankingPanel({ account, data, onUser, friends }) {
         const labels = await friendApi("labels", {
           ids: rows.map((row) => row.uid),
         });
-        const tags = new Map(labels.map((p) => [p.uid, p.tag]));
+        const activities = new Map(labels.map((p) => [p.uid, p]));
         rows.forEach((row) => {
-          row.tag = tags.get(row.uid);
+          const activity = activities.get(row.uid);
+          if (activity)
+            Object.assign(row, {
+              tag: activity.tag,
+              activityDay: activity.activityDay,
+              todayCounts: activity.todayCounts,
+              todayExp: activity.todayExp,
+            });
         });
       }
       if (ticket === sequence.current) {
@@ -223,6 +249,7 @@ export default function RankingPanel({ account, data, onUser, friends }) {
     period,
     scope,
     week,
+    day,
     account.user.uid,
     account.lastSync,
     friends?.revision,
@@ -286,6 +313,7 @@ export default function RankingPanel({ account, data, onUser, friends }) {
       >
         <div>
           <strong>{data.characterName}</strong>
+          <DailyExp entry={summary} day={day} dark />
         </div>
         <div className="my-ranking-score">
           <b>LV. {summary.level}</b>
@@ -337,6 +365,7 @@ export default function RankingPanel({ account, data, onUser, friends }) {
                       {entry.characterName}
                       {entry.uid === account.user.uid && <em>나</em>}
                     </strong>
+                    <DailyExp entry={entry} day={day} />
                   </span>
                   <span className="rank-score">
                     <strong>LV. {displayedLevel(entry)}</strong>
