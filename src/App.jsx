@@ -478,17 +478,23 @@ function Calendar({ data, selected, onSelect, today, month, setMonth }) {
 function SettingsPanel({ data, persist, onClose, notify, error, account }) {
   const [isAdmin, setIsAdmin] = useState(false);
   const [adminOpen, setAdminOpen] = useState(false);
+  const [adminError, setAdminError] = useState("");
+  const [adminRetry, setAdminRetry] = useState(0);
   useEffect(() => {
     let active = true;
+    setIsAdmin(false);
+    setAdminError("");
     friendApi("admin-status")
       .then((result) => {
         if (active) setIsAdmin(result.allowed);
       })
-      .catch(() => {});
+      .catch((e) => {
+        if (active) setAdminError(e.message);
+      });
     return () => {
       active = false;
     };
-  }, [account.user?.uid]);
+  }, [account.user?.uid, adminRetry]);
   const [goals, setGoals] = useState(data.goals),
     [message, setMessage] = useState("");
   if (adminOpen && isAdmin)
@@ -506,6 +512,27 @@ function SettingsPanel({ data, persist, onClose, notify, error, account }) {
   return (
     <Modal title="훈련소 설정" onClose={onClose}>
       <AccountControls account={account} showLink />
+      {isAdmin && (
+        <section className="settings-section">
+          <button
+            className="secondary-button"
+            onClick={() => setAdminOpen(true)}
+          >
+            관리자 페이지
+          </button>
+        </section>
+      )}
+      {adminError && (
+        <div className="error-box" role="alert">
+          <p>관리자 권한을 확인하지 못했습니다. {adminError}</p>
+          <button
+            className="secondary-button"
+            onClick={() => setAdminRetry((n) => n + 1)}
+          >
+            권한 확인 다시 시도
+          </button>
+        </div>
+      )}
       {error && (
         <p className="error-box" role="alert">
           {error}
@@ -590,16 +617,6 @@ function SettingsPanel({ data, persist, onClose, notify, error, account }) {
         <p role="alert" className="error-box">
           {message}
         </p>
-      )}
-      {isAdmin && (
-        <section className="settings-section">
-          <button
-            className="secondary-button"
-            onClick={() => setAdminOpen(true)}
-          >
-            관리자 페이지
-          </button>
-        </section>
       )}
       <p className="settings-footer">
         <Zap size={14} />

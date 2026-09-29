@@ -15,16 +15,20 @@ import { FriendError } from "./friendsModel.js";
 
 export const FIRST_VIRTUAL_UID = "virtual-goguma-v1";
 export const ADMIN_EMAIL = "wkdeoghq@gmail.com";
-export function isAdministrator(claims) {
-  return (
-    claims?.email === ADMIN_EMAIL &&
-    claims.email_verified === true &&
-    claims.firebase?.sign_in_provider === "google.com"
+export function isAdministrator(claims, owner) {
+  const provider = claims?.firebase?.sign_in_provider;
+  return Boolean(
+    claims?.uid &&
+    owner?.uid === claims.uid &&
+    owner.email === ADMIN_EMAIL &&
+    owner.emailVerified === true &&
+    !owner.disabled &&
+    owner.providerData?.some(
+      (p) => p.providerId === "google.com" && p.email === ADMIN_EMAIL,
+    ) &&
+    (provider === "google.com" ||
+      (provider === "custom" && claims.kakao === true)),
   );
-}
-export function requireAdministrator(claims) {
-  if (!isAdministrator(claims))
-    throw new FriendError("관리자 계정으로 Google 로그인해 주세요.", 403);
 }
 // A stable draw makes retries and catch-up runs produce the same workout.
 const draw = (seed, key) =>

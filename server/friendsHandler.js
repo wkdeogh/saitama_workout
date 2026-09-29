@@ -1,9 +1,9 @@
 import { FriendError, requireProvider } from "./friendsModel.js";
-import { isAdministrator, requireAdministrator } from "./virtualModel.js";
 export function createFriendsHandler({
   verify,
   service,
   virtual,
+  administrator = async () => false,
   origin = "https://saitama-workout.vercel.app",
 }) {
   return async (req, res) => {
@@ -40,15 +40,20 @@ export function createFriendsHandler({
         JSON.stringify(body).length > 10000
       )
         throw new FriendError("요청이 너무 큽니다.");
-      if (
-        ["admin-list", "admin-update", "admin-seed"].includes(req.query.action)
-      )
-        requireAdministrator(decoded);
+      const adminAction = ["admin-list", "admin-update", "admin-seed"].includes(
+        req.query.action,
+      );
+      const allowed =
+        adminAction || req.query.action === "admin-status"
+          ? await administrator(decoded)
+          : false;
+      if (adminAction && !allowed)
+        throw new FriendError("관리자 계정만 접근할 수 있습니다.", 403);
       const api = service();
       let result;
       switch (req.query.action) {
         case "admin-status":
-          result = { allowed: isAdministrator(decoded) };
+          result = { allowed };
           break;
         case "admin-list":
           result = await virtual().list();

@@ -79,19 +79,41 @@ test("virtual schedule uses KST 21:00 and public views reset today/week without 
   assert.equal(view.seed, undefined);
   assert.equal(view.enabled, undefined);
 });
-test("only the verified owner using Google can administer; inputs reject invalid totals", () => {
-  const claims = {
+test("verified owner can administer using Google or linked Kakao; forged identities are denied", () => {
+  const owner = {
+    uid: "owner",
     email: "wkdeoghq@gmail.com",
-    email_verified: true,
-    firebase: { sign_in_provider: "google.com" },
+    emailVerified: true,
+    disabled: false,
+    providerData: [{ providerId: "google.com", email: "wkdeoghq@gmail.com" }],
   };
-  assert.equal(isAdministrator(claims), true);
+  const claims = { uid: "owner", firebase: { sign_in_provider: "google.com" } };
+  const kakao = {
+    uid: "owner",
+    firebase: { sign_in_provider: "custom" },
+    kakao: true,
+  };
+  assert.equal(isAdministrator(claims, owner), true);
+  assert.equal(isAdministrator(kakao, owner), true);
+  for (const invalid of [
+    {
+      ...kakao,
+      uid: "other",
+      email: "wkdeoghq@gmail.com",
+      email_verified: true,
+    },
+    { ...kakao, kakao: false },
+    { ...claims, firebase: { sign_in_provider: "anonymous" } },
+  ])
+    assert.equal(isAdministrator(invalid, owner), false);
   for (const change of [
     { email: "friend@gmail.com" },
-    { email_verified: false },
-    { firebase: { sign_in_provider: "custom" } },
+    { emailVerified: false },
+    { disabled: true },
+    { providerData: [] },
   ])
-    assert.equal(isAdministrator({ ...claims, ...change }), false);
+    assert.equal(isAdministrator(claims, { ...owner, ...change }), false);
+  assert.equal(isAdministrator(claims), false);
   const valid = {
     totals: emptyCounts(),
     totalExp: 100,
@@ -166,4 +188,47 @@ test("cron fails closed without secret or with wrong authentication; retries del
     assert.equal(res.statusCode, status);
   }
   assert.equal(called, 1);
+});
+
+test("admin status and editing use the same server identity resolver for linked Kakao", async () => {
+  const claims = {
+    uid: "owner",
+    firebase: { sign_in_provider: "custom" },
+    kakao: true,
+  };
+  let calls = 0;
+  const handler = createFriendsHandler({
+    verify: async () => claims,
+    administrator: async (token) => token.uid === "owner",
+    service: () => ({}),
+    virtual: () => ({
+      list: async () => {
+        calls++;
+        return [];
+      },
+    }),
+  });
+  for (const action of ["admin-status", "admin-list"]) {
+    const res = {
+      setHeader() {},
+      end(body) {
+        this.body = JSON.parse(body);
+      },
+    };
+    await handler(
+      {
+        method: "POST",
+        headers: {
+          origin: "https://saitama-workout.vercel.app",
+          authorization: "Bearer valid",
+        },
+        query: { action },
+        body: {},
+      },
+      res,
+    );
+    assert.equal(res.statusCode, 200);
+    if (action === "admin-status") assert.equal(res.body.allowed, true);
+  }
+  assert.equal(calls, 1);
 });
