@@ -588,7 +588,7 @@ function SettingsPanel({ data, persist, onClose, notify, error, account }) {
           </button>
         </div>
         <p className="hint">
-          윗몸일으키기·달리기 목표 0은 선택 운동입니다. EXP는 목표와 관계없이
+          기타운동·달리기 목표 0은 선택 운동입니다. EXP는 목표와 관계없이
           적립됩니다. 새 목표는 오늘부터 적용되며 과거 기록의 목표는 유지됩니다.
         </p>
         <button
@@ -1215,7 +1215,7 @@ export default function App() {
                   최대 1000레벨 · 미기록 5일째 −5레벨, 이후 매일 −1레벨
                 </p>
                 <div className="growth-rules">
-                  <span>푸쉬업 · 스쿼트 · 윗몸일으키기 1개 = 1 EXP</span>
+                  <span>푸쉬업 · 스쿼트 · 기타운동 1개 = 1 EXP</span>
                   <span>달리기 0.1km = 2 EXP · 하루 여러 레벨 상승 가능</span>
                   <span>미기록 10일은 −10레벨 · 최저 1레벨</span>
                 </div>

@@ -21,7 +21,7 @@ const pages = [
           {[
             ["푸쉬업", "100개"],
             ["스쿼트", "100개"],
-            ["윗몸일으키기", "100개"],
+            ["기타운동", "100개"],
             ["달리기", "10km"],
           ].map(([name, count]) => (
             <div key={name}>
@@ -57,7 +57,7 @@ const pages = [
         </div>
         <ul>
           <li>
-            푸쉬업·스쿼트·윗몸일으키기 <strong>1개 = 1 EXP</strong>
+            푸쉬업·스쿼트·기타운동 <strong>1개 = 1 EXP</strong>
           </li>
           <li>
             달리기 <strong>0.1km = 2 EXP</strong>

@@ -18,7 +18,7 @@ export const EXP_PER_LEVEL = 100;
 export const EXERCISES = [
   { key: "pushups", label: "푸쉬업", unit: "개", step: 1, max: MAX_REPS },
   { key: "squats", label: "스쿼트", unit: "개", step: 1, max: MAX_REPS },
-  { key: "situps", label: "윗몸일으키기", unit: "개", step: 1, max: MAX_REPS },
+  { key: "situps", label: "기타운동", unit: "개", step: 1, max: MAX_REPS },
   { key: "runningKm", label: "달리기", unit: "km", step: 0.1, max: 1000 },
 ];
 export const emptyCounts = () =>
