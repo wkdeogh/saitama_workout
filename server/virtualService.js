@@ -1,4 +1,8 @@
-import { MAX_VIRTUAL_TRAINEES } from "../src/cloud/virtualLimits.js";
+import {
+  MAX_VIRTUAL_TRAINEES,
+  DEFAULT_TRAINING_INTENSITY,
+  DEFAULT_PREFERRED_EXERCISES,
+} from "../src/cloud/virtualLimits.js";
 import { randomUUID } from "node:crypto";
 import { FieldValue } from "firebase-admin/firestore";
 import { emptyCounts, shiftDate, validateName } from "../src/model.js";
@@ -10,6 +14,9 @@ import {
   dueDay,
   publicVirtual,
   validateVirtualEdit,
+  validateTrainingIntensity,
+  validatePreferredExercises,
+  nextVirtualWorkoutDay,
 } from "./virtualModel.js";
 
 export function virtualService(db, now = () => new Date()) {
@@ -34,13 +41,25 @@ export function virtualService(db, now = () => new Date()) {
       )
     )
       throw new FriendError("추가 요청을 확인해 주세요.");
-    await insert(`virtual-${input.requestId.toLowerCase()}`, name, actor);
+    await insert(
+      `virtual-${input.requestId.toLowerCase()}`,
+      name,
+      actor,
+      validateTrainingIntensity(input.intensity),
+      validatePreferredExercises(input.preferredExercises),
+    );
     return list();
   }
   async function seed() {
     return insert(FIRST_VIRTUAL_UID, "고구마똥", null);
   }
-  async function insert(uid, name, actor) {
+  async function insert(
+    uid,
+    name,
+    actor,
+    intensity = DEFAULT_TRAINING_INTENSITY,
+    preferredExercises = DEFAULT_PREFERRED_EXERCISES,
+  ) {
     const day = koreaDay(now());
     for (let attempt = 0; attempt < 6; attempt++) {
       const tag = accountTag();
@@ -66,6 +85,8 @@ export function virtualService(db, now = () => new Date()) {
           tag,
           seed: randomUUID(),
           enabled: true,
+          intensity,
+          preferredExercises,
           createdDay: day,
           processedThrough: shiftDate(day, -1),
           calculatedOn: day,
@@ -80,6 +101,7 @@ export function virtualService(db, now = () => new Date()) {
           progressExp: 0,
           revision: 1,
         };
+        bot.nextWorkoutDay = nextVirtualWorkoutDay(bot, bot.processedThrough);
         tx.create(ref(bot.uid), bot);
         tx.create(tagRef, { uid: bot.uid });
         tx.create(db.doc(`socialProfiles/${bot.uid}`), {
@@ -93,7 +115,12 @@ export function virtualService(db, now = () => new Date()) {
           actor,
           target: bot.uid,
           action: "virtual-create",
-          after: { name: bot.name, enabled: bot.enabled },
+          after: {
+            name: bot.name,
+            enabled: bot.enabled,
+            intensity: bot.intensity,
+            preferredExercises: bot.preferredExercises,
+          },
           at: stamp(),
         });
         publish(tx, bot);
@@ -131,6 +158,9 @@ export function virtualService(db, now = () => new Date()) {
       return {
         ...publicVirtual(bot, koreaDay(now())),
         enabled: bot.enabled,
+        intensity: bot.intensity ?? DEFAULT_TRAINING_INTENSITY,
+        preferredExercises:
+          bot.preferredExercises ?? DEFAULT_PREFERRED_EXERCISES,
         revision: bot.revision,
         processedThrough: bot.processedThrough,
       };
@@ -161,6 +191,11 @@ export function virtualService(db, now = () => new Date()) {
         weeklyExp: Math.min(bot.weeklyExp, edited.totalExp),
         revision: bot.revision + 1,
       };
+      if (
+        edited.intensity !== (bot.intensity ?? DEFAULT_TRAINING_INTENSITY) ||
+        (!bot.enabled && edited.enabled)
+      )
+        next.nextWorkoutDay = nextVirtualWorkoutDay(next, bot.processedThrough);
       tx.set(ref(uid), next);
       publish(tx, next);
       tx.create(db.collection("adminAudit").doc(), {
@@ -172,6 +207,9 @@ export function virtualService(db, now = () => new Date()) {
           totalExp: bot.totalExp,
           totals: bot.totals,
           enabled: bot.enabled,
+          intensity: bot.intensity ?? DEFAULT_TRAINING_INTENSITY,
+          preferredExercises:
+            bot.preferredExercises ?? DEFAULT_PREFERRED_EXERCISES,
         },
         after: edited,
         at: stamp(),

@@ -1,7 +1,62 @@
 import { useEffect, useRef, useState } from "react";
 import { EXERCISES, recordExp, MAX_NAME_LENGTH, validateName } from "../model";
-import { MAX_VIRTUAL_TRAINEES } from "./virtualLimits";
+import {
+  MAX_VIRTUAL_TRAINEES,
+  DEFAULT_TRAINING_INTENSITY,
+  DEFAULT_PREFERRED_EXERCISES,
+  TRAINING_INTENSITIES,
+  trainingIntensityLabel,
+} from "./virtualLimits";
 import { friendApi } from "./friendsClient";
+
+function IntensitySelect({ value, onChange, disabled = false }) {
+  return (
+    <label className="virtual-intensity">
+      훈련강도
+      <select
+        value={value ?? DEFAULT_TRAINING_INTENSITY}
+        onChange={(event) => onChange(Number(event.target.value))}
+        disabled={disabled}
+      >
+        {TRAINING_INTENSITIES.map((setting) => (
+          <option key={setting.level} value={setting.level}>
+            {trainingIntensityLabel(setting)}
+          </option>
+        ))}
+      </select>
+    </label>
+  );
+}
+
+function PreferredExercises({
+  value = DEFAULT_PREFERRED_EXERCISES,
+  onChange,
+  disabled = false,
+}) {
+  return (
+    <fieldset className="virtual-preferences" disabled={disabled}>
+      <legend>선호 운동 (복수 선택)</legend>
+      <div>
+        {EXERCISES.map(({ key, label }) => (
+          <label key={key}>
+            <input
+              type="checkbox"
+              checked={value.includes(key)}
+              onChange={(event) =>
+                onChange(
+                  event.target.checked
+                    ? [...value, key]
+                    : value.filter((item) => item !== key),
+                )
+              }
+            />
+            {label}
+          </label>
+        ))}
+      </div>
+    </fieldset>
+  );
+}
 
 function TraineeEditor({ entry, onSaved }) {
   const [values, setValues] = useState(entry);
@@ -12,6 +67,8 @@ function TraineeEditor({ entry, onSaved }) {
     setBusy(true);
     setError("");
     try {
+      if (values.preferredExercises?.length === 0)
+        throw new Error("선호 운동을 1개 이상 선택해 주세요.");
       onSaved(await friendApi("admin-update", { uid: entry.uid, values }));
     } catch (e) {
       setError(e.message);
@@ -101,11 +158,17 @@ function TraineeEditor({ entry, onSaved }) {
           />{" "}
           자동 운동
         </label>
-        <p className="hint">
-          매일 밤 9시 이후 · 한국 시간
-          <br />
-          운동일 80~120 EXP · 3일 중 하루 휴식
-        </p>
+        <IntensitySelect
+          value={values.intensity}
+          onChange={(intensity) => setValues({ ...values, intensity })}
+        />
+        <PreferredExercises
+          value={values.preferredExercises}
+          onChange={(preferredExercises) =>
+            setValues({ ...values, preferredExercises })
+          }
+        />
+        <p className="hint">운동일 밤 9시 이후 · 한국 시간</p>
         <button className="primary-button" type="submit">
           {busy ? "저장 중…" : "변경 저장"}
         </button>
@@ -125,6 +188,10 @@ export default function AdminPanel() {
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
   const [name, setName] = useState("");
+  const [intensity, setIntensity] = useState(DEFAULT_TRAINING_INTENSITY);
+  const [preferredExercises, setPreferredExercises] = useState(
+    DEFAULT_PREFERRED_EXERCISES,
+  );
   const [creating, setCreating] = useState(false);
   const pendingCreate = useRef(null);
   const createInFlight = useRef(false);
@@ -137,9 +204,19 @@ export default function AdminPanel() {
     setMessage("");
     try {
       const normalized = validateName(name);
-      if (!pendingCreate.current || pendingCreate.current.name !== normalized)
+      if (!preferredExercises.length)
+        throw new Error("선호 운동을 1개 이상 선택해 주세요.");
+      if (
+        !pendingCreate.current ||
+        pendingCreate.current.name !== normalized ||
+        pendingCreate.current.intensity !== intensity ||
+        JSON.stringify(pendingCreate.current.preferredExercises) !==
+          JSON.stringify(preferredExercises)
+      )
         pendingCreate.current = {
           name: normalized,
+          intensity,
+          preferredExercises,
           requestId: crypto.randomUUID(),
         };
       const rows = await friendApi("admin-create", {
@@ -238,6 +315,16 @@ export default function AdminPanel() {
             {creating ? "추가 중…" : "추가"}
           </button>
         </div>
+        <IntensitySelect
+          value={intensity}
+          onChange={setIntensity}
+          disabled={busy || creating || entries.length >= MAX_VIRTUAL_TRAINEES}
+        />
+        <PreferredExercises
+          value={preferredExercises}
+          onChange={setPreferredExercises}
+          disabled={busy || creating || entries.length >= MAX_VIRTUAL_TRAINEES}
+        />
         {entries.length >= MAX_VIRTUAL_TRAINEES && (
           <p className="hint">최대 10명까지 추가할 수 있습니다.</p>
         )}

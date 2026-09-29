@@ -3478,3 +3478,51 @@ main {
   flex-shrink: 0;
   width: auto;
 }
+
+.virtual-intensity {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 16px;
+  font-size: 13px;
+}
+.virtual-intensity select {
+  width: 100%;
+  min-width: 0;
+  min-height: 44px;
+  border: 1px solid #aaa;
+  border-radius: 6px;
+  padding: 10px 6px;
+  font-size: 13px;
+  background: #fff;
+  color: #171717;
+}
+
+.virtual-preferences,
+.virtual-editor .virtual-preferences {
+  border: 0;
+  padding: 0;
+  margin: 16px 0 0;
+  min-width: 0;
+}
+.virtual-preferences legend {
+  font-size: 13px;
+  margin-bottom: 8px;
+}
+.virtual-preferences > div {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 4px 12px;
+}
+.virtual-preferences label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  font-size: 13px;
+}
+.virtual-preferences input {
+  width: 20px;
+  height: 20px;
+  accent-color: #d92c29;
+}

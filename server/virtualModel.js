@@ -1,3 +1,8 @@
+import {
+  DEFAULT_TRAINING_INTENSITY,
+  DEFAULT_PREFERRED_EXERCISES,
+  TRAINING_INTENSITIES,
+} from "../src/cloud/virtualLimits.js";
 import { createHash } from "node:crypto";
 import {
   emptyCounts,
@@ -33,17 +38,59 @@ export function isAdministrator(claims, owner) {
 // A stable draw makes retries and catch-up runs produce the same workout.
 const draw = (seed, key) =>
   createHash("sha256").update(`${seed}:${key}`).digest().readUInt32BE(0);
+export function validateTrainingIntensity(value = DEFAULT_TRAINING_INTENSITY) {
+  if (!Number.isInteger(value) || value < 1 || value > 5)
+    throw new FriendError("훈련강도는 1~5단계로 선택해 주세요.");
+  return value;
+}
+export function validatePreferredExercises(
+  value = DEFAULT_PREFERRED_EXERCISES,
+) {
+  const keys = Object.keys(emptyCounts());
+  if (
+    !Array.isArray(value) ||
+    value.length < 1 ||
+    value.length > keys.length ||
+    new Set(value).size !== value.length ||
+    value.some((key) => !keys.includes(key))
+  )
+    throw new FriendError("선호 운동을 1개 이상 선택해 주세요.");
+  return keys.filter((key) => value.includes(key));
+}
+export function nextVirtualWorkoutDay(bot, after) {
+  const intensity = bot.intensity ?? DEFAULT_TRAINING_INTENSITY;
+  const { maxIntervalDays } = TRAINING_INTENSITIES[intensity - 1];
+  const interval =
+    1 + (draw(bot.seed, `interval:${intensity}:${after}`) % maxIntervalDays);
+  return shiftDate(after, interval);
+}
+// Called only on a scheduled workout day; retain ten-EXP exercise units.
 export function plannedWorkout(bot, day) {
-  const age = daysBetween(bot.createdDay, day);
-  const rest = draw(bot.seed, `rest:${Math.floor(age / 3)}`) % 3;
-  if (age % 3 === rest) return emptyCounts();
-  const units = 8 + (draw(bot.seed, `exp:${day}`) % 5);
-  const pushUnits = 3 + (draw(bot.seed, `push:${day}`) % (units - 5));
-  return {
-    ...emptyCounts(),
-    pushups: pushUnits * 10,
-    squats: (units - pushUnits) * 10,
-  };
+  const intensity = bot.intensity ?? DEFAULT_TRAINING_INTENSITY;
+  const { minExp, maxExp } = TRAINING_INTENSITIES[intensity - 1];
+  const units =
+    minExp / 10 +
+    (draw(bot.seed, `exp:${intensity}:${day}`) % ((maxExp - minExp) / 10 + 1));
+  const preferences = bot.preferredExercises ?? DEFAULT_PREFERRED_EXERCISES;
+  const primary =
+    preferences[draw(bot.seed, `primary:${day}`) % preferences.length];
+  const otherExercises = Object.keys(emptyCounts()).filter(
+    (key) => key !== primary,
+  );
+  const secondary =
+    otherExercises[draw(bot.seed, `secondary:${day}`) % otherExercises.length];
+  const secondaryUnits =
+    draw(bot.seed, `mix:${day}`) % 10 < 3
+      ? 1 +
+        (draw(bot.seed, `mix-units:${day}`) %
+          Math.max(1, Math.floor(units / 3)))
+      : 0;
+  const counts = emptyCounts();
+  // Ten EXP is ten reps or 0.5 km; totals stay exactly within the intensity range.
+  counts[primary] =
+    (units - secondaryUnits) * (primary === "runningKm" ? 0.5 : 10);
+  counts[secondary] = secondaryUnits * (secondary === "runningKm" ? 0.5 : 10);
+  return counts;
 }
 export function dueDay(now = new Date()) {
   // Daily job is scheduled at 21:00 KST. Reads can catch up delayed runs.
@@ -60,11 +107,17 @@ export function dueDay(now = new Date()) {
 export function advanceVirtual(source, until) {
   const bot = structuredClone(source);
   if (until <= bot.processedThrough) return bot;
+  bot.intensity ??= DEFAULT_TRAINING_INTENSITY;
+  bot.preferredExercises ??= [...DEFAULT_PREFERRED_EXERCISES];
+  bot.nextWorkoutDay ??= nextVirtualWorkoutDay(bot, bot.processedThrough);
   // Bound catch-up work; later calls continue if a project was idle for years.
   const count = Math.min(366, daysBetween(bot.processedThrough, until));
   for (let i = 0; i < count; i++) {
     const day = shiftDate(bot.processedThrough, 1);
-    const counts = bot.enabled ? plannedWorkout(bot, day) : emptyCounts();
+    const scheduled = day >= bot.nextWorkoutDay;
+    const counts =
+      bot.enabled && scheduled ? plannedWorkout(bot, day) : emptyCounts();
+    if (scheduled) bot.nextWorkoutDay = nextVirtualWorkoutDay(bot, day);
     const exp = recordExp(counts);
     // The workout date itself is not a missed day.
     const gap = daysBetween(bot.lastWorkout, day) - (exp > 0 ? 1 : 0);
@@ -115,6 +168,14 @@ export function publicVirtual(bot, day = koreaDay()) {
 export function validateVirtualEdit(input, bot) {
   if (!input || typeof input !== "object")
     throw new FriendError("입력값을 확인해 주세요.");
+  const intensity = validateTrainingIntensity(
+    input.intensity === undefined ? bot.intensity : input.intensity,
+  );
+  const preferredExercises = validatePreferredExercises(
+    input.preferredExercises === undefined
+      ? bot.preferredExercises
+      : input.preferredExercises,
+  );
   const integer = (v, min, max) => Number.isInteger(v) && v >= min && v <= max;
   if (
     !integer(input.level, 1, 1000) ||
@@ -143,6 +204,8 @@ export function validateVirtualEdit(input, bot) {
   }
   return {
     totals,
+    intensity,
+    preferredExercises,
     totalExp: input.totalExp,
     level: input.level,
     enabled: input.enabled,

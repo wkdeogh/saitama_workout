@@ -1,9 +1,17 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { emptyCounts, shiftDate, recordExp } from "../src/model.js";
+import {
+  emptyCounts,
+  shiftDate,
+  recordExp,
+  daysBetween,
+} from "../src/model.js";
 import {
   advanceVirtual,
   plannedWorkout,
+  nextVirtualWorkoutDay,
+  validateTrainingIntensity,
+  validatePreferredExercises,
   publicVirtual,
   dueDay,
   isAdministrator,
@@ -30,19 +38,73 @@ const bot = () => ({
   progressExp: 0,
   enabled: true,
 });
-test("virtual exercise draws have exactly one rest per three days and 80–120 EXP in tens", () => {
-  for (let cycle = 0; cycle < 120; cycle++) {
-    const workouts = [0, 1, 2].map((i) =>
-      plannedWorkout(bot(), shiftDate("2026-09-01", cycle * 3 + i)),
-    );
-    assert.equal(workouts.filter((w) => recordExp(w) === 0).length, 1);
-    for (const w of workouts.filter((w) => recordExp(w))) {
-      assert.ok(recordExp(w) >= 80 && recordExp(w) <= 120);
-      assert.equal(w.pushups % 10, 0);
-      assert.equal(w.squats % 10, 0);
-      assert.ok(w.pushups >= 30 && w.squats >= 30);
+test("all five intensities respect interval and EXP ranges across seeds and daily/catch-up runs", () => {
+  const ranges = [
+    [10, 30, 100],
+    [7, 50, 120],
+    [4, 80, 150],
+    [2, 100, 200],
+    [1, 100, 400],
+  ];
+  for (const [index, [maxGap, minExp, maxExp]] of ranges.entries()) {
+    const gaps = new Set(),
+      amounts = new Set();
+    for (let seed = 0; seed < 8; seed++) {
+      const original = { ...bot(), intensity: index + 1, seed: `seed-${seed}` };
+      let daily = original,
+        previous = original.processedThrough;
+      for (let i = 0; i < 180; i++) {
+        const day = shiftDate(original.createdDay, i);
+        daily = advanceVirtual(daily, day);
+        const exp = recordExp(daily.todayCounts);
+        if (exp) {
+          const gap = daysBetween(previous, day);
+          assert.ok(gap >= 1 && gap <= maxGap);
+          assert.ok(exp >= minExp && exp <= maxExp);
+          assert.equal(exp % 10, 0);
+          assert.ok(
+            daily.todayCounts.pushups > 0 || daily.todayCounts.squats > 0,
+          );
+          previous = day;
+          gaps.add(gap);
+          amounts.add(exp);
+        } else {
+          assert.ok(daysBetween(previous, day) < maxGap);
+        }
+      }
+      assert.deepEqual(advanceVirtual(original, daily.processedThrough), daily);
+      assert.deepEqual(advanceVirtual(daily, daily.processedThrough), daily);
+      assert.equal(daily.totalExp, recordExp(daily.totals));
     }
+    assert.equal(Math.min(...gaps), 1);
+    assert.equal(Math.max(...gaps), maxGap);
+    assert.equal(Math.min(...amounts), minExp);
+    assert.equal(Math.max(...amounts), maxExp);
   }
+});
+test("legacy bots default to stage three and paused schedules never bank missed workouts", () => {
+  const original = { ...bot(), level: 50, intensity: 5, enabled: false };
+  const paused = advanceVirtual(original, "2026-09-20");
+  assert.equal(paused.totalExp, 0);
+  const resumed = advanceVirtual({ ...paused, enabled: true }, "2026-09-21");
+  assert.equal(
+    resumed.totalExp,
+    recordExp(plannedWorkout(resumed, "2026-09-21")),
+  );
+  assert.equal(resumed.nextWorkoutDay, "2026-09-22");
+  const legacy = advanceVirtual(bot(), "2026-09-30");
+  assert.equal(legacy.intensity, 3);
+  assert.deepEqual(
+    legacy,
+    advanceVirtual({ ...bot(), intensity: 3 }, "2026-09-30"),
+  );
+  for (const value of [0, 6, 1.5, "3", null, NaN])
+    assert.throws(() => validateTrainingIntensity(value), /1~5/);
+  assert.equal(validateTrainingIntensity(), 3);
+  assert.equal(
+    nextVirtualWorkoutDay({ ...bot(), intensity: 5 }, "2026-09-30"),
+    "2026-10-01",
+  );
 });
 test("catch-up and daily runs agree, retries never duplicate EXP, and input is not mutated", () => {
   const original = bot();
@@ -78,6 +140,9 @@ test("virtual schedule uses KST 21:00 and public views reset today/week without 
   assert.equal(view.weeklyExp, 0);
   assert.equal(view.seed, undefined);
   assert.equal(view.enabled, undefined);
+  assert.equal(view.intensity, undefined);
+  assert.equal(view.preferredExercises, undefined);
+  assert.equal(view.nextWorkoutDay, undefined);
 });
 test("verified owner can administer using Google or linked Kakao; forged identities are denied", () => {
   const owner = {
@@ -126,6 +191,8 @@ test("verified owner can administer using Google or linked Kakao; forged identit
     { level: 1001 },
     { totalExp: -1 },
     { enabled: "true" },
+    { intensity: 6 },
+    { intensity: null },
     { totals: { ...emptyCounts(), runningKm: 0.01 } },
     { totals: { ...emptyCounts(), pushups: "100" } },
   ])
@@ -275,4 +342,59 @@ test("admin creation uses verified actor and forwards creation input", async () 
   );
   assert.equal(res.statusCode, 200);
   assert.equal(res.body[0].characterName, values.name);
+});
+
+test("every preference combination keeps favored exercises dominant with occasional variety and exact EXP", () => {
+  const keys = Object.keys(emptyCounts());
+  for (let mask = 1; mask < 16; mask++) {
+    const preferences = keys.filter((_, index) => mask & (1 << index));
+    let total = 0,
+      favored = 0,
+      mixedDays = 0;
+    const seen = new Set();
+    for (let i = 0; i < 360; i++) {
+      const source = {
+        ...bot(),
+        preferredExercises: preferences,
+        intensity: 1 + (i % 5),
+      };
+      const day = shiftDate(source.createdDay, i);
+      const counts = plannedWorkout(source, day);
+      assert.deepEqual(counts, plannedWorkout(source, day));
+      assert.equal(
+        recordExp(counts),
+        recordExp(plannedWorkout({ ...source, preferredExercises: keys }, day)),
+      );
+      const preferredCounts = emptyCounts();
+      for (const key of keys) {
+        if (preferences.includes(key)) preferredCounts[key] = counts[key];
+        if (counts[key]) seen.add(key);
+        assert.ok(counts[key] >= 0);
+        assert.equal((counts[key] * (key === "runningKm" ? 10 : 1)) % 1, 0);
+      }
+      const exp = recordExp(counts),
+        preferredExp = recordExp(preferredCounts);
+      assert.ok(preferredExp > exp / 2);
+      total += exp;
+      favored += preferredExp;
+      if (keys.some((key) => !preferences.includes(key) && counts[key] > 0))
+        mixedDays++;
+    }
+    assert.equal(seen.size, 4);
+    assert.ok(favored / total > 0.85);
+    if (preferences.length < 4) {
+      assert.ok(mixedDays > 0 && mixedDays < 180);
+      assert.ok(favored < total);
+    }
+  }
+  for (const invalid of [
+    [],
+    null,
+    "pushups",
+    ["yoga"],
+    ["pushups", "pushups"],
+    ["__proto__"],
+  ])
+    assert.throws(() => validatePreferredExercises(invalid), /선호 운동/);
+  assert.deepEqual(validatePreferredExercises(), ["pushups", "squats"]);
 });

@@ -7,7 +7,8 @@ import { virtualService } from "../../server/virtualService.js";
 import { friendsService } from "../../server/friendsService.js";
 import {
   FIRST_VIRTUAL_UID,
-  plannedWorkout,
+  advanceVirtual,
+  nextVirtualWorkoutDay,
 } from "../../server/virtualModel.js";
 import { koreaDay } from "../../src/cloud/rankingModel.js";
 import { emptyCounts, initialData, shiftDate } from "../../src/model.js";
@@ -27,7 +28,10 @@ test("seed, concurrent daily ticks, server-owned edits, auto acceptance and both
   const bot = (
     await db.doc(`virtualTrainees/${FIRST_VIRTUAL_UID}`).get()
   ).data();
-  assert.deepEqual(entry.todayCounts, plannedWorkout(bot, date));
+  assert.deepEqual(
+    entry.todayCounts,
+    advanceVirtual(seeded[0], date).todayCounts,
+  );
   const exp = entry.totalExp;
   await virtual.refresh();
   assert.equal((await virtual.list())[0].totalExp, exp);
@@ -87,7 +91,12 @@ test("seed, concurrent daily ticks, server-owned edits, auto acceptance and both
   await assert.rejects(
     virtual.create("owner", { name: "정상", requestId: "../bad" }),
   );
-  const request = { name: "  Test훈련생  ", requestId: randomUUID() };
+  const request = {
+    name: "  Test훈련생  ",
+    requestId: randomUUID(),
+    intensity: 5,
+    preferredExercises: ["runningKm"],
+  };
   const createdUid = `virtual-${request.requestId}`;
   await Promise.all([
     virtual.create("owner", request),
@@ -97,6 +106,67 @@ test("seed, concurrent daily ticks, server-owned edits, auto acceptance and both
   const created = (await db.doc(`virtualTrainees/${createdUid}`).get()).data();
   assert.equal(created.name, "Test훈련생");
   assert.equal(created.enabled, true);
+  assert.equal(created.intensity, 5);
+  assert.deepEqual(created.preferredExercises, ["runningKm"]);
+  for (const intensity of [0, 6, "3", null])
+    await assert.rejects(
+      virtual.create("owner", {
+        name: "무효",
+        requestId: randomUUID(),
+        intensity,
+      }),
+      /1~5/,
+    );
+  const editable = (await virtual.list()).find((row) => row.uid === createdUid);
+  assert.equal(editable.intensity, 5);
+  await virtual.update("owner", createdUid, {
+    ...editable,
+    intensity: 1,
+    preferredExercises: ["situps"],
+  });
+  const adjusted = (await db.doc(`virtualTrainees/${createdUid}`).get()).data();
+  assert.equal(adjusted.intensity, 1);
+  assert.deepEqual(adjusted.preferredExercises, ["situps"]);
+  assert.equal(adjusted.totalExp, created.totalExp);
+  assert.deepEqual(adjusted.todayCounts, created.todayCounts);
+  assert.equal(
+    adjusted.nextWorkoutDay,
+    nextVirtualWorkoutDay(adjusted, adjusted.processedThrough),
+  );
+  assert.ok(adjusted.nextWorkoutDay > adjusted.processedThrough);
+  const current = (await virtual.list()).find((row) => row.uid === createdUid);
+  await assert.rejects(
+    virtual.update("owner", createdUid, { ...current, intensity: 6 }),
+    /1~5/,
+  );
+  await assert.rejects(
+    virtual.update("owner", createdUid, { ...current, preferredExercises: [] }),
+    /선호 운동/,
+  );
+  await assert.rejects(
+    virtual.create("owner", {
+      name: "무효",
+      requestId: randomUUID(),
+      preferredExercises: ["yoga"],
+    }),
+    /선호 운동/,
+  );
+  // Old clients that omit settings preserve the saved values.
+  const {
+    intensity: omitted,
+    preferredExercises: omittedPreferences,
+    ...oldClient
+  } = current;
+  await virtual.update("owner", createdUid, oldClient);
+  assert.equal(
+    (await db.doc(`virtualTrainees/${createdUid}`).get()).data().intensity,
+    1,
+  );
+  assert.deepEqual(
+    (await db.doc(`virtualTrainees/${createdUid}`).get()).data()
+      .preferredExercises,
+    ["situps"],
+  );
   assert.equal(
     (await db.doc(`socialTags/${created.tag}`).get()).data().uid,
     createdUid,
