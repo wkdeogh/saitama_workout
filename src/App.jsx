@@ -1002,7 +1002,7 @@ export default function App() {
                       : `${summary.progressExp} / 100 EXP`}{" "}
                     <span>· 100 EXP마다 +1레벨</span>
                   </p>
-                  {summary.inactiveDays > 0 && summary.level > 1 && (
+                  {summary.inactiveDays >= 3 && summary.level > 1 && (
                     <p className="decay-status">
                       미기록 {summary.inactiveDays}일 · {summary.daysToDecay}일
                       뒤 −{summary.inactiveDays >= 5 ? 1 : 5}레벨
