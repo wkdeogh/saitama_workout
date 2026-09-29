@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { test, after } from "node:test";
 import assert from "node:assert/strict";
 import { initializeApp, deleteApp } from "firebase-admin/app";
@@ -78,4 +79,72 @@ test("seed, concurrent daily ticks, server-owned edits, auto acceptance and both
         .get()
     ).empty,
   );
+  // Existing trainee counts toward the cap; new trainees use the same public paths.
+  for (const name of ["", " ", "x".repeat(21), "bad\nname", 12])
+    await assert.rejects(
+      virtual.create("owner", { name, requestId: randomUUID() }),
+    );
+  await assert.rejects(
+    virtual.create("owner", { name: "정상", requestId: "../bad" }),
+  );
+  const request = { name: "  Test훈련생  ", requestId: randomUUID() };
+  const createdUid = `virtual-${request.requestId}`;
+  await Promise.all([
+    virtual.create("owner", request),
+    virtual.create("owner", request),
+  ]);
+  assert.equal((await virtual.list()).length, 2);
+  const created = (await db.doc(`virtualTrainees/${createdUid}`).get()).data();
+  assert.equal(created.name, "Test훈련생");
+  assert.equal(created.enabled, true);
+  assert.equal(
+    (await db.doc(`socialTags/${created.tag}`).get()).data().uid,
+    createdUid,
+  );
+  assert.equal(
+    (await db.doc(`socialProfiles/${createdUid}`).get()).data().nameLower,
+    "test훈련생",
+  );
+  assert.equal(
+    (await db.doc(`rankings/${createdUid}`).get()).data().characterName,
+    created.name,
+  );
+  assert.equal((await friends.request(uid, created.tag)).accepted, true);
+  assert.ok(
+    (await friends.ranking(uid, "all")).some((row) => row.uid === createdUid),
+  );
+  for (let i = 0; i < 7; i++)
+    await virtual.create("owner", {
+      name: `훈련생${i}`,
+      requestId: randomUUID(),
+    });
+  const results = await Promise.allSettled(
+    Array.from({ length: 3 }, (_, i) =>
+      virtual.create("owner", {
+        name: `동시추가${i}`,
+        requestId: randomUUID(),
+      }),
+    ),
+  );
+  assert.equal(results.filter((r) => r.status === "fulfilled").length, 1);
+  for (const result of results.filter((r) => r.status === "rejected"))
+    assert.match(result.reason.message, /최대 10명/);
+  assert.equal((await virtual.list()).length, 10);
+  await virtual.create("owner", request);
+  await virtual.seed();
+  assert.equal((await virtual.list()).length, 10);
+  assert.equal(
+    (
+      await db
+        .collection("adminAudit")
+        .where("target", "==", createdUid)
+        .where("action", "==", "virtual-create")
+        .get()
+    ).size,
+    1,
+  );
+  // Legacy seed must also respect capacity when its original record is absent.
+  await db.doc(`virtualTrainees/${FIRST_VIRTUAL_UID}`).delete();
+  await virtual.create("owner", { name: "빈자리", requestId: randomUUID() });
+  await assert.rejects(virtual.seed(), /최대 10명/);
 });

@@ -3450,3 +3450,31 @@ main {
   margin-top: 20px;
   width: 100%;
 }
+
+.virtual-create {
+  margin-top: 20px;
+}
+.virtual-create-heading,
+.virtual-create-fields {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.virtual-create-heading {
+  justify-content: space-between;
+  margin-bottom: 8px;
+  font-size: 13px;
+}
+.virtual-create-fields input {
+  flex: 1;
+  min-width: 0;
+  min-height: 44px;
+  border: 1px solid #aaa;
+  border-radius: 6px;
+  padding: 10px;
+  font-size: 16px;
+}
+.virtual-create-fields button {
+  flex-shrink: 0;
+  width: auto;
+}

@@ -40,9 +40,12 @@ export function createFriendsHandler({
         JSON.stringify(body).length > 10000
       )
         throw new FriendError("요청이 너무 큽니다.");
-      const adminAction = ["admin-list", "admin-update", "admin-seed"].includes(
-        req.query.action,
-      );
+      const adminAction = [
+        "admin-list",
+        "admin-update",
+        "admin-seed",
+        "admin-create",
+      ].includes(req.query.action);
       const allowed =
         adminAction || req.query.action === "admin-status"
           ? await administrator(decoded)
@@ -60,6 +63,9 @@ export function createFriendsHandler({
           break;
         case "admin-update":
           result = await virtual().update(uid, body.uid, body.values);
+          break;
+        case "admin-create":
+          result = await virtual().create(uid, body.values);
           break;
         case "admin-seed":
           await virtual().seed();

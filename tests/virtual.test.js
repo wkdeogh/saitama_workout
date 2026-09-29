@@ -133,7 +133,12 @@ test("verified owner can administer using Google or linked Kakao; forged identit
 });
 test("admin endpoints reject forged body ownership before calling virtual service", async () => {
   let called = 0;
-  for (const action of ["admin-list", "admin-seed", "admin-update"]) {
+  for (const action of [
+    "admin-list",
+    "admin-seed",
+    "admin-update",
+    "admin-create",
+  ]) {
     const handler = createFriendsHandler({
       verify: async () => ({
         uid: "friend",
@@ -231,4 +236,43 @@ test("admin status and editing use the same server identity resolver for linked 
     if (action === "admin-status") assert.equal(res.body.allowed, true);
   }
   assert.equal(calls, 1);
+});
+
+test("admin creation uses verified actor and forwards creation input", async () => {
+  const values = { name: "새 훈련생", requestId: "request" };
+  const handler = createFriendsHandler({
+    verify: async () => ({
+      uid: "owner",
+      firebase: { sign_in_provider: "google.com" },
+    }),
+    administrator: async () => true,
+    service: () => ({}),
+    virtual: () => ({
+      create: async (actor, input) => {
+        assert.equal(actor, "owner");
+        assert.deepEqual(input, values);
+        return [{ characterName: input.name }];
+      },
+    }),
+  });
+  const res = {
+    setHeader() {},
+    end(body) {
+      this.body = JSON.parse(body);
+    },
+  };
+  await handler(
+    {
+      method: "POST",
+      headers: {
+        origin: "https://saitama-workout.vercel.app",
+        authorization: "Bearer valid",
+      },
+      query: { action: "admin-create" },
+      body: { uid: "forged", values },
+    },
+    res,
+  );
+  assert.equal(res.statusCode, 200);
+  assert.equal(res.body[0].characterName, values.name);
 });

@@ -1,5 +1,6 @@
-import { useEffect, useState } from "react";
-import { EXERCISES, recordExp } from "../model";
+import { useEffect, useRef, useState } from "react";
+import { EXERCISES, recordExp, MAX_NAME_LENGTH, validateName } from "../model";
+import { MAX_VIRTUAL_TRAINEES } from "./virtualLimits";
 import { friendApi } from "./friendsClient";
 
 function TraineeEditor({ entry, onSaved }) {
@@ -123,6 +124,38 @@ export default function AdminPanel() {
   const [busy, setBusy] = useState(true);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
+  const [name, setName] = useState("");
+  const [creating, setCreating] = useState(false);
+  const pendingCreate = useRef(null);
+  const createInFlight = useRef(false);
+  async function addTrainee(event) {
+    event.preventDefault();
+    if (createInFlight.current) return;
+    createInFlight.current = true;
+    setCreating(true);
+    setError("");
+    setMessage("");
+    try {
+      const normalized = validateName(name);
+      if (!pendingCreate.current || pendingCreate.current.name !== normalized)
+        pendingCreate.current = {
+          name: normalized,
+          requestId: crypto.randomUUID(),
+        };
+      const rows = await friendApi("admin-create", {
+        values: pendingCreate.current,
+      });
+      setEntries(rows);
+      pendingCreate.current = null;
+      setName("");
+      setMessage("가상 훈련생을 추가했습니다.");
+    } catch (error) {
+      setError(error.message);
+    } finally {
+      createInFlight.current = false;
+      setCreating(false);
+    }
+  }
   async function load(action = "admin-list") {
     setBusy(true);
     setError("");
@@ -158,7 +191,7 @@ export default function AdminPanel() {
         <button
           className="secondary-button"
           onClick={() => load()}
-          disabled={busy}
+          disabled={busy || creating}
         >
           새로고침
         </button>
@@ -174,11 +207,41 @@ export default function AdminPanel() {
           {message}
         </p>
       )}
-      {!busy && !error && !entries.length && (
-        <button className="primary-button" onClick={() => load("admin-seed")}>
-          고구마똥 추가
-        </button>
-      )}
+      <form className="virtual-create" onSubmit={addTrainee}>
+        <div className="virtual-create-heading">
+          <label htmlFor="virtual-name">훈련생 이름</label>
+          <span>
+            {entries.length} / {MAX_VIRTUAL_TRAINEES}명
+          </span>
+        </div>
+        <div className="virtual-create-fields">
+          <input
+            id="virtual-name"
+            value={name}
+            onChange={(event) => setName(event.target.value)}
+            required
+            maxLength={MAX_NAME_LENGTH}
+            disabled={
+              busy || creating || entries.length >= MAX_VIRTUAL_TRAINEES
+            }
+          />
+          <button
+            className="primary-button"
+            type="submit"
+            disabled={
+              busy ||
+              creating ||
+              !name.trim() ||
+              entries.length >= MAX_VIRTUAL_TRAINEES
+            }
+          >
+            {creating ? "추가 중…" : "추가"}
+          </button>
+        </div>
+        {entries.length >= MAX_VIRTUAL_TRAINEES && (
+          <p className="hint">최대 10명까지 추가할 수 있습니다.</p>
+        )}
+      </form>
       {!busy &&
         entries.map((entry) => (
           <TraineeEditor

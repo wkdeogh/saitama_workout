@@ -1,6 +1,7 @@
+import { MAX_VIRTUAL_TRAINEES } from "../src/cloud/virtualLimits.js";
 import { randomUUID } from "node:crypto";
 import { FieldValue } from "firebase-admin/firestore";
-import { emptyCounts, shiftDate } from "../src/model.js";
+import { emptyCounts, shiftDate, validateName } from "../src/model.js";
 import { koreaDay, weekStart } from "../src/cloud/rankingModel.js";
 import { accountTag, FriendError } from "./friendsModel.js";
 import {
@@ -19,18 +20,49 @@ export function virtualService(db, now = () => new Date()) {
     const { uid, tag, activityDay, todayCounts, todayExp, ...summary } = view;
     tx.set(db.doc(`rankings/${bot.uid}`), { ...summary, updatedAt: stamp() });
   }
+  async function create(actor, input) {
+    let name;
+    try {
+      name = validateName(input?.name);
+    } catch (error) {
+      throw new FriendError(error.message);
+    }
+    if (
+      typeof input?.requestId !== "string" ||
+      !/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+        input.requestId,
+      )
+    )
+      throw new FriendError("추가 요청을 확인해 주세요.");
+    await insert(`virtual-${input.requestId.toLowerCase()}`, name, actor);
+    return list();
+  }
   async function seed() {
+    return insert(FIRST_VIRTUAL_UID, "고구마똥", null);
+  }
+  async function insert(uid, name, actor) {
     const day = koreaDay(now());
     for (let attempt = 0; attempt < 6; attempt++) {
       const tag = accountTag();
       const result = await db.runTransaction(async (tx) => {
-        const current = await tx.get(ref(FIRST_VIRTUAL_UID));
+        const current = await tx.get(ref(uid));
         if (current.exists) return current.data();
+        // Serialize all creation paths, including the legacy seed endpoint.
+        const capacityRef = db.doc("adminState/virtualTrainees");
+        await tx.get(capacityRef);
+        const existing = await tx.get(
+          db.collection("virtualTrainees").limit(MAX_VIRTUAL_TRAINEES),
+        );
+        if (existing.size >= MAX_VIRTUAL_TRAINEES)
+          throw new FriendError(
+            "가상 훈련생은 최대 10명까지 추가할 수 있습니다.",
+            409,
+          );
         const tagRef = db.doc(`socialTags/${tag}`);
         if ((await tx.get(tagRef)).exists) return null;
         const bot = {
-          uid: FIRST_VIRTUAL_UID,
-          name: "고구마똥",
+          uid,
+          name,
           tag,
           seed: randomUUID(),
           enabled: true,
@@ -53,8 +85,16 @@ export function virtualService(db, now = () => new Date()) {
         tx.create(db.doc(`socialProfiles/${bot.uid}`), {
           tag,
           name: bot.name,
-          nameLower: bot.name,
+          nameLower: bot.name.normalize("NFKC").toLowerCase(),
           createdAt: stamp(),
+        });
+        tx.set(capacityRef, { count: existing.size + 1 });
+        tx.create(db.collection("adminAudit").doc(), {
+          actor,
+          target: bot.uid,
+          action: "virtual-create",
+          after: { name: bot.name, enabled: bot.enabled },
+          at: stamp(),
         });
         publish(tx, bot);
         return bot;
@@ -139,5 +179,5 @@ export function virtualService(db, now = () => new Date()) {
     });
     return list();
   }
-  return { seed, refresh, list, update };
+  return { seed, create, refresh, list, update };
 }
