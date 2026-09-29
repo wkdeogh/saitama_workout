@@ -226,3 +226,25 @@ test("friend inbox belongs to its recipient and social identities are server con
     await assertFails(setDoc(doc(authed("owner"), path), { uid: "owner" }));
   }
 });
+
+test("virtual management and audit are server-only, even with owner email claims", async () => {
+  for (const db of [
+    authed("friend"),
+    env
+      .authenticatedContext("owner", {
+        email: "wkdeoghq@gmail.com",
+        email_verified: true,
+        firebase: { sign_in_provider: "google.com" },
+      })
+      .firestore(),
+  ]) {
+    for (const path of [
+      "virtualTrainees/virtual-goguma-v1",
+      "adminAudit/example",
+    ]) {
+      await assertFails(getDoc(doc(db, path)));
+      await assertFails(setDoc(doc(db, path), { level: 1000 }));
+    }
+    await assertFails(setDoc(doc(db, "rankings/virtual-goguma-v1"), entry()));
+  }
+});

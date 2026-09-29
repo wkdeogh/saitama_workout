@@ -26,6 +26,8 @@ import OnboardingGuide from "./OnboardingGuide";
 import { claimOnboarding } from "./onboardingModel";
 import { workoutProof } from "./workoutProofModel";
 import useWorkoutAccount from "./cloud/useWorkoutAccount";
+import AdminPanel from "./cloud/AdminPanel";
+import { friendApi } from "./cloud/friendsClient";
 import FriendsPanel from "./cloud/FriendsPanel";
 import useFriends from "./cloud/useFriends";
 import { LoginScreen, AccountControls } from "./cloud/RankingPanel";
@@ -474,8 +476,33 @@ function Calendar({ data, selected, onSelect, today, month, setMonth }) {
   );
 }
 function SettingsPanel({ data, persist, onClose, notify, error, account }) {
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [adminOpen, setAdminOpen] = useState(false);
+  useEffect(() => {
+    let active = true;
+    friendApi("admin-status")
+      .then((result) => {
+        if (active) setIsAdmin(result.allowed);
+      })
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
+  }, [account.user?.uid]);
   const [goals, setGoals] = useState(data.goals),
     [message, setMessage] = useState("");
+  if (adminOpen && isAdmin)
+    return (
+      <Modal title="관리자 페이지" onClose={onClose}>
+        <button
+          className="secondary-button admin-back"
+          onClick={() => setAdminOpen(false)}
+        >
+          설정으로 돌아가기
+        </button>
+        <AdminPanel />
+      </Modal>
+    );
   return (
     <Modal title="훈련소 설정" onClose={onClose}>
       <AccountControls account={account} showLink />
@@ -563,6 +590,16 @@ function SettingsPanel({ data, persist, onClose, notify, error, account }) {
         <p role="alert" className="error-box">
           {message}
         </p>
+      )}
+      {isAdmin && (
+        <section className="settings-section">
+          <button
+            className="secondary-button"
+            onClick={() => setAdminOpen(true)}
+          >
+            관리자 페이지
+          </button>
+        </section>
       )}
       <p className="settings-footer">
         <Zap size={14} />

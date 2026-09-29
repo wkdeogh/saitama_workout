@@ -62,9 +62,11 @@ export default function FriendsPanel({ account, data, onUser, friends }) {
     try {
       const result = await friendApi(endpoint, body);
       setMessage(
-        result.push?.failed
-          ? "친구 요청은 전달됐습니다. 푸시는 발송하지 못했지만 받은 요청 목록에서 확인할 수 있습니다."
-          : success,
+        result.accepted
+          ? "친구가 되었습니다."
+          : result.push?.failed
+            ? "친구 요청은 전달됐습니다. 푸시는 발송하지 못했지만 받은 요청 목록에서 확인할 수 있습니다."
+            : success,
       );
       await friends.refresh();
     } catch (e) {

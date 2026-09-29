@@ -2,5 +2,6 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "framework": "vite",
   "buildCommand": "npm run check",
-  "outputDirectory": "dist"
+  "outputDirectory": "dist",
+  "crons": [{ "path": "/api/cron/virtual-workouts", "schedule": "0 12 * * *" }]
 }

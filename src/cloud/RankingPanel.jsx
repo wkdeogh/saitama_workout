@@ -207,6 +207,7 @@ export default function RankingPanel({ account, data, onUser, friends }) {
     setLoading(true);
     setError("");
     try {
+      if (scope === "all") await friendApi("prepare-ranking");
       const rows =
         scope === "friends"
           ? await friendApi("ranking", { period })
@@ -263,6 +264,9 @@ export default function RankingPanel({ account, data, onUser, friends }) {
         <div>
           <span className="eyebrow">LEADERBOARD</span>
           <h2>훈련 랭킹</h2>
+          <p className="ranking-disclosure">
+            자동 운동하는 가상 경쟁자가 함께 참여합니다.
+          </p>
         </div>
         <Trophy size={24} />
       </div>

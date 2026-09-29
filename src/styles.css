@@ -3375,3 +3375,78 @@ main {
   line-height: 1.5;
   font-weight: 700;
 }
+
+.ranking-disclosure {
+  font-size: 12px;
+  color: #666;
+  margin-top: 6px;
+  line-height: 1.6;
+}
+.admin-back {
+  margin-bottom: 20px;
+}
+.admin-panel .section-heading {
+  gap: 12px;
+}
+.admin-panel .section-heading .secondary-button {
+  flex-shrink: 0;
+}
+.virtual-editor {
+  border-top: 2px solid #171717;
+  padding-top: 20px;
+  margin-top: 20px;
+}
+.virtual-editor fieldset {
+  border: 0;
+  padding: 0;
+  margin: 20px 0 0;
+  min-width: 0;
+}
+.virtual-editor legend {
+  font-size: 14px;
+  font-weight: 700;
+  margin-bottom: 12px;
+}
+.virtual-editor .goal-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+.virtual-editor .goal-fields label {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 13px;
+}
+.virtual-editor .goal-fields input {
+  width: 100%;
+  min-height: 44px;
+  border: 1px solid #aaa;
+  border-radius: 6px;
+  padding: 10px;
+  font-size: 16px;
+}
+.virtual-editor small {
+  color: #666;
+  font-size: 12px;
+}
+.admin-scores {
+  margin: 20px 0 12px;
+}
+.virtual-enabled {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 48px;
+  margin-top: 16px;
+  font-weight: 700;
+}
+.virtual-enabled input {
+  width: 20px;
+  height: 20px;
+  accent-color: #d92c29;
+}
+.virtual-editor .primary-button {
+  margin-top: 20px;
+  width: 100%;
+}

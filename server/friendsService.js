@@ -15,6 +15,8 @@ import {
   rankedEntries,
 } from "../src/cloud/rankingModel.js";
 import { parseBackup } from "../src/model.js";
+import { virtualService } from "./virtualService.js";
+import { publicVirtual } from "./virtualModel.js";
 import { dailyActivity } from "../src/cloud/dailyActivity.js";
 
 const stamp = () => FieldValue.serverTimestamp();
@@ -176,7 +178,7 @@ export function friendsService(db, messaging) {
     const id = pairKey(uid, to),
       requestRef = db.doc(`friendRequests/${id}`);
     const created = await db.runTransaction(async (tx) => {
-      const [request, left, right, incoming, outgoing, cooldown] =
+      const [request, left, right, incoming, outgoing, cooldown, virtual] =
         await Promise.all([
           tx.get(requestRef),
           tx.get(listRef(uid)),
@@ -184,6 +186,7 @@ export function friendsService(db, messaging) {
           tx.get(inboxRef(to)),
           tx.get(inboxRef(uid)),
           tx.get(db.doc(`friendCooldowns/${id}`)),
+          tx.get(db.doc(`virtualTrainees/${to}`)),
         ]);
       if ((left.data()?.ids || []).includes(to))
         throw new FriendError("이미 친구입니다.", 409);
@@ -215,6 +218,20 @@ export function friendsService(db, messaging) {
           "이 사용자에게는 24시간 후 다시 요청할 수 있습니다.",
           429,
         );
+      if (virtual.exists) {
+        tx.set(listRef(uid), {
+          ids: [...new Set([...(left.data()?.ids || []), to])],
+        });
+        tx.set(listRef(to), {
+          ids: [...new Set([...(right.data()?.ids || []), uid])],
+        });
+        tx.set(
+          inboxRef(uid),
+          { requestDay: today, dailyRequests: daily + 1, updatedAt: stamp() },
+          { merge: true },
+        );
+        return "accepted";
+      }
       tx.create(requestRef, { from: uid, to, createdAt: stamp() });
       tx.set(
         inboxRef(to),
@@ -233,6 +250,8 @@ export function friendsService(db, messaging) {
       );
       return true;
     });
+    if (created === "accepted")
+      return { created: true, accepted: true, push: { sent: 0, failed: 0 } };
     const push = created ? await notify(to, me) : { sent: 0, failed: 0 };
     return { created, push };
   }
@@ -299,6 +318,7 @@ export function friendsService(db, messaging) {
     return { ok: true };
   }
   async function ranking(uid, period) {
+    await virtualService(db).refresh();
     const list = await listRef(uid).get();
     const ids = [...new Set([uid, ...(list.data()?.ids || [])])];
     const accounts = await db.getAll(
@@ -320,6 +340,14 @@ export function friendsService(db, messaging) {
         };
       })
       .filter((r) => r.characterName);
+    const virtuals = await db.getAll(
+      ...ids.map((id) => db.doc(`virtualTrainees/${id}`)),
+    );
+    rows.push(
+      ...virtuals
+        .filter((snap) => snap.exists)
+        .map((snap) => publicVirtual(snap.data(), day)),
+    );
     rows.sort((a, b) => b[field] - a[field] || a.uid.localeCompare(b.uid));
     return rankedEntries(rows, field);
   }
@@ -372,14 +400,17 @@ export function friendsService(db, messaging) {
     if (!ids.length) return [];
     const unique = [...new Set(ids)],
       day = koreaDay();
-    const [profiles, accounts] = await Promise.all([
+    const [profiles, accounts, virtuals] = await Promise.all([
       db.getAll(...unique.map(profileRef)),
       db.getAll(...unique.map((id) => db.doc(`accounts/${id}`))),
+      db.getAll(...unique.map((id) => db.doc(`virtualTrainees/${id}`))),
     ]);
     return profiles
       .map((profile, index) => {
         const identity = profileView(profile),
           account = accounts[index];
+        if (virtuals[index].exists)
+          return { ...identity, ...publicVirtual(virtuals[index].data(), day) };
         if (!identity || !account.exists || !account.data().participating)
           return null;
         const data = parseBackup(account.data().payload, day);
