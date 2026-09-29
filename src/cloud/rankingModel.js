@@ -7,6 +7,7 @@ import {
   initialData,
   validateData,
   daysBetween,
+  inactivityPenalty,
 } from "../model.js";
 
 export function koreaDay(now = new Date()) {
@@ -46,13 +47,11 @@ export function rankingSummary(data, day = koreaDay()) {
   };
 }
 export function displayedLevel(entry, today = koreaDay()) {
-  const previous = Math.floor(
-    Math.max(0, daysBetween(entry.lastWorkout, entry.calculatedOn)) / 5,
+  const previous = inactivityPenalty(
+    daysBetween(entry.lastWorkout, entry.calculatedOn),
   );
-  const now = Math.floor(
-    Math.max(0, daysBetween(entry.lastWorkout, today)) / 5,
-  );
-  return Math.max(1, entry.level - Math.max(0, now - previous) * 5);
+  const now = inactivityPenalty(daysBetween(entry.lastWorkout, today));
+  return Math.max(1, entry.level - Math.max(0, now - previous));
 }
 const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
 // Local edits win only on fields changed since this device's last successful sync.

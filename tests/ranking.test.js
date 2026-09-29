@@ -20,8 +20,14 @@ const day = "2026-09-27";
 const add = (d, date, counts) =>
   saveRecord(d, date, { ...emptyCounts(), ...counts }, day);
 test("changed goals and today's snapshot survive cloud sync without rewriting past goals", () => {
-  const base = add(add(initialData(), "2026-09-26", { pushups: 100 }), day, { pushups: 50 });
-  const local = updateGoals(base, { pushups: 50, squats: 50, situps: 0, runningKm: 0 }, day);
+  const base = add(add(initialData(), "2026-09-26", { pushups: 100 }), day, {
+    pushups: 50,
+  });
+  const local = updateGoals(
+    base,
+    { pushups: 50, squats: 50, situps: 0, runningKm: 0 },
+    day,
+  );
   const synced = mergeChanges(base, local, base);
   assert.deepEqual(synced.goals, local.goals);
   assert.deepEqual(synced.records[day], local.records[day]);
@@ -154,4 +160,17 @@ test("default goal migration survives cloud merge and later personal goal change
   assert.equal(merged.goalDefaultsVersion, 1);
   const custom = { ...merged, goals: old.goals };
   assert.deepEqual(mergeChanges(merged, custom, upgraded).goals, old.goals);
+});
+
+test("cached level deducts only new daily decay after initial five-day loss", () => {
+  const data = add(initialData(), "2026-09-01", { pushups: 3000 });
+  for (const calculatedOn of ["2026-09-04", "2026-09-06", "2026-09-08"]) {
+    const cached = rankingSummary(data, calculatedOn);
+    for (const today of ["2026-09-08", "2026-09-09", "2026-09-11"]) {
+      assert.equal(
+        displayedLevel(cached, today),
+        rankingSummary(data, today).level,
+      );
+    }
+  }
 });

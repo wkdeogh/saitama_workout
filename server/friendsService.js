@@ -383,7 +383,14 @@ export function friendsService(db, messaging) {
         if (!identity || !account.exists || !account.data().participating)
           return null;
         const data = parseBackup(account.data().payload, day);
-        return { ...identity, ...dailyActivity(data, day) };
+        const { level, calculatedOn, lastWorkout } = rankingSummary(data, day);
+        return {
+          ...identity,
+          level,
+          calculatedOn,
+          lastWorkout,
+          ...dailyActivity(data, day),
+        };
       })
       .filter(Boolean);
   }

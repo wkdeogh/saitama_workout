@@ -951,7 +951,7 @@ export default function App() {
                   {summary.inactiveDays > 0 && summary.level > 1 && (
                     <p className="decay-status">
                       미기록 {summary.inactiveDays}일 · {summary.daysToDecay}일
-                      뒤 −5레벨
+                      뒤 −{summary.inactiveDays >= 5 ? 1 : 5}레벨
                     </p>
                   )}
                 </div>
@@ -1158,7 +1158,7 @@ export default function App() {
                 <p className="growth-description">
                   100 EXP마다 +1레벨 · 매 레벨 외형 변화
                   <br />
-                  최대 1000레벨 · 연속 미기록 5일마다 −5레벨
+                  최대 1000레벨 · 미기록 5일째 −5레벨, 이후 매일 −1레벨
                 </p>
                 <div className="growth-rules">
                   <span>푸쉬업 · 스쿼트 · 윗몸일으키기 1개 = 1 EXP</span>

@@ -149,6 +149,9 @@ export function daysBetween(from, to) {
       86400000,
   );
 }
+export function inactivityPenalty(days) {
+  return days >= 5 ? days : 0;
+}
 export function progression(records, today = dateKey()) {
   const days = Object.keys(records)
     .filter((key) => key <= today && hasWorkout(records[key]))
@@ -159,10 +162,8 @@ export function progression(records, today = dateKey()) {
     lostLevels = 0;
   for (const day of days) {
     if (previous) {
-      const penalty = Math.floor(
-        Math.max(0, daysBetween(previous, day) - 1) / 5,
-      );
-      const next = Math.max(1, level - penalty * 5);
+      const penalty = inactivityPenalty(daysBetween(previous, day) - 1);
+      const next = Math.max(1, level - penalty);
       lostLevels += level - next;
       level = next;
     }
@@ -172,8 +173,8 @@ export function progression(records, today = dateKey()) {
     previous = day;
   }
   const inactiveDays = previous ? daysBetween(previous, today) : 0;
-  const penalty = Math.floor(inactiveDays / 5);
-  const finalLevel = Math.max(1, level - penalty * 5);
+  const penalty = inactivityPenalty(inactiveDays);
+  const finalLevel = Math.max(1, level - penalty);
   lostLevels += level - finalLevel;
   return {
     level: finalLevel,
@@ -181,7 +182,7 @@ export function progression(records, today = dateKey()) {
     expToNext: finalLevel === MAX_LEVEL ? 0 : EXP_PER_LEVEL - progressExp,
     inactiveDays,
     lostLevels,
-    daysToDecay: previous ? 5 - (inactiveDays % 5) : null,
+    daysToDecay: previous ? Math.max(1, 5 - inactiveDays) : null,
   };
 }
 export function stats(data, today = dateKey()) {

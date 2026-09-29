@@ -221,6 +221,9 @@ export default function RankingPanel({ account, data, onUser, friends }) {
           if (activity)
             Object.assign(row, {
               tag: activity.tag,
+              level: activity.level,
+              calculatedOn: activity.calculatedOn,
+              lastWorkout: activity.lastWorkout,
               activityDay: activity.activityDay,
               todayCounts: activity.todayCounts,
               todayExp: activity.todayExp,

@@ -65,14 +65,20 @@ test("changing goals updates today's saved target but preserves past completion 
   const updated = updateGoals(original, goals, today);
   assert.deepEqual(updated.records[today].goals, goals);
   assert.equal(isComplete(updated.records[today]), false);
-  assert.deepEqual(updated.records["2026-09-26"], original.records["2026-09-26"]);
+  assert.deepEqual(
+    updated.records["2026-09-26"],
+    original.records["2026-09-26"],
+  );
   assert.equal(isComplete(updated.records["2026-09-26"]), true);
   assert.equal(stats(updated, today).total, stats(original, today).total);
   assert.equal(isComplete(original.records[today]), true);
   const restored = updateGoals(updated, original.goals, today);
   assert.equal(isComplete(restored.records[today]), true);
   assert.deepEqual(record(updated, today).records[today].goals, goals);
-  assert.deepEqual(record(updated, "2026-09-26").records["2026-09-26"].goals, original.goals);
+  assert.deepEqual(
+    record(updated, "2026-09-26").records["2026-09-26"].goals,
+    original.goals,
+  );
   assert.deepEqual(parseBackup(JSON.stringify(updated), today), updated);
 });
 test("changing goals without today's record does not create workout history", () => {
@@ -80,8 +86,13 @@ test("changing goals without today's record does not create workout history", ()
   const updated = updateGoals(original, initialData().goals, today);
   assert.deepEqual(updated.records, original.records);
   assert.equal(updated.records[today], undefined);
-  assert.deepEqual(record(updated, today).records[today].goals, initialData().goals);
-  assert.throws(() => updateGoals(original, { ...original.goals, runningKm: -1 }, today));
+  assert.deepEqual(
+    record(updated, today).records[today].goals,
+    initialData().goals,
+  );
+  assert.throws(() =>
+    updateGoals(original, { ...original.goals, runningKm: -1 }, today),
+  );
 });
 test("streak includes yesterday until today is completed", () => {
   let d = record(legacyGoals(), "2026-09-25");
@@ -289,7 +300,7 @@ test("five consecutive missing days lose five levels; ten lose ten; floor is one
   assert.equal(progression(r, "2026-09-16").progressExp, 50);
   assert.equal(progression(r, "2026-09-16").lostLevels, 15);
   assert.equal(progression(r, "2026-09-05").daysToDecay, 1);
-  assert.equal(progression(r, "2026-09-06").daysToDecay, 5);
+  assert.equal(progression(r, "2026-09-06").daysToDecay, 1);
   assert.equal(progression({}, today).daysToDecay, null);
 });
 test("workout on fifth day cancels its uncompleted gap; sixth day retains penalty", () => {
@@ -426,4 +437,23 @@ test("legacy personal goals are not overwritten by default migration", () => {
     goals: { pushups: 25, squats: 40, situps: 15, runningKm: 1 },
   };
   assert.deepEqual(upgradeDefaultGoals(old, today).goals, old.goals);
+});
+
+test("after the fifth inactive day decay continues daily and each workout restarts grace", () => {
+  const r = { "2026-09-01": entry(3000) };
+  for (let days = 0; days <= 12; days++) {
+    const result = progression(r, shiftDate("2026-09-01", days));
+    assert.equal(result.level, 31 - (days >= 5 ? days : 0));
+    assert.equal(result.daysToDecay, Math.max(1, 5 - days));
+  }
+  r["2026-09-09"] = entry(1);
+  assert.equal(progression(r, "2026-09-09").level, 24);
+  assert.equal(progression(r, "2026-09-13").level, 24);
+  assert.equal(progression(r, "2026-09-14").level, 19);
+  assert.equal(progression(r, "2026-09-15").level, 18);
+  r["2026-09-16"] = entry(1);
+  assert.equal(progression(r, "2026-09-16").level, 18);
+  assert.equal(progression(r, "2026-09-20").level, 18);
+  assert.equal(progression(r, "2026-09-21").level, 13);
+  assert.equal(progression(r, "2026-09-21").progressExp, 2);
 });

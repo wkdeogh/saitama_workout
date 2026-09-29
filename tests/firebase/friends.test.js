@@ -4,7 +4,12 @@ import { initializeApp, deleteApp } from "firebase-admin/app";
 import { getFirestore, Timestamp } from "firebase-admin/firestore";
 import { friendsService } from "../../server/friendsService.js";
 import { pairKey } from "../../server/friendsModel.js";
-import { initialData, saveRecord, emptyCounts } from "../../src/model.js";
+import {
+  initialData,
+  saveRecord,
+  emptyCounts,
+  shiftDate,
+} from "../../src/model.js";
 import { koreaDay } from "../../src/cloud/rankingModel.js";
 if (!process.env.FIRESTORE_EMULATOR_HOST)
   throw new Error("Run only inside Firestore emulator");
@@ -138,4 +143,26 @@ test("public ranking activity is calculated from today's saved account records o
   assert.equal(rankings[0].todayCounts.runningKm, 2.5);
   await user("daily", "오늘훈련", 0.1);
   assert.equal((await service.labels(a.uid, [a.uid]))[0].todayExp, 2);
+});
+
+test("existing ranking accounts recalculate old gaps using daily decay without republishing", async () => {
+  const a = await user("decay");
+  const today = koreaDay();
+  const data = saveRecord(
+    initialData(),
+    shiftDate(today, -7),
+    { ...emptyCounts(), pushups: 3000 },
+    today,
+  );
+  data.characterName = "감소확인";
+  await db
+    .doc(`accounts/${a.uid}`)
+    .set({ payload: JSON.stringify(data), participating: true });
+  const [label] = await service.labels(a.uid, [a.uid]);
+  const [friend] = await service.ranking(a.uid, "all");
+  assert.equal(label.level, 24);
+  assert.equal(friend.level, 24);
+  assert.equal(label.calculatedOn, today);
+  assert.equal(label.lastWorkout, shiftDate(today, -7));
+  assert.equal(label.todayExp, 0);
 });
