@@ -1,3 +1,4 @@
+import { virtualEditSummary } from "../src/cloud/virtualEdits.js";
 import {
   DEFAULT_TRAINING_INTENSITY,
   DEFAULT_PREFERRED_EXERCISES,
@@ -72,24 +73,32 @@ export function plannedWorkout(bot, day) {
     minExp / 10 +
     (draw(bot.seed, `exp:${intensity}:${day}`) % ((maxExp - minExp) / 10 + 1));
   const preferences = bot.preferredExercises ?? DEFAULT_PREFERRED_EXERCISES;
-  const primary =
-    preferences[draw(bot.seed, `primary:${day}`) % preferences.length];
-  const otherExercises = Object.keys(emptyCounts()).filter(
-    (key) => key !== primary,
+  const others = Object.keys(emptyCounts()).filter(
+    (key) => !preferences.includes(key),
   );
-  const secondary =
-    otherExercises[draw(bot.seed, `secondary:${day}`) % otherExercises.length];
-  const secondaryUnits =
-    draw(bot.seed, `mix:${day}`) % 10 < 3
-      ? 1 +
-        (draw(bot.seed, `mix-units:${day}`) %
-          Math.max(1, Math.floor(units / 3)))
+  const mixLimit = Math.min(
+    Math.floor(units / 3),
+    Math.max(0, units - preferences.length),
+  );
+  const mixedUnits =
+    others.length && mixLimit > 0 && draw(bot.seed, `mix:${day}`) % 10 < 3
+      ? 1 + (draw(bot.seed, `mix-units:${day}`) % mixLimit)
       : 0;
   const counts = emptyCounts();
-  // Ten EXP is ten reps or 0.5 km; totals stay exactly within the intensity range.
-  counts[primary] =
-    (units - secondaryUnits) * (primary === "runningKm" ? 0.5 : 10);
-  counts[secondary] = secondaryUnits * (secondary === "runningKm" ? 0.5 : 10);
+  const mainUnits = units - mixedUnits;
+  const offset = draw(bot.seed, `balance:${day}`) % preferences.length;
+  for (let i = 0; i < preferences.length; i++) {
+    const key = preferences[(i + offset) % preferences.length];
+    const share =
+      Math.floor(mainUnits / preferences.length) +
+      (i < mainUnits % preferences.length ? 1 : 0);
+    counts[key] = share * (key === "runningKm" ? 0.5 : 10);
+  }
+  if (mixedUnits) {
+    const secondary =
+      others[draw(bot.seed, `secondary:${day}`) % others.length];
+    counts[secondary] = mixedUnits * (secondary === "runningKm" ? 0.5 : 10);
+  }
   return counts;
 }
 export function dueDay(now = new Date()) {
@@ -176,15 +185,8 @@ export function validateVirtualEdit(input, bot) {
       ? bot.preferredExercises
       : input.preferredExercises,
   );
-  const integer = (v, min, max) => Number.isInteger(v) && v >= min && v <= max;
-  if (
-    !integer(input.level, 1, 1000) ||
-    !integer(input.totalExp, recordExp(bot.todayCounts), 2000000000) ||
-    typeof input.enabled !== "boolean"
-  )
-    throw new FriendError(
-      "레벨은 1~1000, EXP는 오늘 EXP 이상으로 입력해 주세요.",
-    );
+  if (typeof input.enabled !== "boolean")
+    throw new FriendError("자동 운동 설정을 확인해 주세요.");
   const totals = {};
   for (const key of Object.keys(emptyCounts())) {
     const value = input.totals?.[key];
@@ -192,13 +194,13 @@ export function validateVirtualEdit(input, bot) {
     if (
       typeof value !== "number" ||
       !Number.isFinite(value) ||
-      value < bot.todayCounts[key] ||
+      value < 0 ||
       value > (key === "runningKm" ? 40000000 : 400000000) ||
       !Number.isInteger(scaled) ||
       (key === "runningKm" && Math.abs(value * 10 - scaled) > 1e-7)
     )
       throw new FriendError(
-        "누적 운동량은 오늘 운동량 이상으로 입력해 주세요. 달리기는 0.1km 단위입니다.",
+        "누적 운동량은 0 이상으로 입력해 주세요. 달리기는 0.1km 단위입니다.",
       );
     totals[key] = value;
   }
@@ -206,8 +208,7 @@ export function validateVirtualEdit(input, bot) {
     totals,
     intensity,
     preferredExercises,
-    totalExp: input.totalExp,
-    level: input.level,
+    ...virtualEditSummary(totals, bot),
     enabled: input.enabled,
   };
 }

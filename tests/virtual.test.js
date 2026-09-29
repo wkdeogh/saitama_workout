@@ -185,11 +185,9 @@ test("verified owner can administer using Google or linked Kakao; forged identit
     level: 15,
     enabled: false,
   };
-  assert.equal(validateVirtualEdit(valid, bot()).level, 15);
+  assert.equal(validateVirtualEdit(valid, bot()).level, 1);
   for (const change of [
-    { level: 0 },
-    { level: 1001 },
-    { totalExp: -1 },
+    { totals: { ...emptyCounts(), pushups: -1 } },
     { enabled: "true" },
     { intensity: 6 },
     { intensity: null },
@@ -205,6 +203,7 @@ test("admin endpoints reject forged body ownership before calling virtual servic
     "admin-seed",
     "admin-update",
     "admin-create",
+    "admin-delete",
   ]) {
     const handler = createFriendsHandler({
       verify: async () => ({
@@ -397,4 +396,83 @@ test("every preference combination keeps favored exercises dominant with occasio
   ])
     assert.throws(() => validatePreferredExercises(invalid), /선호 운동/);
   assert.deepEqual(validatePreferredExercises(), ["pushups", "squats"]);
+});
+
+test("lower totals recalculate EXP and level, clamp daily counts, and ignore forged derived fields", () => {
+  const source = {
+    ...bot(),
+    totals: { pushups: 100, squats: 100, situps: 0, runningKm: 2 },
+    todayCounts: { pushups: 60, squats: 40, situps: 0, runningKm: 1 },
+    totalExp: 240,
+    level: 3,
+  };
+  const edited = validateVirtualEdit(
+    {
+      ...source,
+      totals: { pushups: 20, squats: 0, situps: 5, runningKm: 0.1 },
+      totalExp: -100,
+      level: 999,
+    },
+    source,
+  );
+  assert.equal(edited.totalExp, 27);
+  assert.equal(edited.level, 1);
+  assert.deepEqual(edited.todayCounts, {
+    pushups: 0,
+    squats: 0,
+    situps: 5,
+    runningKm: 0,
+  });
+  const zero = validateVirtualEdit(
+    { ...source, totals: emptyCounts() },
+    source,
+  );
+  assert.equal(zero.totalExp, 0);
+  assert.equal(zero.level, 1);
+  assert.deepEqual(zero.todayCounts, emptyCounts());
+  const increased = validateVirtualEdit(
+    { ...source, totals: { ...source.totals, pushups: 200 } },
+    source,
+  );
+  assert.equal(increased.totalExp, 340);
+  assert.equal(increased.level, 4);
+  assert.equal(increased.todayCounts.pushups, 160);
+  assert.equal(
+    validateVirtualEdit({ ...source, level: 1000 }, { ...source, level: 2 })
+      .level,
+    2,
+  );
+});
+test("selected bodyweight exercises share each workout evenly, including 50/50 at 100 EXP", () => {
+  for (const preferredExercises of [
+    ["pushups", "squats"],
+    ["pushups", "situps"],
+    ["pushups", "squats", "situps"],
+    ["pushups", "squats", "runningKm"],
+  ]) {
+    for (let i = 0; i < 300; i++) {
+      const workout = plannedWorkout(
+        { ...bot(), intensity: 1 + (i % 5), preferredExercises },
+        shiftDate("2026-09-01", i),
+      );
+      const reps = preferredExercises
+        .filter((key) => key !== "runningKm")
+        .map((key) => workout[key]);
+      assert.ok(Math.max(...reps) - Math.min(...reps) <= 10);
+      assert.ok(reps.every((n) => n > 0));
+    }
+  }
+  let found = false;
+  for (let i = 0; i < 300; i++) {
+    const workout = plannedWorkout(
+      { ...bot(), intensity: 1, preferredExercises: ["pushups", "squats"] },
+      shiftDate("2026-09-01", i),
+    );
+    if (recordExp(workout) === 100 && !workout.situps && !workout.runningKm) {
+      assert.equal(workout.pushups, 50);
+      assert.equal(workout.squats, 50);
+      found = true;
+    }
+  }
+  assert.ok(found);
 });

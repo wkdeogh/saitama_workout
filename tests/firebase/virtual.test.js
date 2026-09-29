@@ -67,13 +67,13 @@ test("seed, concurrent daily ticks, server-owned edits, auto acceptance and both
     enabled: false,
   };
   await virtual.update("owner", entry.uid, changed);
-  assert.equal((await virtual.list())[0].level, 30);
+  assert.equal((await virtual.list())[0].level, 22);
   await assert.rejects(virtual.update("owner", entry.uid, changed), /새로고침/);
   await assert.rejects(virtual.update("owner", "real-account", changed));
   now = new Date(`${shiftDate(date, 7)}T12:30:00Z`);
   [entry] = await virtual.list();
-  assert.equal(entry.totalExp, 4000);
-  assert.equal(entry.level, 23);
+  assert.equal(entry.totalExp, 2100);
+  assert.equal(entry.level, 15);
   assert.deepEqual(entry.todayCounts, emptyCounts());
   assert.ok(
     !(
@@ -82,6 +82,17 @@ test("seed, concurrent daily ticks, server-owned edits, auto acceptance and both
         .where("target", "==", FIRST_VIRTUAL_UID)
         .get()
     ).empty,
+  );
+  await virtual.update("owner", entry.uid, { ...entry, totals: emptyCounts() });
+  const reset = (await virtual.list())[0];
+  assert.equal(reset.totalExp, 0);
+  assert.equal(reset.level, 1);
+  assert.equal(reset.weeklyExp, 0);
+  assert.equal(reset.todayExp, 0);
+  assert.deepEqual(reset.todayCounts, emptyCounts());
+  assert.equal(
+    (await db.doc(`rankings/${entry.uid}`).get()).data().totalExp,
+    0,
   );
   // Existing trainee counts toward the cap; new trainees use the same public paths.
   for (const name of ["", " ", "x".repeat(21), "bad\nname", 12])
@@ -213,8 +224,35 @@ test("seed, concurrent daily ticks, server-owned edits, auto acceptance and both
     ).size,
     1,
   );
+  await assert.rejects(virtual.remove("owner", "real-account"));
+  await Promise.all([virtual.remove("owner", createdUid), virtual.refresh()]);
+  assert.equal((await virtual.list()).length, 9);
+  for (const path of [
+    `virtualTrainees/${createdUid}`,
+    `rankings/${createdUid}`,
+    `socialProfiles/${createdUid}`,
+    `socialTags/${created.tag}`,
+    `friendLists/${createdUid}`,
+  ])
+    assert.equal((await db.doc(path).get()).exists, false);
+  assert.ok(
+    !(await db.doc(`friendLists/${uid}`).get()).data().ids.includes(createdUid),
+  );
+  assert.ok(
+    !(await friends.state(uid)).friends.some((row) => row.uid === createdUid),
+  );
+  assert.ok(
+    !(await friends.ranking(uid, "all")).some((row) => row.uid === createdUid),
+  );
+  await assert.rejects(friends.request(uid, created.tag), /찾을 수 없습니다/);
+  await virtual.remove("owner", createdUid);
+  await virtual.create("owner", {
+    name: "삭제 후 추가",
+    requestId: randomUUID(),
+  });
+  assert.equal((await virtual.list()).length, 10);
   // Legacy seed must also respect capacity when its original record is absent.
-  await db.doc(`virtualTrainees/${FIRST_VIRTUAL_UID}`).delete();
+  await virtual.remove("owner", FIRST_VIRTUAL_UID);
   await virtual.create("owner", { name: "빈자리", requestId: randomUUID() });
   await assert.rejects(virtual.seed(), /최대 10명/);
 });

@@ -1,6 +1,7 @@
-import { ChevronDown, Plus, X } from "lucide-react";
+import { virtualEditSummary } from "./virtualEdits";
+import { ChevronDown, Plus, X, Trash2 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import { EXERCISES, recordExp, MAX_NAME_LENGTH, validateName } from "../model";
+import { EXERCISES, MAX_NAME_LENGTH, validateName } from "../model";
 import {
   MAX_VIRTUAL_TRAINEES,
   DEFAULT_TRAINING_INTENSITY,
@@ -61,6 +62,7 @@ function PreferredExercises({
 
 function TraineeEditor({ entry, onSaved }) {
   const [values, setValues] = useState(entry);
+  const summary = virtualEditSummary(values.totals, entry);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   async function save(e) {
@@ -89,7 +91,7 @@ function TraineeEditor({ entry, onSaved }) {
               <input
                 type="number"
                 required
-                min={entry.todayCounts[key]}
+                min="0"
                 max={key === "runningKm" ? 40000000 : 400000000}
                 step={step}
                 value={values.totals[key]}
@@ -105,7 +107,7 @@ function TraineeEditor({ entry, onSaved }) {
                 }
               />
               <small>
-                오늘 ▲ {entry.todayCounts[key]}
+                오늘 ▲ {summary.todayCounts[key]}
                 {unit}
               </small>
             </label>
@@ -114,40 +116,13 @@ function TraineeEditor({ entry, onSaved }) {
         <div className="goal-fields admin-scores">
           <label>
             현재 레벨
-            <input
-              type="number"
-              required
-              min="1"
-              max="1000"
-              step="1"
-              value={values.level}
-              onChange={(e) =>
-                setValues({
-                  ...values,
-                  level: e.target.value === "" ? "" : Number(e.target.value),
-                })
-              }
-            />
+            <input type="number" readOnly value={summary.level} />
           </label>
           <label>
             누적 EXP
-            <input
-              type="number"
-              required
-              min={recordExp(entry.todayCounts)}
-              max="2000000000"
-              step="1"
-              value={values.totalExp}
-              onChange={(e) =>
-                setValues({
-                  ...values,
-                  totalExp: e.target.value === "" ? "" : Number(e.target.value),
-                })
-              }
-            />
+            <input type="number" readOnly value={summary.totalExp} />
           </label>
         </div>
-        <p className="hint">레벨·EXP는 운동량과 별도로 수정됩니다.</p>
         <label className="virtual-enabled">
           <input
             type="checkbox"
@@ -194,6 +169,22 @@ export default function AdminPanel() {
   );
   const [creating, setCreating] = useState(false);
   const [showCreate, setShowCreate] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState(null);
+  const [deleting, setDeleting] = useState(false);
+  async function deleteTrainee(uid) {
+    setDeleting(true);
+    setError("");
+    setMessage("");
+    try {
+      setEntries(await friendApi("admin-delete", { uid }));
+      setDeleteTarget(null);
+      setMessage("가상 훈련생을 삭제했습니다.");
+    } catch (error) {
+      setError(error.message);
+    } finally {
+      setDeleting(false);
+    }
+  }
   const pendingCreate = useRef(null);
   const createInFlight = useRef(false);
   async function addTrainee(event) {
@@ -270,7 +261,7 @@ export default function AdminPanel() {
         <button
           className="secondary-button"
           onClick={() => load()}
-          disabled={busy || creating}
+          disabled={busy || creating || deleting}
         >
           새로고침
         </button>
@@ -372,7 +363,7 @@ export default function AdminPanel() {
       {!busy && (
         <ul className="virtual-list">
           {entries.map((entry) => (
-            <li key={entry.uid}>
+            <li key={entry.uid} className="virtual-list-item">
               <details name="virtual-trainees">
                 <summary className="virtual-list-row">
                   <span className="virtual-list-identity">
@@ -396,6 +387,42 @@ export default function AdminPanel() {
                   }}
                 />
               </details>
+              <button
+                className="virtual-delete-button"
+                type="button"
+                aria-label={`${entry.characterName} 삭제`}
+                disabled={deleting}
+                onClick={() => setDeleteTarget(entry.uid)}
+              >
+                <Trash2 size={17} aria-hidden="true" />
+              </button>
+              {deleteTarget === entry.uid && (
+                <div
+                  className="virtual-delete-confirm"
+                  role="group"
+                  aria-label={`${entry.characterName} 삭제 확인`}
+                >
+                  <p>{entry.characterName} 훈련생을 삭제할까요?</p>
+                  <div className="action-buttons">
+                    <button
+                      className="secondary-button"
+                      type="button"
+                      disabled={deleting}
+                      onClick={() => setDeleteTarget(null)}
+                    >
+                      취소
+                    </button>
+                    <button
+                      className="secondary-button"
+                      type="button"
+                      disabled={deleting}
+                      onClick={() => deleteTrainee(entry.uid)}
+                    >
+                      {deleting ? "삭제 중…" : "삭제 확인"}
+                    </button>
+                  </div>
+                </div>
+              )}
             </li>
           ))}
         </ul>

@@ -133,8 +133,7 @@ export function virtualService(db, now = () => new Date()) {
   async function advance(uid) {
     return db.runTransaction(async (tx) => {
       const snapshot = await tx.get(ref(uid));
-      if (!snapshot.exists)
-        throw new FriendError("가상 훈련생을 찾을 수 없습니다.", 404);
+      if (!snapshot.exists) return null;
       const old = snapshot.data();
       const bot = advanceVirtual(old, dueDay(now()));
       if (bot.processedThrough !== old.processedThrough) {
@@ -172,6 +171,8 @@ export function virtualService(db, now = () => new Date()) {
     await advance(uid);
     await db.runTransaction(async (tx) => {
       const snapshot = await tx.get(ref(uid));
+      if (!snapshot.exists)
+        throw new FriendError("가상 훈련생을 찾을 수 없습니다.", 404);
       const bot = snapshot.data();
       if (input?.revision !== bot.revision)
         throw new FriendError(
@@ -182,13 +183,22 @@ export function virtualService(db, now = () => new Date()) {
       const edited = validateVirtualEdit(input, {
         ...bot,
         todayCounts: view.todayCounts,
+        level: view.level,
       });
       const next = {
         ...bot,
         ...edited,
         calculatedOn: koreaDay(now()),
         progressExp: edited.level === 1000 ? 0 : edited.totalExp % 100,
-        weeklyExp: Math.min(bot.weeklyExp, edited.totalExp),
+        activityDay: koreaDay(now()),
+        weekStart: view.weekStart,
+        weeklyExp: Math.max(
+          0,
+          Math.min(
+            edited.totalExp,
+            view.weeklyExp + edited.totalExp - bot.totalExp,
+          ),
+        ),
         revision: bot.revision + 1,
       };
       if (
@@ -217,5 +227,50 @@ export function virtualService(db, now = () => new Date()) {
     });
     return list();
   }
-  return { seed, create, refresh, list, update };
+  async function remove(actor, uid) {
+    if (typeof uid !== "string" || !/^virtual-[a-z0-9-]{1,80}$/.test(uid))
+      throw new FriendError("가상 훈련생을 확인해 주세요.");
+    await db.runTransaction(async (tx) => {
+      const snapshot = await tx.get(ref(uid));
+      if (!snapshot.exists) return;
+      const bot = snapshot.data();
+      const capacityRef = db.doc("adminState/virtualTrainees");
+      await tx.get(capacityRef);
+      const existing = await tx.get(
+        db.collection("virtualTrainees").limit(MAX_VIRTUAL_TRAINEES),
+      );
+      const friends = await tx.get(db.doc(`friendLists/${uid}`));
+      for (const friend of friends.data()?.ids || []) {
+        tx.set(
+          db.doc(`friendLists/${friend}`),
+          { ids: FieldValue.arrayRemove(uid) },
+          { merge: true },
+        );
+        tx.set(
+          db.doc(`friendInbox/${friend}`),
+          { updatedAt: stamp() },
+          { merge: true },
+        );
+      }
+      for (const path of [
+        `virtualTrainees/${uid}`,
+        `rankings/${uid}`,
+        `socialProfiles/${uid}`,
+        `socialTags/${bot.tag}`,
+        `friendLists/${uid}`,
+        `friendInbox/${uid}`,
+      ])
+        tx.delete(db.doc(path));
+      tx.set(capacityRef, { count: Math.max(0, existing.size - 1) });
+      tx.create(db.collection("adminAudit").doc(), {
+        actor,
+        target: uid,
+        action: "virtual-delete",
+        before: bot,
+        at: stamp(),
+      });
+    });
+    return list();
+  }
+  return { seed, create, refresh, list, update, remove };
 }

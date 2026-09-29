@@ -45,6 +45,7 @@ export function createFriendsHandler({
         "admin-update",
         "admin-seed",
         "admin-create",
+        "admin-delete",
       ].includes(req.query.action);
       const allowed =
         adminAction || req.query.action === "admin-status"
@@ -63,6 +64,9 @@ export function createFriendsHandler({
           break;
         case "admin-update":
           result = await virtual().update(uid, body.uid, body.values);
+          break;
+        case "admin-delete":
+          result = await virtual().remove(uid, body.uid);
           break;
         case "admin-create":
           result = await virtual().create(uid, body.values);

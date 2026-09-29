@@ -188,6 +188,8 @@ export function friendsService(db, messaging) {
           tx.get(db.doc(`friendCooldowns/${id}`)),
           tx.get(db.doc(`virtualTrainees/${to}`)),
         ]);
+      if (!(await tx.get(profileRef(to))).exists)
+        throw new FriendError("사용자를 찾을 수 없습니다.", 404);
       if ((left.data()?.ids || []).includes(to))
         throw new FriendError("이미 친구입니다.", 409);
       if (request.exists) {
