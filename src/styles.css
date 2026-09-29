@@ -3526,3 +3526,76 @@ main {
   height: 20px;
   accent-color: #d92c29;
 }
+
+.virtual-list-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 20px;
+  font-size: 13px;
+}
+.virtual-list {
+  list-style: none;
+  margin: 16px 0 0;
+  padding: 0;
+  border: 1px solid #bbb;
+  border-radius: 6px;
+  overflow: hidden;
+}
+.virtual-list:empty {
+  display: none;
+}
+.virtual-list > li + li {
+  border-top: 1px solid #bbb;
+}
+.virtual-list-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 68px;
+  padding: 12px;
+  list-style: none;
+  cursor: pointer;
+}
+.virtual-list-row::-webkit-details-marker {
+  display: none;
+}
+.virtual-list-row:hover {
+  background: #fff4b8;
+}
+.virtual-list-row:focus-visible {
+  outline: 3px solid #c63025;
+  outline-offset: -3px;
+}
+.virtual-list-identity {
+  flex: 1;
+  min-width: 0;
+}
+.virtual-list-identity strong {
+  display: block;
+  overflow-wrap: anywhere;
+  font-size: 14px;
+}
+.virtual-list-identity small {
+  display: block;
+  margin-top: 4px;
+  font-size: 11px;
+  color: #555;
+}
+.virtual-list-status {
+  flex-shrink: 0;
+  font-size: 11px;
+  color: #555;
+}
+.virtual-list-row > svg {
+  flex-shrink: 0;
+}
+.virtual-list details[open] > summary > svg {
+  transform: rotate(180deg);
+}
+.virtual-list .virtual-editor {
+  margin: 0;
+  padding: 16px 12px;
+  border-top: 1px solid #ddd;
+}

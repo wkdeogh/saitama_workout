@@ -1,3 +1,4 @@
+import { ChevronDown, Plus, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { EXERCISES, recordExp, MAX_NAME_LENGTH, validateName } from "../model";
 import {
@@ -78,7 +79,6 @@ function TraineeEditor({ entry, onSaved }) {
   }
   return (
     <form className="virtual-editor" onSubmit={save}>
-      <h3>{entry.characterName}</h3>
       <p className="hint">#{entry.tag}</p>
       <fieldset disabled={busy}>
         <legend>누적 운동량</legend>
@@ -193,6 +193,7 @@ export default function AdminPanel() {
     DEFAULT_PREFERRED_EXERCISES,
   );
   const [creating, setCreating] = useState(false);
+  const [showCreate, setShowCreate] = useState(false);
   const pendingCreate = useRef(null);
   const createInFlight = useRef(false);
   async function addTrainee(event) {
@@ -225,6 +226,7 @@ export default function AdminPanel() {
       setEntries(rows);
       pendingCreate.current = null;
       setName("");
+      setShowCreate(false);
       setMessage("가상 훈련생을 추가했습니다.");
     } catch (error) {
       setError(error.message);
@@ -284,62 +286,120 @@ export default function AdminPanel() {
           {message}
         </p>
       )}
-      <form className="virtual-create" onSubmit={addTrainee}>
-        <div className="virtual-create-heading">
-          <label htmlFor="virtual-name">훈련생 이름</label>
-          <span>
-            {entries.length} / {MAX_VIRTUAL_TRAINEES}명
-          </span>
-        </div>
-        <div className="virtual-create-fields">
-          <input
-            id="virtual-name"
-            value={name}
-            onChange={(event) => setName(event.target.value)}
-            required
-            maxLength={MAX_NAME_LENGTH}
+      <div className="virtual-list-toolbar">
+        <span>
+          {entries.length} / {MAX_VIRTUAL_TRAINEES}명
+        </span>
+        <button
+          className="secondary-button"
+          type="button"
+          aria-expanded={showCreate}
+          aria-controls="virtual-create-form"
+          disabled={
+            busy ||
+            creating ||
+            (!showCreate && entries.length >= MAX_VIRTUAL_TRAINEES)
+          }
+          onClick={() => {
+            setShowCreate(!showCreate);
+            setError("");
+            setMessage("");
+          }}
+        >
+          {showCreate ? (
+            <X size={16} aria-hidden="true" />
+          ) : (
+            <Plus size={16} aria-hidden="true" />
+          )}
+          {showCreate ? "추가 취소" : "가상훈련생 추가"}
+        </button>
+      </div>
+      {entries.length >= MAX_VIRTUAL_TRAINEES && (
+        <p className="hint">최대 10명까지 추가할 수 있습니다.</p>
+      )}
+      {showCreate && (
+        <form
+          id="virtual-create-form"
+          className="virtual-create"
+          onSubmit={addTrainee}
+        >
+          <div className="virtual-create-heading">
+            <label htmlFor="virtual-name">훈련생 이름</label>
+          </div>
+          <div className="virtual-create-fields">
+            <input
+              id="virtual-name"
+              value={name}
+              onChange={(event) => setName(event.target.value)}
+              required
+              maxLength={MAX_NAME_LENGTH}
+              disabled={
+                busy || creating || entries.length >= MAX_VIRTUAL_TRAINEES
+              }
+            />
+            <button
+              className="primary-button"
+              type="submit"
+              disabled={
+                busy ||
+                creating ||
+                !name.trim() ||
+                entries.length >= MAX_VIRTUAL_TRAINEES
+              }
+            >
+              {creating ? "추가 중…" : "추가"}
+            </button>
+          </div>
+          <IntensitySelect
+            value={intensity}
+            onChange={setIntensity}
             disabled={
               busy || creating || entries.length >= MAX_VIRTUAL_TRAINEES
             }
           />
-          <button
-            className="primary-button"
-            type="submit"
+          <PreferredExercises
+            value={preferredExercises}
+            onChange={setPreferredExercises}
             disabled={
-              busy ||
-              creating ||
-              !name.trim() ||
-              entries.length >= MAX_VIRTUAL_TRAINEES
+              busy || creating || entries.length >= MAX_VIRTUAL_TRAINEES
             }
-          >
-            {creating ? "추가 중…" : "추가"}
-          </button>
-        </div>
-        <IntensitySelect
-          value={intensity}
-          onChange={setIntensity}
-          disabled={busy || creating || entries.length >= MAX_VIRTUAL_TRAINEES}
-        />
-        <PreferredExercises
-          value={preferredExercises}
-          onChange={setPreferredExercises}
-          disabled={busy || creating || entries.length >= MAX_VIRTUAL_TRAINEES}
-        />
-        {entries.length >= MAX_VIRTUAL_TRAINEES && (
-          <p className="hint">최대 10명까지 추가할 수 있습니다.</p>
-        )}
-      </form>
-      {!busy &&
-        entries.map((entry) => (
-          <TraineeEditor
-            key={`${entry.uid}:${entry.revision}`}
-            entry={entry}
-            onSaved={(rows) => {
-              setEntries(rows);
-              setMessage("변경사항을 저장했습니다.");
-            }}
           />
-        ))}
+        </form>
+      )}
+      {!busy && !error && !entries.length && (
+        <p className="hint">등록된 가상 훈련생이 없습니다.</p>
+      )}
+      {!busy && (
+        <ul className="virtual-list">
+          {entries.map((entry) => (
+            <li key={entry.uid}>
+              <details name="virtual-trainees">
+                <summary className="virtual-list-row">
+                  <span className="virtual-list-identity">
+                    <strong>{entry.characterName}</strong>
+                    <small>
+                      LV. {entry.level} · 훈련강도{" "}
+                      {entry.intensity ?? DEFAULT_TRAINING_INTENSITY}단계
+                    </small>
+                  </span>
+                  <span className="virtual-list-status">
+                    {entry.enabled ? "자동 운동" : "운동 중지"}
+                  </span>
+                  <ChevronDown size={18} aria-hidden="true" />
+                </summary>
+                <TraineeEditor
+                  key={`${entry.uid}:${entry.revision}`}
+                  entry={entry}
+                  onSaved={(rows) => {
+                    setEntries(rows);
+                    setMessage("변경사항을 저장했습니다.");
+                  }}
+                />
+              </details>
+            </li>
+          ))}
+        </ul>
+      )}
     </section>
   );
 }
