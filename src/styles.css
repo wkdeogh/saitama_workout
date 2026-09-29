@@ -2736,8 +2736,8 @@ main {
 }
 .ranking-row {
   width: 100%;
-  padding: 15px 10px;
-  min-height: 86px;
+  padding: 5px 10px;
+  min-height: 65px;
   border-bottom: 1px solid #ddd;
   background: #fff;
   text-align: left;
