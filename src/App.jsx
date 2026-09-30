@@ -950,7 +950,13 @@ export default function App() {
             <aside className="hero-column">
               <section className="hero-card">
                 <div className="hero-heading">
-                  <span className="eyebrow">CHARACTER</span>
+                  <span
+                    className={`eyebrow${summary.streak > 0 ? " streak-heading" : ""}`}
+                  >
+                    {summary.streak > 0
+                      ? `${summary.streak}일 연속 운동 중!`
+                      : "CHARACTER"}
+                  </span>
                   <span className="level-badge">
                     <Zap size={13} fill="currentColor" />
                     LV. {summary.level}
@@ -974,9 +980,6 @@ export default function App() {
                     streak={summary.streak}
                     celebrate={celebrate}
                   />
-                  <span className="character-streak">
-                    {summary.streak}일 연속 운동 중!
-                  </span>
                   <span className="drag-label">
                     <RotateCcw size={11} />
                     드래그해서 돌려보기
