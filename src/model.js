@@ -150,7 +150,7 @@ export function daysBetween(from, to) {
   );
 }
 export function inactivityPenalty(days) {
-  return days >= 5 ? days : 0;
+  return Math.max(0, days - 4);
 }
 export function progression(records, today = dateKey()) {
   const days = Object.keys(records)

@@ -291,14 +291,16 @@ test("new optional goals do not change past completion and all four roundtrip", 
   assert.equal(isComplete(d.records[today]), true);
   assert.deepEqual(parseBackup(JSON.stringify(d), today), d);
 });
-test("five consecutive missing days lose five levels; ten lose ten; floor is one", () => {
+test("five consecutive missing days lose one level; ten lose six; floor is one", () => {
   const r = { "2026-09-01": entry(1550) };
   assert.equal(progression(r, "2026-09-05").level, 16);
-  assert.equal(progression(r, "2026-09-06").level, 11);
-  assert.equal(progression(r, "2026-09-11").level, 6);
-  assert.equal(progression(r, "2026-09-16").level, 1);
+  assert.equal(progression(r, "2026-09-06").level, 15);
+  assert.equal(progression(r, "2026-09-07").level, 14);
+  assert.equal(progression(r, "2026-09-11").level, 10);
+  assert.equal(progression(r, "2026-09-16").level, 5);
+  assert.equal(progression(r, "2026-09-20").level, 1);
   assert.equal(progression(r, "2026-09-16").progressExp, 50);
-  assert.equal(progression(r, "2026-09-16").lostLevels, 15);
+  assert.equal(progression(r, "2026-09-20").lostLevels, 15);
   assert.equal(progression(r, "2026-09-05").daysToDecay, 1);
   assert.equal(progression(r, "2026-09-06").daysToDecay, 1);
   assert.equal(progression({}, today).daysToDecay, null);
@@ -308,12 +310,12 @@ test("workout on fifth day cancels its uncompleted gap; sixth day retains penalt
   assert.equal(progression(r, "2026-09-06").level, 11);
   delete r["2026-09-06"];
   r["2026-09-07"] = entry(1);
-  assert.equal(progression(r, "2026-09-07").level, 6);
+  assert.equal(progression(r, "2026-09-07").level, 10);
   assert.equal(progression(r, "2026-09-07").progressExp, 1);
 });
 test("zero records do not reset inactivity; small workouts restart the window", () => {
   const r = { "2026-09-01": entry(1000), "2026-09-05": entry(0) };
-  assert.equal(progression(r, "2026-09-06").level, 6);
+  assert.equal(progression(r, "2026-09-06").level, 10);
   r["2026-09-05"] = { ...emptyCounts(), runningKm: 0.1 };
   assert.equal(progression(r, "2026-09-06").level, 11);
 });
@@ -335,9 +337,9 @@ test("level caps at 1000 with no banked EXP and still decays", () => {
   assert.equal(progression(r, "2026-09-11").level, 1000);
   assert.equal(progression(r, "2026-09-11").progressExp, 0);
   assert.equal(progression(r, "2026-09-11").expToNext, 0);
-  assert.equal(progression(r, "2026-09-16").level, 995);
+  assert.equal(progression(r, "2026-09-16").level, 999);
   r["2026-09-17"] = entry(100);
-  assert.equal(progression(r, "2026-09-17").level, 996);
+  assert.equal(progression(r, "2026-09-17").level, 1000);
 });
 
 test("character names survive saves and JSON roundtrips, with whitespace trimmed", () => {
@@ -443,17 +445,17 @@ test("after the fifth inactive day decay continues daily and each workout restar
   const r = { "2026-09-01": entry(3000) };
   for (let days = 0; days <= 12; days++) {
     const result = progression(r, shiftDate("2026-09-01", days));
-    assert.equal(result.level, 31 - (days >= 5 ? days : 0));
+    assert.equal(result.level, 31 - (days >= 5 ? days - 4 : 0));
     assert.equal(result.daysToDecay, Math.max(1, 5 - days));
   }
   r["2026-09-09"] = entry(1);
-  assert.equal(progression(r, "2026-09-09").level, 24);
-  assert.equal(progression(r, "2026-09-13").level, 24);
-  assert.equal(progression(r, "2026-09-14").level, 19);
-  assert.equal(progression(r, "2026-09-15").level, 18);
+  assert.equal(progression(r, "2026-09-09").level, 28);
+  assert.equal(progression(r, "2026-09-13").level, 28);
+  assert.equal(progression(r, "2026-09-14").level, 27);
+  assert.equal(progression(r, "2026-09-15").level, 26);
   r["2026-09-16"] = entry(1);
-  assert.equal(progression(r, "2026-09-16").level, 18);
-  assert.equal(progression(r, "2026-09-20").level, 18);
-  assert.equal(progression(r, "2026-09-21").level, 13);
+  assert.equal(progression(r, "2026-09-16").level, 26);
+  assert.equal(progression(r, "2026-09-20").level, 26);
+  assert.equal(progression(r, "2026-09-21").level, 25);
   assert.equal(progression(r, "2026-09-21").progressExp, 2);
 });

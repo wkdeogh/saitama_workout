@@ -160,8 +160,8 @@ test("existing ranking accounts recalculate old gaps using daily decay without r
     .set({ payload: JSON.stringify(data), participating: true });
   const [label] = await service.labels(a.uid, [a.uid]);
   const [friend] = await service.ranking(a.uid, "all");
-  assert.equal(label.level, 24);
-  assert.equal(friend.level, 24);
+  assert.equal(label.level, 28);
+  assert.equal(friend.level, 28);
   assert.equal(label.calculatedOn, today);
   assert.equal(label.lastWorkout, shiftDate(today, -7));
   assert.equal(label.todayExp, 0);

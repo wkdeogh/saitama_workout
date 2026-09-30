@@ -61,13 +61,13 @@ test("cached leaderboard levels apply missed-day decay without requiring a login
     calculatedOn: "2026-09-05",
   };
   assert.equal(displayedLevel(e, "2026-09-05"), 20);
-  assert.equal(displayedLevel(e, "2026-09-06"), 15);
+  assert.equal(displayedLevel(e, "2026-09-06"), 19);
   assert.equal(
     displayedLevel(
-      { ...e, level: 15, calculatedOn: "2026-09-06" },
+      { ...e, level: 19, calculatedOn: "2026-09-06" },
       "2026-09-11",
     ),
-    10,
+    14,
   );
   assert.equal(displayedLevel(e, "2026-10-01"), 1);
 });
@@ -162,7 +162,7 @@ test("default goal migration survives cloud merge and later personal goal change
   assert.deepEqual(mergeChanges(merged, custom, upgraded).goals, old.goals);
 });
 
-test("cached level deducts only new daily decay after initial five-day loss", () => {
+test("cached level deducts only new daily decay after the first loss on day five", () => {
   const data = add(initialData(), "2026-09-01", { pushups: 3000 });
   for (const calculatedOn of ["2026-09-04", "2026-09-06", "2026-09-08"]) {
     const cached = rankingSummary(data, calculatedOn);

@@ -126,8 +126,8 @@ test("paused virtual trainees decay daily after grace and never accumulate worko
     processedThrough: "2026-09-01",
   };
   assert.equal(advanceVirtual(initial, "2026-09-05").level, 30);
-  assert.equal(advanceVirtual(initial, "2026-09-06").level, 25);
-  assert.equal(advanceVirtual(initial, "2026-09-08").level, 23);
+  assert.equal(advanceVirtual(initial, "2026-09-06").level, 29);
+  assert.equal(advanceVirtual(initial, "2026-09-08").level, 27);
   assert.equal(advanceVirtual(initial, "2026-09-30").totalExp, 0);
   assert.equal(advanceVirtual(initial, "2026-10-10").level, 1);
 });

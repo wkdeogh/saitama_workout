@@ -73,7 +73,7 @@ test("seed, concurrent daily ticks, server-owned edits, auto acceptance and both
   now = new Date(`${shiftDate(date, 7)}T12:30:00Z`);
   [entry] = await virtual.list();
   assert.equal(entry.totalExp, 2100);
-  assert.equal(entry.level, 15);
+  assert.equal(entry.level, 19);
   assert.deepEqual(entry.todayCounts, emptyCounts());
   assert.ok(
     !(
