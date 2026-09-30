@@ -17,6 +17,7 @@ import {
   dailyExpColor,
 } from "./dailyActivity";
 import { stats } from "../model";
+import StreakNickname from "../StreakNickname";
 import useKoreaDay from "./useKoreaDay";
 
 function DailyExp({ entry, day, dark = false }) {
@@ -322,7 +323,13 @@ export default function RankingPanel({ account, data, onUser, friends }) {
         }
       >
         <div>
-          <strong>{data.characterName}</strong>
+          <strong>
+            <StreakNickname
+              name={data.characterName}
+              streak={summary.streak}
+              dark
+            />
+          </strong>
           <DailyExp entry={summary} day={day} dark />
         </div>
         <div className="my-ranking-score">
@@ -372,7 +379,10 @@ export default function RankingPanel({ account, data, onUser, friends }) {
                   </span>
                   <span className="rank-user">
                     <strong>
-                      {entry.characterName}
+                      <StreakNickname
+                        name={entry.characterName}
+                        streak={entry.calculatedOn === day ? entry.streak : 0}
+                      />
                       {entry.uid === account.user.uid && <em>나</em>}
                     </strong>
                     <DailyExp entry={entry} day={day} />

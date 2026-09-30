@@ -162,7 +162,9 @@ function RankingUserDialog({ entry, onClose }) {
         }}
       >
         <Character level={level} streak={streak} stage={stageIndex(level)} />
-        <span className="character-streak">{streak}일 연속 운동 중!</span>
+        {streak >= 2 && (
+          <span className="character-streak">{streak}일 연속 운동 중!</span>
+        )}
       </div>
       <div className="ranking-user-totals">
         {EXERCISES.map(({ key, label, unit }) => (
@@ -951,9 +953,9 @@ export default function App() {
               <section className="hero-card">
                 <div className="hero-heading">
                   <span
-                    className={`eyebrow${summary.streak > 0 ? " streak-heading" : ""}`}
+                    className={`eyebrow${summary.streak >= 2 ? " streak-heading" : ""}`}
                   >
-                    {summary.streak > 0
+                    {summary.streak >= 2
                       ? `${summary.streak}일 연속 운동 중!`
                       : "CHARACTER"}
                   </span>
@@ -1024,7 +1026,11 @@ export default function App() {
                   <Flame size={25} />
                 </span>
                 <div>
-                  <strong>{summary.streak}일 연속 운동 중!</strong>
+                  <strong>
+                    {summary.streak >= 2
+                      ? `${summary.streak}일 연속 운동 중!`
+                      : "연속 운동을 시작해 보세요"}
+                  </strong>
                   <p>운동을 기록한 날 기준</p>
                 </div>
                 <span className="streak-deco">↗</span>

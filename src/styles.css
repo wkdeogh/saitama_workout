@@ -3648,3 +3648,51 @@ main {
   font-size: 12px;
   letter-spacing: 0;
 }
+
+.streak-nickname {
+  color: #171717;
+  background: linear-gradient(
+    110deg,
+    #171717 25%,
+    var(--streak-shine) 43%,
+    #ffffff 50%,
+    var(--streak-shine) 57%,
+    #171717 75%
+  );
+  background-size: 250% 100%;
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  text-shadow: 0 0 8px color-mix(in srgb, var(--streak-shine) 40%, transparent);
+  animation: streak-name-shine 3.6s ease-in-out infinite;
+}
+.streak-nickname-dark {
+  background-image: linear-gradient(
+    110deg,
+    #ffffff 25%,
+    var(--streak-shine) 43%,
+    #ffffff 50%,
+    var(--streak-shine) 57%,
+    #ffffff 75%
+  );
+}
+@keyframes streak-name-shine {
+  0%,
+  15% {
+    background-position: 100% 50%;
+  }
+  75%,
+  100% {
+    background-position: 0% 50%;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .streak-nickname {
+    animation: none;
+    background: none;
+    -webkit-text-fill-color: currentColor;
+  }
+  .streak-nickname-dark {
+    color: #ffffff;
+  }
+}

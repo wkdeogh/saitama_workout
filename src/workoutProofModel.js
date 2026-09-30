@@ -47,7 +47,7 @@ export function proofShareData(proof, file) {
       frame,
       `💪 ${proof.name}.. 오늘의 훈련 완료..`,
       proof.day,
-      `${proof.streak || 0}일 연속 운동 중!`,
+      ...(proof.streak >= 2 ? [`${proof.streak}일 연속 운동 중!`] : []),
       "",
       ...EXERCISES.map(
         ({ key, label, unit }) =>
