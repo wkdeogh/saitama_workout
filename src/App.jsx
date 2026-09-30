@@ -162,7 +162,7 @@ function RankingUserDialog({ entry, onClose }) {
         }}
       >
         <Character level={level} streak={streak} stage={stageIndex(level)} />
-        <span className="character-streak">{streak}일 연속 운동 중</span>
+        <span className="character-streak">{streak}일 연속 운동 중!</span>
       </div>
       <div className="ranking-user-totals">
         {EXERCISES.map(({ key, label, unit }) => (
@@ -975,7 +975,7 @@ export default function App() {
                     celebrate={celebrate}
                   />
                   <span className="character-streak">
-                    {summary.streak}일 연속 운동 중
+                    {summary.streak}일 연속 운동 중!
                   </span>
                   <span className="drag-label">
                     <RotateCcw size={11} />
@@ -1021,7 +1021,7 @@ export default function App() {
                   <Flame size={25} />
                 </span>
                 <div>
-                  <strong>{summary.streak}일 연속 운동 중</strong>
+                  <strong>{summary.streak}일 연속 운동 중!</strong>
                   <p>운동을 기록한 날 기준</p>
                 </div>
                 <span className="streak-deco">↗</span>

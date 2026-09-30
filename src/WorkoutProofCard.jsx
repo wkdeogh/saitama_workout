@@ -72,7 +72,7 @@ export async function createProofImage(proof, pose) {
   ctx.textAlign = "left";
   text(
     ctx,
-    `${proof.streak || 0}일 연속 운동 중`,
+    `${proof.streak || 0}일 연속 운동 중!`,
     74,
     334,
     30,
@@ -185,7 +185,7 @@ export default function WorkoutProofCard({ proof }) {
         {image ? (
           <img
             src={image.url}
-            alt={`${proof.day} ${proof.name} LV. ${proof.level} 오운완. ${proof.streak || 0}일 연속 운동 중. ${EXERCISES.map(({ key, label, unit }) => `${label} ${proof.counts[key]}${unit}`).join(", ")}`}
+            alt={`${proof.day} ${proof.name} LV. ${proof.level} 오운완. ${proof.streak || 0}일 연속 운동 중! ${EXERCISES.map(({ key, label, unit }) => `${label} ${proof.counts[key]}${unit}`).join(", ")}`}
           />
         ) : (
           <div className="proof-loading" role="status">
