@@ -94,12 +94,12 @@ test("changing goals without today's record does not create workout history", ()
     updateGoals(original, { ...original.goals, runningKm: -1 }, today),
   );
 });
-test("streak includes yesterday until today is completed", () => {
+test("streak includes yesterday until any workout is recorded today", () => {
   let d = record(legacyGoals(), "2026-09-25");
   d = record(d, "2026-09-26");
   assert.equal(stats(d, today).streak, 2);
   d = record(d, today, 5, 0);
-  assert.equal(stats(d, today).streak, 2);
+  assert.equal(stats(d, today).streak, 3);
   d = record(d, today);
   assert.equal(stats(d, today).streak, 3);
 });
@@ -458,4 +458,24 @@ test("after the fifth inactive day decay continues daily and each workout restar
   assert.equal(progression(r, "2026-09-20").level, 26);
   assert.equal(progression(r, "2026-09-21").level, 25);
   assert.equal(progression(r, "2026-09-21").progressExp, 2);
+});
+
+test("a single rep or 0.1km extends streak while zero and future records do not", () => {
+  let data = initialData();
+  for (let i = 5; i >= 0; i--)
+    data = saveRecord(
+      data,
+      shiftDate(today, -i),
+      i % 2
+        ? { ...emptyCounts(), pushups: 1 }
+        : { ...emptyCounts(), runningKm: 0.1 },
+      today,
+    );
+  assert.equal(stats(data, today).streak, 6);
+  assert.equal(stats(data, today).completed, 0);
+  const zero = saveRecord(data, today, emptyCounts(), today);
+  assert.equal(stats(zero, today).streak, 5);
+  assert.equal(stats(zero, shiftDate(today, 1)).streak, 0);
+  delete data.records[shiftDate(today, -2)];
+  assert.equal(stats(data, today).streak, 2);
 });

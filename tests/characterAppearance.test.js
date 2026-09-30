@@ -30,8 +30,6 @@ test("every one of the 1000 levels has monotonically growing finite proportions"
 });
 test("effects unlock at their documented thresholds and rings build to three", () => {
   for (const [key, threshold] of [
-    ["aura", 60],
-    ["eyes", 100],
     ["lightning", 120],
     ["fists", 150],
     ["awakened", 200],
@@ -56,7 +54,7 @@ test("unlock previews always show a future reward and end at maximum level", () 
     assert.ok(VISUAL_UNLOCKS.includes(next));
   }
   assert.equal(characterAppearance(1000).nextUnlock, null);
-  assert.equal(characterAppearance(59).nextUnlock.level, 60);
+  assert.equal(characterAppearance(59).nextUnlock.level, 80);
   assert.equal(characterAppearance(60).nextUnlock.level, 80);
 });
 test("appearance stays bounded for malformed preview values", () => {
@@ -88,4 +86,31 @@ test("hair and clothing unlock progressively through the golden final form", () 
   assert.equal(characterAppearance(749).hairGold, 0);
   assert.equal(characterAppearance(850).hairGold, 1);
   assert.equal(characterAppearance(1000).rings, 4);
+});
+
+test("streak rewards cross all six boundaries independent of level", () => {
+  const colors = [0xffb20c, 0xff302a, 0x9d52ff, 0xffdd33, 0x25aaff, 0xffd21b];
+  for (const level of [1, 60, 150, 750, 1000]) {
+    for (const days of [0, 9, 10, 19, 20, 29, 30, 39, 40, 49, 50, 59, 60, 99]) {
+      const p = characterAppearance(level, days);
+      const stage = Math.min(6, Math.floor(days / 10));
+      assert.equal(p.rewardStage, stage);
+      assert.equal(p.aura, stage > 0);
+      assert.equal(p.eyes, stage >= 3);
+      assert.equal(p.eyeFlames, stage >= 3);
+      if (stage) assert.equal(p.auraColor, colors[stage - 1]);
+      if (stage >= 5) assert.equal(p.eyeColor, 0x3fffe0);
+      for (const key of [
+        "rings",
+        "lightning",
+        "fists",
+        "hairGold",
+        "energyColor",
+        "energyEdge",
+      ])
+        assert.equal(p[key], characterAppearance(level)[key]);
+    }
+    assert.equal(characterAppearance(level, 0).eyes, false);
+    assert.equal(characterAppearance(level, 0).aura, false);
+  }
 });

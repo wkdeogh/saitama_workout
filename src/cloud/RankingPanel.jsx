@@ -16,6 +16,7 @@ import {
   displayedDailyActivity,
   dailyExpColor,
 } from "./dailyActivity";
+import { stats } from "../model";
 import useKoreaDay from "./useKoreaDay";
 
 function DailyExp({ entry, day, dark = false }) {
@@ -199,7 +200,11 @@ export default function RankingPanel({ account, data, onUser, friends }) {
     [updated, setUpdated] = useState(null);
   const sequence = useRef(0);
   const day = useKoreaDay();
-  const summary = { ...rankingSummary(data, day), ...dailyActivity(data, day) },
+  const summary = {
+      ...rankingSummary(data, day),
+      streak: stats(data, day).streak,
+      ...dailyActivity(data, day),
+    },
     field = period === "week" ? "weeklyExp" : "totalExp";
   const week = weekStart(day);
   async function refresh() {
@@ -223,6 +228,7 @@ export default function RankingPanel({ account, data, onUser, friends }) {
             Object.assign(row, {
               tag: activity.tag,
               level: activity.level,
+              streak: activity.streak || 0,
               calculatedOn: activity.calculatedOn,
               lastWorkout: activity.lastWorkout,
               activityDay: activity.activityDay,

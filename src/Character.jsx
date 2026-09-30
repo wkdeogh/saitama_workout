@@ -242,7 +242,7 @@ function createFigure(p, pose = "idle") {
       const glow = new THREE.Mesh(
         geometry,
         new THREE.MeshBasicMaterial({
-          color: p.auraEdge,
+          color: p.energyEdge,
           transparent: true,
           opacity: 0.14,
           depthWrite: false,
@@ -255,7 +255,7 @@ function createFigure(p, pose = "idle") {
       fists.push(glow);
       const cuff = new THREE.Mesh(
         new THREE.TorusGeometry(0.23, 0.014, 6, 36),
-        new THREE.MeshBasicMaterial({ color: p.auraColor }),
+        new THREE.MeshBasicMaterial({ color: p.energyColor }),
       );
       cuff.position.set(...hand);
       cuff.rotation.x = 0.5;
@@ -357,7 +357,7 @@ function createFigure(p, pose = "idle") {
       }
   }
   const eyeGlow = new THREE.MeshBasicMaterial({
-    color: p.hairGold > 0 ? 0x3fffe0 : 0xffec90,
+    color: p.eyeColor,
   });
   for (const side of [-1, 1]) {
     sphere(head, skin, [side * headWidth, -0.12, 0], [0.085, 0.135, 0.075]);
@@ -390,9 +390,13 @@ function createFigure(p, pose = "idle") {
   mouth.rotation.z = Math.PI / 2;
   head.add(mouth);
   const eyeFlames = [];
-  if (p.eyes && !p.hairGold)
+  const turquoiseEyes = p.rewardStage >= 5;
+  const eyeFlameColors = turquoiseEyes
+    ? [0x087fba, 0x00ddc4, 0x65ffe8, 0xeaffff]
+    : [0xf33b0b, 0xffb817, 0xfff5be];
+  if (p.eyeFlames)
     for (const side of [-1, 1])
-      for (let layer = 0; layer < 3; layer++) {
+      for (let layer = 0; layer < eyeFlameColors.length; layer++) {
         const shape = new THREE.Shape();
         shape.moveTo(-0.11, 0);
         shape.bezierCurveTo(-0.22, 0.18, -0.08, 0.36, -0.1, 0.57);
@@ -401,7 +405,7 @@ function createFigure(p, pose = "idle") {
         const flame = new THREE.Mesh(
           new THREE.ShapeGeometry(shape, 14),
           new THREE.MeshBasicMaterial({
-            color: [0xf33b0b, 0xffb817, 0xfff5be][layer],
+            color: eyeFlameColors[layer],
             side: THREE.DoubleSide,
             transparent: true,
             opacity: 0.92,
@@ -409,10 +413,11 @@ function createFigure(p, pose = "idle") {
           }),
         );
         flame.position.set(side * 0.225, -0.13, 0.58 + layer * 0.014);
-        flame.scale.setScalar(1 - layer * 0.24);
+        const scale = (turquoiseEyes ? 1.22 : 1) * (1 - layer * 0.24);
+        flame.scale.setScalar(scale);
         flame.rotation.z = -side * 0.19;
         head.add(flame);
-        eyeFlames.push({ mesh: flame, scale: 1 - layer * 0.24 });
+        eyeFlames.push({ mesh: flame, scale });
       }
   root.scale.setScalar(p.height);
   // Feet remain on the platform while the whole silhouette grows from 64% to 100% height.
@@ -445,42 +450,48 @@ function createEnergy(p) {
     bolts = [];
   let flame = null,
     particles = null;
-  if (!p.aura) return { root, rings, bolts, flame, particles };
-  const uniforms = {
-    time: { value: 0 },
-    power: { value: p.auraPower },
-    tint: { value: new THREE.Color(p.auraColor) },
-    edge: { value: new THREE.Color(p.auraEdge) },
-  };
-  flame = new THREE.Mesh(
-    new THREE.PlaneGeometry(4.6 + p.hair * 0.7, 4.2 + p.hair * 1.6),
-    new THREE.ShaderMaterial({
-      uniforms,
-      vertexShader: auraVertex,
-      fragmentShader: auraFragment,
+  if (p.aura) {
+    const uniforms = {
+      time: { value: 0 },
+      power: { value: p.auraPower },
+      tint: { value: new THREE.Color(p.auraColor) },
+      edge: { value: new THREE.Color(p.auraEdge) },
+    };
+    flame = new THREE.Mesh(
+      new THREE.PlaneGeometry(4.6 + p.hair * 0.7, 4.2 + p.hair * 1.6),
+      new THREE.ShaderMaterial({
+        uniforms,
+        vertexShader: auraVertex,
+        fragmentShader: auraFragment,
+        transparent: true,
+        depthWrite: false,
+        side: THREE.DoubleSide,
+        blending: THREE.AdditiveBlending,
+      }),
+    );
+    flame.position.set(0, 2.1 + p.hair * 0.6, -0.56);
+    root.add(flame);
+  }
+  if (p.level >= 60) {
+    const count = 40 + Math.round(p.growth * 48),
+      positions = new Float32Array(count * 3);
+    const particleGeo = new THREE.BufferGeometry();
+    particleGeo.setAttribute(
+      "position",
+      new THREE.BufferAttribute(positions, 3),
+    );
+    const particleMat = new THREE.ShaderMaterial({
+      uniforms: { tint: { value: new THREE.Color(p.energyEdge) } },
       transparent: true,
       depthWrite: false,
-      side: THREE.DoubleSide,
       blending: THREE.AdditiveBlending,
-    }),
-  );
-  flame.position.set(0, 2.1 + p.hair * 0.6, -0.56);
-  root.add(flame);
-  const count = 40 + Math.round(p.growth * 48),
-    positions = new Float32Array(count * 3);
-  const particleGeo = new THREE.BufferGeometry();
-  particleGeo.setAttribute("position", new THREE.BufferAttribute(positions, 3));
-  const particleMat = new THREE.ShaderMaterial({
-    uniforms: { tint: { value: new THREE.Color(p.auraEdge) } },
-    transparent: true,
-    depthWrite: false,
-    blending: THREE.AdditiveBlending,
-    vertexShader: `void main(){vec4 mv=modelViewMatrix*vec4(position,1.0);gl_PointSize=clamp(42.0/-mv.z,2.0,10.0);gl_Position=projectionMatrix*mv;}`,
-    fragmentShader: `uniform vec3 tint;void main(){float r=length(gl_PointCoord-.5);float a=1.0-smoothstep(.04,.5,r);gl_FragColor=vec4(tint,a);}`,
-  });
-  particles = new THREE.Points(particleGeo, particleMat);
-  particles.frustumCulled = false;
-  root.add(particles);
+      vertexShader: `void main(){vec4 mv=modelViewMatrix*vec4(position,1.0);gl_PointSize=clamp(42.0/-mv.z,2.0,10.0);gl_Position=projectionMatrix*mv;}`,
+      fragmentShader: `uniform vec3 tint;void main(){float r=length(gl_PointCoord-.5);float a=1.0-smoothstep(.04,.5,r);gl_FragColor=vec4(tint,a);}`,
+    });
+    particles = new THREE.Points(particleGeo, particleMat);
+    particles.frustumCulled = false;
+    root.add(particles);
+  }
   for (let i = 0; i < p.rings; i++) {
     const ring = new THREE.Mesh(
       new THREE.TorusGeometry(
@@ -490,7 +501,7 @@ function createEnergy(p) {
         96,
       ),
       new THREE.MeshBasicMaterial({
-        color: i % 2 ? p.auraEdge : p.auraColor,
+        color: i % 2 ? p.energyEdge : p.energyColor,
         transparent: true,
         opacity: 0.8,
         depthWrite: false,
@@ -502,13 +513,15 @@ function createEnergy(p) {
     root.add(ring);
     rings.push(ring);
   }
-  const ground = new THREE.Mesh(
-    new THREE.TorusGeometry(1.1, 0.025, 8, 80),
-    new THREE.MeshBasicMaterial({ color: p.auraColor }),
-  );
-  ground.rotation.x = Math.PI / 2;
-  ground.position.y = 0.23;
-  root.add(ground);
+  if (p.level >= 60) {
+    const ground = new THREE.Mesh(
+      new THREE.TorusGeometry(1.1, 0.025, 8, 80),
+      new THREE.MeshBasicMaterial({ color: p.energyColor }),
+    );
+    ground.rotation.x = Math.PI / 2;
+    ground.position.y = 0.23;
+    root.add(ground);
+  }
   if (p.lightning)
     for (let i = 0; i < (p.awakened ? 8 : 4); i++) {
       const side = i % 2 ? 1 : -1,
@@ -531,7 +544,7 @@ function createEnergy(p) {
           false,
         ),
         new THREE.MeshBasicMaterial({
-          color: p.auraEdge,
+          color: p.energyEdge,
           transparent: true,
           opacity: 0.85,
           depthWrite: false,
@@ -545,14 +558,20 @@ function createEnergy(p) {
 }
 
 // Render and copy in the same frame; no persistent WebGL buffer or animation loop.
-export function characterPortrait(level, pose, width = 960, height = 820) {
+export function characterPortrait(
+  level,
+  pose,
+  width = 960,
+  height = 820,
+  streak = 0,
+) {
   const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
   const scene = new THREE.Scene();
   try {
     renderer.setSize(width, height);
     renderer.setPixelRatio(1);
     renderer.outputColorSpace = THREE.SRGBColorSpace;
-    const p = characterAppearance(level);
+    const p = characterAppearance(level, streak);
     const figure = createFigure(p, pose);
     figure.root.rotation.y = bodyPose(pose).turn;
     figure.root.position.y -= bodyPose(pose).drop * p.height;
@@ -594,6 +613,7 @@ export default function Character({
   stage = 0,
   level = 1,
   celebrate = false,
+  streak = 0,
   label,
 }) {
   const mount = useRef(null),
@@ -761,7 +781,7 @@ export default function Character({
   useEffect(() => {
     const state = runtime.current;
     if (!state) return;
-    const p = characterAppearance(level),
+    const p = characterAppearance(level, streak),
       figure = createFigure(p),
       energy = createEnergy(p);
     state.camera.position.set(0, 2.9 + p.hair * 0.5, 9.3 + p.hair * 1.7);
@@ -778,7 +798,7 @@ export default function Character({
         state.energy = null;
       }
     };
-  }, [level]);
+  }, [level, streak]);
   return (
     <div
       ref={mount}

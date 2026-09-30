@@ -14,7 +14,7 @@ import {
   rankingSummary,
   rankedEntries,
 } from "../src/cloud/rankingModel.js";
-import { parseBackup } from "../src/model.js";
+import { parseBackup, stats } from "../src/model.js";
 import { virtualService } from "./virtualService.js";
 import { publicVirtual } from "./virtualModel.js";
 import { dailyActivity } from "../src/cloud/dailyActivity.js";
@@ -338,6 +338,7 @@ export function friendsService(db, messaging) {
           uid: a.id,
           tag: tags.get(a.id),
           ...rankingSummary(data, day),
+          streak: stats(data, day).streak,
           ...dailyActivity(data, day),
         };
       })
@@ -420,6 +421,7 @@ export function friendsService(db, messaging) {
         return {
           ...identity,
           level,
+          streak: stats(data, day).streak,
           calculatedOn,
           lastWorkout,
           ...dailyActivity(data, day),

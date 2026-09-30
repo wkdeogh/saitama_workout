@@ -62,7 +62,7 @@ export async function createProofImage(proof, pose) {
     ctx.lineTo(540 + Math.cos(angle) * 740, 610 + Math.sin(angle) * 740);
     ctx.stroke();
   }
-  const portrait = characterPortrait(proof.level, pose, 972, 710);
+  const portrait = characterPortrait(proof.level, pose, 972, 710, proof.streak);
   ctx.drawImage(portrait, 54, 264);
   ctx.fillStyle = "#171717";
   ctx.fillRect(54, 228, 188, 64);
@@ -70,6 +70,16 @@ export async function createProofImage(proof, pose) {
   ctx.textAlign = "right";
   text(ctx, proof.name, 1026, 273, 38, "#171717", 900, 740);
   ctx.textAlign = "left";
+  text(
+    ctx,
+    `${proof.streak || 0}일 연속 운동 중`,
+    74,
+    334,
+    30,
+    "#171717",
+    800,
+    600,
+  );
 
   ctx.fillStyle = "#c7372b";
   ctx.fillRect(54, 926, 972, 64);
@@ -175,7 +185,7 @@ export default function WorkoutProofCard({ proof }) {
         {image ? (
           <img
             src={image.url}
-            alt={`${proof.day} ${proof.name} LV. ${proof.level} 오운완. ${EXERCISES.map(({ key, label, unit }) => `${label} ${proof.counts[key]}${unit}`).join(", ")}`}
+            alt={`${proof.day} ${proof.name} LV. ${proof.level} 오운완. ${proof.streak || 0}일 연속 운동 중. ${EXERCISES.map(({ key, label, unit }) => `${label} ${proof.counts[key]}${unit}`).join(", ")}`}
           />
         ) : (
           <div className="proof-loading" role="status">

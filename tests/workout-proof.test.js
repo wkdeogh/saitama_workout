@@ -1,6 +1,12 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { initialData, saveRecord, emptyCounts } from "../src/model.js";
+import {
+  initialData,
+  saveRecord,
+  emptyCounts,
+  shiftDate,
+  stats,
+} from "../src/model.js";
 import { characterAppearance } from "../src/characterAppearance.js";
 import {
   workoutProof,
@@ -26,6 +32,7 @@ test("proof takes a detached snapshot of saved counts and the updated level", ()
     day,
     name: "근육대호",
     level: 3,
+    streak: 1,
     counts: { pushups: 50, squats: 50, situps: 10, runningKm: 5 },
   });
   assert.equal(JSON.stringify(data), before);
@@ -122,4 +129,23 @@ test("all proof stances bend legs without stretching bones or sinking feet", () 
       );
     }
   }
+});
+
+test("proof streak uses any workout and expires after a missed day", () => {
+  let data = { ...initialData(), characterName: "훈련생" };
+  for (let i = 59; i >= 0; i--)
+    data = saveRecord(
+      data,
+      shiftDate(day, -i),
+      { ...emptyCounts(), pushups: 1 },
+      day,
+    );
+  const proof = workoutProof(data, day);
+  assert.equal(proof.streak, 60);
+  assert.equal(characterAppearance(proof.level, proof.streak).rewardStage, 6);
+  assert.equal(stats(data, shiftDate(day, 1)).streak, 60);
+  assert.equal(stats(data, shiftDate(day, 2)).streak, 0);
+  delete data.records[shiftDate(day, -10)];
+  assert.equal(workoutProof(data, day).streak, 10);
+  assert.equal(proof.streak, 60);
 });

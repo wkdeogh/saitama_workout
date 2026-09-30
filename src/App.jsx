@@ -148,7 +148,8 @@ function RankingUserDialog({ entry, onClose }) {
   const day = useKoreaDay();
   const { todayCounts, todayExp } = displayedDailyActivity(entry, day);
   const level = displayedLevel(entry, day),
-    appearance = characterAppearance(level);
+    streak = entry.calculatedOn === day ? entry.streak || 0 : 0,
+    appearance = characterAppearance(level, streak);
   return (
     <Modal title={entry.characterName} onClose={onClose}>
       <p className="ranking-user-level">LV. {level}</p>
@@ -160,7 +161,8 @@ function RankingUserDialog({ entry, onClose }) {
           "--aura-color": `#${appearance.auraColor.toString(16).padStart(6, "0")}`,
         }}
       >
-        <Character level={level} stage={stageIndex(level)} />
+        <Character level={level} streak={streak} stage={stageIndex(level)} />
+        <span className="character-streak">{streak}일 연속 운동 중</span>
       </div>
       <div className="ranking-user-totals">
         {EXERCISES.map(({ key, label, unit }) => (
@@ -653,7 +655,7 @@ export default function App() {
   const workoutRef = useRef(null);
   const onboardingSeen = useRef(new Set());
   const summary = stats(data, today);
-  const appearance = characterAppearance(summary.level);
+  const appearance = characterAppearance(summary.level, summary.streak);
   const record = data.records[selected],
     goals = record?.goals || data.goals;
   const dirty = EXERCISES.some(
@@ -969,8 +971,12 @@ export default function App() {
                   <Character
                     stage={summary.stage}
                     level={summary.level}
+                    streak={summary.streak}
                     celebrate={celebrate}
                   />
+                  <span className="character-streak">
+                    {summary.streak}일 연속 운동 중
+                  </span>
                   <span className="drag-label">
                     <RotateCcw size={11} />
                     드래그해서 돌려보기
@@ -1015,8 +1021,8 @@ export default function App() {
                   <Flame size={25} />
                 </span>
                 <div>
-                  <strong>{summary.streak}일 연속 달성 중</strong>
-                  <p>설정한 운동 목표 기준</p>
+                  <strong>{summary.streak}일 연속 운동 중</strong>
+                  <p>운동을 기록한 날 기준</p>
                 </div>
                 <span className="streak-deco">↗</span>
               </div>

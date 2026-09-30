@@ -28,10 +28,12 @@ export function workoutProof(data, day) {
   const record = checked.records[day];
   if (!hasWorkout(record))
     throw new Error("오늘 운동한 기록을 먼저 입력해 주세요.");
+  const summary = stats(checked, day);
   return {
     day,
     name: checked.characterName,
-    level: stats(checked, day).level,
+    level: summary.level,
+    streak: summary.streak,
     counts: Object.fromEntries(
       EXERCISES.map(({ key }) => [key, record[key] || 0]),
     ),
@@ -45,6 +47,7 @@ export function proofShareData(proof, file) {
       frame,
       `💪 ${proof.name}.. 오늘의 훈련 완료..`,
       proof.day,
+      `${proof.streak || 0}일 연속 운동 중`,
       "",
       ...EXERCISES.map(
         ({ key, label, unit }) =>

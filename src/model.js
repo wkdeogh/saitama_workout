@@ -191,8 +191,8 @@ export function stats(data, today = dateKey()) {
   );
   const total = entries.reduce((sum, [, r]) => sum + recordExp(r), 0);
   let streak = 0,
-    cursor = isComplete(data.records[today]) ? today : shiftDate(today, -1);
-  while (isComplete(data.records[cursor])) {
+    cursor = hasWorkout(data.records[today]) ? today : shiftDate(today, -1);
+  while (hasWorkout(data.records[cursor])) {
     streak++;
     cursor = shiftDate(cursor, -1);
   }

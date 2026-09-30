@@ -3630,3 +3630,19 @@ main {
   font-size: 13px;
   overflow-wrap: anywhere;
 }
+
+.character-streak {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  z-index: 2;
+  padding: 7px 11px;
+  border: 1px solid #171717;
+  border-radius: 20px;
+  background: #ffdf48;
+  color: #171717;
+  font-size: 12px;
+  font-weight: 800;
+  white-space: nowrap;
+  pointer-events: none;
+}
