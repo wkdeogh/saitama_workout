@@ -11,6 +11,7 @@ import {
   plannedWorkout,
   nextVirtualWorkoutDay,
   validateTrainingIntensity,
+  validateTrainingFrequency,
   validatePreferredExercises,
   publicVirtual,
   dueDay,
@@ -38,7 +39,7 @@ const bot = () => ({
   progressExp: 0,
   enabled: true,
 });
-test("all five intensities respect interval and EXP ranges across seeds and daily/catch-up runs", () => {
+test("all 25 frequency/intensity combinations respect interval and EXP ranges across seeds and daily/catch-up runs", () => {
   const ranges = [
     [10, 30, 100],
     [7, 50, 120],
@@ -46,40 +47,83 @@ test("all five intensities respect interval and EXP ranges across seeds and dail
     [2, 100, 200],
     [1, 100, 400],
   ];
-  for (const [index, [maxGap, minExp, maxExp]] of ranges.entries()) {
-    const gaps = new Set(),
-      amounts = new Set();
-    for (let seed = 0; seed < 8; seed++) {
-      const original = { ...bot(), intensity: index + 1, seed: `seed-${seed}` };
-      let daily = original,
-        previous = original.processedThrough;
-      for (let i = 0; i < 180; i++) {
-        const day = shiftDate(original.createdDay, i);
-        daily = advanceVirtual(daily, day);
-        const exp = recordExp(daily.todayCounts);
-        if (exp) {
-          const gap = daysBetween(previous, day);
-          assert.ok(gap >= 1 && gap <= maxGap);
-          assert.ok(exp >= minExp && exp <= maxExp);
-          assert.equal(exp % 10, 0);
-          assert.ok(
-            daily.todayCounts.pushups > 0 || daily.todayCounts.squats > 0,
-          );
-          previous = day;
-          gaps.add(gap);
-          amounts.add(exp);
-        } else {
-          assert.ok(daysBetween(previous, day) < maxGap);
+  for (const [frequencyIndex, [maxGap]] of ranges.entries()) {
+    for (const [index, [, minExp, maxExp]] of ranges.entries()) {
+      const gaps = new Set(),
+        amounts = new Set();
+      for (let seed = 0; seed < 8; seed++) {
+        const original = {
+          ...bot(),
+          intensity: index + 1,
+          frequency: frequencyIndex + 1,
+          seed: `seed-${seed}`,
+        };
+        let daily = original,
+          previous = original.processedThrough;
+        for (let i = 0; i < 180; i++) {
+          const day = shiftDate(original.createdDay, i);
+          daily = advanceVirtual(daily, day);
+          const exp = recordExp(daily.todayCounts);
+          if (exp) {
+            const gap = daysBetween(previous, day);
+            assert.ok(gap >= 1 && gap <= maxGap);
+            assert.ok(exp >= minExp && exp <= maxExp);
+            assert.equal(exp % 10, 0);
+            assert.ok(
+              daily.todayCounts.pushups > 0 || daily.todayCounts.squats > 0,
+            );
+            previous = day;
+            gaps.add(gap);
+            amounts.add(exp);
+          } else {
+            assert.ok(daysBetween(previous, day) < maxGap);
+          }
         }
+        assert.deepEqual(
+          advanceVirtual(original, daily.processedThrough),
+          daily,
+        );
+        assert.deepEqual(advanceVirtual(daily, daily.processedThrough), daily);
+        assert.equal(daily.totalExp, recordExp(daily.totals));
       }
-      assert.deepEqual(advanceVirtual(original, daily.processedThrough), daily);
-      assert.deepEqual(advanceVirtual(daily, daily.processedThrough), daily);
-      assert.equal(daily.totalExp, recordExp(daily.totals));
+      assert.equal(Math.min(...gaps), 1);
+      assert.equal(Math.max(...gaps), maxGap);
+      assert.equal(Math.min(...amounts), minExp);
+      assert.equal(Math.max(...amounts), maxExp);
     }
-    assert.equal(Math.min(...gaps), 1);
-    assert.equal(Math.max(...gaps), maxGap);
-    assert.equal(Math.min(...amounts), minExp);
-    assert.equal(Math.max(...amounts), maxExp);
+  }
+});
+test("frequency changes only the schedule and intensity changes only the workout amount", () => {
+  for (let i = 0; i < 90; i++) {
+    const day = shiftDate("2026-09-01", i);
+    for (let level = 1; level <= 5; level++) {
+      assert.deepEqual(
+        plannedWorkout({ ...bot(), frequency: level, intensity: 3 }, day),
+        plannedWorkout({ ...bot(), frequency: 3, intensity: 3 }, day),
+      );
+      assert.equal(
+        nextVirtualWorkoutDay(
+          { ...bot(), frequency: 3, intensity: level },
+          day,
+        ),
+        nextVirtualWorkoutDay({ ...bot(), frequency: 3, intensity: 3 }, day),
+      );
+    }
+  }
+});
+test("existing combined stages retain their frequency when intensity is edited or caught up", () => {
+  for (let intensity = 1; intensity <= 5; intensity++) {
+    const legacy = { ...bot(), intensity };
+    assert.deepEqual(
+      advanceVirtual(legacy, "2026-09-30"),
+      advanceVirtual({ ...legacy, frequency: intensity }, "2026-09-30"),
+    );
+    const edited = validateVirtualEdit(
+      { totals: emptyCounts(), enabled: true, intensity: 6 - intensity },
+      legacy,
+    );
+    assert.equal(edited.frequency, intensity);
+    assert.equal(edited.intensity, 6 - intensity);
   }
 });
 test("legacy bots default to stage three and paused schedules never bank missed workouts", () => {
@@ -94,13 +138,17 @@ test("legacy bots default to stage three and paused schedules never bank missed 
   assert.equal(resumed.nextWorkoutDay, "2026-09-22");
   const legacy = advanceVirtual(bot(), "2026-09-30");
   assert.equal(legacy.intensity, 3);
+  assert.equal(legacy.frequency, 3);
   assert.deepEqual(
     legacy,
     advanceVirtual({ ...bot(), intensity: 3 }, "2026-09-30"),
   );
-  for (const value of [0, 6, 1.5, "3", null, NaN])
+  for (const value of [0, 6, 1.5, "3", null, NaN]) {
     assert.throws(() => validateTrainingIntensity(value), /1~5/);
+    assert.throws(() => validateTrainingFrequency(value), /훈련빈도.*1~5/);
+  }
   assert.equal(validateTrainingIntensity(), 3);
+  assert.equal(validateTrainingFrequency(), 3);
   assert.equal(
     nextVirtualWorkoutDay({ ...bot(), intensity: 5 }, "2026-09-30"),
     "2026-10-01",
@@ -141,6 +189,7 @@ test("virtual schedule uses KST 21:00 and public views reset today/week without 
   assert.equal(view.seed, undefined);
   assert.equal(view.enabled, undefined);
   assert.equal(view.intensity, undefined);
+  assert.equal(view.frequency, undefined);
   assert.equal(view.preferredExercises, undefined);
   assert.equal(view.nextWorkoutDay, undefined);
 });
@@ -191,6 +240,8 @@ test("verified owner can administer using Google or linked Kakao; forged identit
     { enabled: "true" },
     { intensity: 6 },
     { intensity: null },
+    { frequency: 6 },
+    { frequency: null },
     { totals: { ...emptyCounts(), runningKm: 0.01 } },
     { totals: { ...emptyCounts(), pushups: "100" } },
   ])

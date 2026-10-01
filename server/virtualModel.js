@@ -1,8 +1,11 @@
 import { virtualEditSummary } from "../src/cloud/virtualEdits.js";
 import {
   DEFAULT_TRAINING_INTENSITY,
+  DEFAULT_TRAINING_FREQUENCY,
   DEFAULT_PREFERRED_EXERCISES,
   TRAINING_INTENSITIES,
+  TRAINING_FREQUENCIES,
+  trainingFrequency,
 } from "../src/cloud/virtualLimits.js";
 import { createHash } from "node:crypto";
 import {
@@ -44,6 +47,11 @@ export function validateTrainingIntensity(value = DEFAULT_TRAINING_INTENSITY) {
     throw new FriendError("훈련강도는 1~5단계로 선택해 주세요.");
   return value;
 }
+export function validateTrainingFrequency(value = DEFAULT_TRAINING_FREQUENCY) {
+  if (!Number.isInteger(value) || value < 1 || value > 5)
+    throw new FriendError("훈련빈도는 1~5단계로 선택해 주세요.");
+  return value;
+}
 export function validatePreferredExercises(
   value = DEFAULT_PREFERRED_EXERCISES,
 ) {
@@ -59,10 +67,10 @@ export function validatePreferredExercises(
   return keys.filter((key) => value.includes(key));
 }
 export function nextVirtualWorkoutDay(bot, after) {
-  const intensity = bot.intensity ?? DEFAULT_TRAINING_INTENSITY;
-  const { maxIntervalDays } = TRAINING_INTENSITIES[intensity - 1];
+  const frequency = trainingFrequency(bot);
+  const { maxIntervalDays } = TRAINING_FREQUENCIES[frequency - 1];
   const interval =
-    1 + (draw(bot.seed, `interval:${intensity}:${after}`) % maxIntervalDays);
+    1 + (draw(bot.seed, `interval:${frequency}:${after}`) % maxIntervalDays);
   return shiftDate(after, interval);
 }
 // Called only on a scheduled workout day; retain ten-EXP exercise units.
@@ -117,6 +125,7 @@ export function advanceVirtual(source, until) {
   const bot = structuredClone(source);
   if (until <= bot.processedThrough) return bot;
   bot.intensity ??= DEFAULT_TRAINING_INTENSITY;
+  bot.frequency ??= trainingFrequency(bot);
   bot.preferredExercises ??= [...DEFAULT_PREFERRED_EXERCISES];
   bot.nextWorkoutDay ??= nextVirtualWorkoutDay(bot, bot.processedThrough);
   // Bound catch-up work; later calls continue if a project was idle for years.
@@ -180,6 +189,9 @@ export function validateVirtualEdit(input, bot) {
   const intensity = validateTrainingIntensity(
     input.intensity === undefined ? bot.intensity : input.intensity,
   );
+  const frequency = validateTrainingFrequency(
+    input.frequency === undefined ? trainingFrequency(bot) : input.frequency,
+  );
   const preferredExercises = validatePreferredExercises(
     input.preferredExercises === undefined
       ? bot.preferredExercises
@@ -207,6 +219,7 @@ export function validateVirtualEdit(input, bot) {
   return {
     totals,
     intensity,
+    frequency,
     preferredExercises,
     ...virtualEditSummary(totals, bot),
     enabled: input.enabled,

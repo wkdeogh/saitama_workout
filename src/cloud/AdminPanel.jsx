@@ -5,11 +5,34 @@ import { EXERCISES, MAX_NAME_LENGTH, validateName } from "../model";
 import {
   MAX_VIRTUAL_TRAINEES,
   DEFAULT_TRAINING_INTENSITY,
+  DEFAULT_TRAINING_FREQUENCY,
   DEFAULT_PREFERRED_EXERCISES,
   TRAINING_INTENSITIES,
+  TRAINING_FREQUENCIES,
+  trainingFrequency,
+  trainingFrequencyLabel,
   trainingIntensityLabel,
 } from "./virtualLimits";
 import { friendApi } from "./friendsClient";
+
+function FrequencySelect({ value, onChange, disabled = false }) {
+  return (
+    <label className="virtual-intensity">
+      훈련빈도
+      <select
+        value={value ?? DEFAULT_TRAINING_FREQUENCY}
+        onChange={(event) => onChange(Number(event.target.value))}
+        disabled={disabled}
+      >
+        {TRAINING_FREQUENCIES.map((setting) => (
+          <option key={setting.level} value={setting.level}>
+            {trainingFrequencyLabel(setting)}
+          </option>
+        ))}
+      </select>
+    </label>
+  );
+}
 
 function IntensitySelect({ value, onChange, disabled = false }) {
   return (
@@ -61,7 +84,10 @@ function PreferredExercises({
 }
 
 function TraineeEditor({ entry, onSaved }) {
-  const [values, setValues] = useState(entry);
+  const [values, setValues] = useState({
+    ...entry,
+    frequency: trainingFrequency(entry),
+  });
   const summary = virtualEditSummary(values.totals, entry);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -133,6 +159,10 @@ function TraineeEditor({ entry, onSaved }) {
           />{" "}
           자동 운동
         </label>
+        <FrequencySelect
+          value={values.frequency}
+          onChange={(frequency) => setValues({ ...values, frequency })}
+        />
         <IntensitySelect
           value={values.intensity}
           onChange={(intensity) => setValues({ ...values, intensity })}
@@ -164,6 +194,7 @@ export default function AdminPanel() {
   const [message, setMessage] = useState("");
   const [name, setName] = useState("");
   const [intensity, setIntensity] = useState(DEFAULT_TRAINING_INTENSITY);
+  const [frequency, setFrequency] = useState(DEFAULT_TRAINING_FREQUENCY);
   const [preferredExercises, setPreferredExercises] = useState(
     DEFAULT_PREFERRED_EXERCISES,
   );
@@ -202,12 +233,14 @@ export default function AdminPanel() {
         !pendingCreate.current ||
         pendingCreate.current.name !== normalized ||
         pendingCreate.current.intensity !== intensity ||
+        pendingCreate.current.frequency !== frequency ||
         JSON.stringify(pendingCreate.current.preferredExercises) !==
           JSON.stringify(preferredExercises)
       )
         pendingCreate.current = {
           name: normalized,
           intensity,
+          frequency,
           preferredExercises,
           requestId: crypto.randomUUID(),
         };
@@ -341,6 +374,13 @@ export default function AdminPanel() {
               {creating ? "추가 중…" : "추가"}
             </button>
           </div>
+          <FrequencySelect
+            value={frequency}
+            onChange={setFrequency}
+            disabled={
+              busy || creating || entries.length >= MAX_VIRTUAL_TRAINEES
+            }
+          />
           <IntensitySelect
             value={intensity}
             onChange={setIntensity}
@@ -369,8 +409,8 @@ export default function AdminPanel() {
                   <span className="virtual-list-identity">
                     <strong>{entry.characterName}</strong>
                     <small>
-                      LV. {entry.level} · 훈련강도{" "}
-                      {entry.intensity ?? DEFAULT_TRAINING_INTENSITY}단계
+                      LV. {entry.level} · 빈도 {trainingFrequency(entry)}단계 ·
+                      강도 {entry.intensity ?? DEFAULT_TRAINING_INTENSITY}단계
                     </small>
                   </span>
                   <span className="virtual-list-status">

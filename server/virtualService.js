@@ -2,6 +2,7 @@ import {
   MAX_VIRTUAL_TRAINEES,
   DEFAULT_TRAINING_INTENSITY,
   DEFAULT_PREFERRED_EXERCISES,
+  trainingFrequency,
 } from "../src/cloud/virtualLimits.js";
 import { randomUUID } from "node:crypto";
 import { FieldValue } from "firebase-admin/firestore";
@@ -15,6 +16,7 @@ import {
   publicVirtual,
   validateVirtualEdit,
   validateTrainingIntensity,
+  validateTrainingFrequency,
   validatePreferredExercises,
   nextVirtualWorkoutDay,
 } from "./virtualModel.js";
@@ -47,6 +49,9 @@ export function virtualService(db, now = () => new Date()) {
       actor,
       validateTrainingIntensity(input.intensity),
       validatePreferredExercises(input.preferredExercises),
+      validateTrainingFrequency(
+        input.frequency === undefined ? input.intensity : input.frequency,
+      ),
     );
     return list();
   }
@@ -59,6 +64,7 @@ export function virtualService(db, now = () => new Date()) {
     actor,
     intensity = DEFAULT_TRAINING_INTENSITY,
     preferredExercises = DEFAULT_PREFERRED_EXERCISES,
+    frequency = intensity,
   ) {
     const day = koreaDay(now());
     for (let attempt = 0; attempt < 6; attempt++) {
@@ -86,6 +92,7 @@ export function virtualService(db, now = () => new Date()) {
           seed: randomUUID(),
           enabled: true,
           intensity,
+          frequency,
           preferredExercises,
           createdDay: day,
           processedThrough: shiftDate(day, -1),
@@ -119,6 +126,7 @@ export function virtualService(db, now = () => new Date()) {
             name: bot.name,
             enabled: bot.enabled,
             intensity: bot.intensity,
+            frequency: bot.frequency,
             preferredExercises: bot.preferredExercises,
           },
           at: stamp(),
@@ -158,6 +166,7 @@ export function virtualService(db, now = () => new Date()) {
         ...publicVirtual(bot, koreaDay(now())),
         enabled: bot.enabled,
         intensity: bot.intensity ?? DEFAULT_TRAINING_INTENSITY,
+        frequency: trainingFrequency(bot),
         preferredExercises:
           bot.preferredExercises ?? DEFAULT_PREFERRED_EXERCISES,
         revision: bot.revision,
@@ -202,7 +211,7 @@ export function virtualService(db, now = () => new Date()) {
         revision: bot.revision + 1,
       };
       if (
-        edited.intensity !== (bot.intensity ?? DEFAULT_TRAINING_INTENSITY) ||
+        edited.frequency !== trainingFrequency(bot) ||
         (!bot.enabled && edited.enabled)
       )
         next.nextWorkoutDay = nextVirtualWorkoutDay(next, bot.processedThrough);
@@ -218,6 +227,7 @@ export function virtualService(db, now = () => new Date()) {
           totals: bot.totals,
           enabled: bot.enabled,
           intensity: bot.intensity ?? DEFAULT_TRAINING_INTENSITY,
+          frequency: trainingFrequency(bot),
           preferredExercises:
             bot.preferredExercises ?? DEFAULT_PREFERRED_EXERCISES,
         },
