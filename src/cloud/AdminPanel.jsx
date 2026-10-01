@@ -34,7 +34,12 @@ function FrequencySelect({ value, onChange, disabled = false }) {
   );
 }
 
-function IntensitySelect({ value, onChange, disabled = false }) {
+function IntensitySelect({
+  value,
+  preferredExercises,
+  onChange,
+  disabled = false,
+}) {
   return (
     <label className="virtual-intensity">
       훈련강도
@@ -45,7 +50,7 @@ function IntensitySelect({ value, onChange, disabled = false }) {
       >
         {TRAINING_INTENSITIES.map((setting) => (
           <option key={setting.level} value={setting.level}>
-            {trainingIntensityLabel(setting)}
+            {trainingIntensityLabel(setting, preferredExercises)}
           </option>
         ))}
       </select>
@@ -165,6 +170,7 @@ function TraineeEditor({ entry, onSaved }) {
         />
         <IntensitySelect
           value={values.intensity}
+          preferredExercises={values.preferredExercises}
           onChange={(intensity) => setValues({ ...values, intensity })}
         />
         <PreferredExercises
@@ -383,6 +389,7 @@ export default function AdminPanel() {
           />
           <IntensitySelect
             value={intensity}
+            preferredExercises={preferredExercises}
             onChange={setIntensity}
             disabled={
               busy || creating || entries.length >= MAX_VIRTUAL_TRAINEES

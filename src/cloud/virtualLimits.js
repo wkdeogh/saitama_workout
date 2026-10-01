@@ -1,7 +1,31 @@
+import { recordExp } from "../model.js";
+
 export const MAX_VIRTUAL_TRAINEES = 10;
 export const DEFAULT_TRAINING_INTENSITY = 3;
 export const DEFAULT_TRAINING_FREQUENCY = 3;
 export const DEFAULT_PREFERRED_EXERCISES = ["pushups", "squats"];
+export const MIN_VIRTUAL_WORKOUT_COUNTS = {
+  pushups: 30,
+  squats: 30,
+  situps: 30,
+  runningKm: 2,
+};
+export function minimumVirtualWorkoutUnits(key) {
+  return recordExp({ [key]: MIN_VIRTUAL_WORKOUT_COUNTS[key] }) / 10;
+}
+export function trainingIntensityRange(
+  setting,
+  preferredExercises = DEFAULT_PREFERRED_EXERCISES,
+) {
+  const minimumExp = preferredExercises.reduce(
+    (sum, key) => sum + minimumVirtualWorkoutUnits(key) * 10,
+    0,
+  );
+  return {
+    minExp: Math.max(setting.minExp, minimumExp),
+    maxExp: Math.max(setting.maxExp, minimumExp),
+  };
+}
 export const TRAINING_INTENSITIES = [
   { level: 1, minExp: 30, maxExp: 100 },
   { level: 2, minExp: 50, maxExp: 120 },
@@ -26,6 +50,11 @@ export function trainingFrequencyLabel(setting) {
       : `1~${setting.maxIntervalDays}일에 한 번`;
   return `${setting.level}단계 · ${interval}`;
 }
-export function trainingIntensityLabel(setting) {
-  return `${setting.level}단계 · ${setting.minExp}~${setting.maxExp} EXP`;
+export function trainingIntensityLabel(setting, preferredExercises) {
+  const { minExp, maxExp } = trainingIntensityRange(
+    setting,
+    preferredExercises,
+  );
+  const range = minExp === maxExp ? minExp : `${minExp}~${maxExp}`;
+  return `${setting.level}단계 · ${range} EXP`;
 }

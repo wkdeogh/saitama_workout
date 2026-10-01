@@ -20,6 +20,10 @@ import {
 } from "../server/virtualModel.js";
 import { createVirtualCron } from "../server/virtualCron.js";
 import { createFriendsHandler } from "../server/friendsHandler.js";
+import {
+  TRAINING_INTENSITIES,
+  trainingIntensityLabel,
+} from "../src/cloud/virtualLimits.js";
 const bot = () => ({
   uid: "virtual-test",
   name: "고구마똥",
@@ -41,8 +45,8 @@ const bot = () => ({
 });
 test("all 25 frequency/intensity combinations respect interval and EXP ranges across seeds and daily/catch-up runs", () => {
   const ranges = [
-    [10, 30, 100],
-    [7, 50, 120],
+    [10, 60, 100],
+    [7, 60, 120],
     [4, 80, 150],
     [2, 100, 200],
     [1, 100, 400],
@@ -69,6 +73,8 @@ test("all 25 frequency/intensity combinations respect interval and EXP ranges ac
             assert.ok(gap >= 1 && gap <= maxGap);
             assert.ok(exp >= minExp && exp <= maxExp);
             assert.equal(exp % 10, 0);
+            for (const [key, count] of Object.entries(daily.todayCounts))
+              assert.ok(count === 0 || count >= (key === "runningKm" ? 2 : 30));
             assert.ok(
               daily.todayCounts.pushups > 0 || daily.todayCounts.squats > 0,
             );
@@ -394,7 +400,7 @@ test("admin creation uses verified actor and forwards creation input", async () 
   assert.equal(res.body[0].characterName, values.name);
 });
 
-test("every preference combination keeps favored exercises dominant with occasional variety and exact EXP", () => {
+test("every preference combination meets exercise minimums across all intensities with favored exercises and occasional variety", () => {
   const keys = Object.keys(emptyCounts());
   for (let mask = 1; mask < 16; mask++) {
     const preferences = keys.filter((_, index) => mask & (1 << index));
@@ -411,15 +417,31 @@ test("every preference combination keeps favored exercises dominant with occasio
       const day = shiftDate(source.createdDay, i);
       const counts = plannedWorkout(source, day);
       assert.deepEqual(counts, plannedWorkout(source, day));
-      assert.equal(
-        recordExp(counts),
-        recordExp(plannedWorkout({ ...source, preferredExercises: keys }, day)),
+      const minimumExp = preferences.reduce(
+        (sum, key) => sum + (key === "runningKm" ? 40 : 30),
+        0,
       );
+      const [minExp, maxExp] = [
+        [30, 100],
+        [50, 120],
+        [80, 150],
+        [100, 200],
+        [100, 400],
+      ][source.intensity - 1];
+      assert.ok(recordExp(counts) >= Math.max(minExp, minimumExp));
+      assert.ok(recordExp(counts) <= Math.max(maxExp, minimumExp));
+      assert.equal(recordExp(counts) % 10, 0);
       const preferredCounts = emptyCounts();
       for (const key of keys) {
-        if (preferences.includes(key)) preferredCounts[key] = counts[key];
+        if (preferences.includes(key)) {
+          preferredCounts[key] = counts[key];
+          assert.ok(counts[key] >= (key === "runningKm" ? 2 : 30));
+        }
         if (counts[key]) seen.add(key);
         assert.ok(counts[key] >= 0);
+        assert.ok(
+          counts[key] === 0 || counts[key] >= (key === "runningKm" ? 2 : 30),
+        );
         assert.equal((counts[key] * (key === "runningKm" ? 10 : 1)) % 1, 0);
       }
       const exp = recordExp(counts),
@@ -447,6 +469,49 @@ test("every preference combination keeps favored exercises dominant with occasio
   ])
     assert.throws(() => validatePreferredExercises(invalid), /선호 운동/);
   assert.deepEqual(validatePreferredExercises(), ["pushups", "squats"]);
+});
+
+test("low intensity reserves all preferred minimums and the displayed EXP range matches them", () => {
+  const allExercises = Object.keys(emptyCounts());
+  for (let i = 0; i < 90; i++) {
+    const day = shiftDate("2026-09-01", i);
+    for (const intensity of [1, 2]) {
+      assert.deepEqual(
+        plannedWorkout(
+          { ...bot(), intensity, preferredExercises: allExercises },
+          day,
+        ),
+        { pushups: 30, squats: 30, situps: 30, runningKm: 2 },
+      );
+      const bodyweight = plannedWorkout({ ...bot(), intensity }, day);
+      assert.ok(bodyweight.pushups >= 30 && bodyweight.squats >= 30);
+      const running = plannedWorkout(
+        { ...bot(), intensity, preferredExercises: ["runningKm"] },
+        day,
+      );
+      assert.ok(running.runningKm >= 2);
+    }
+  }
+  assert.equal(
+    trainingIntensityLabel(TRAINING_INTENSITIES[0]),
+    "1단계 · 60~100 EXP",
+  );
+  assert.equal(
+    trainingIntensityLabel(TRAINING_INTENSITIES[0], ["pushups"]),
+    "1단계 · 30~100 EXP",
+  );
+  assert.equal(
+    trainingIntensityLabel(TRAINING_INTENSITIES[0], ["runningKm"]),
+    "1단계 · 40~100 EXP",
+  );
+  assert.equal(
+    trainingIntensityLabel(TRAINING_INTENSITIES[0], allExercises),
+    "1단계 · 130 EXP",
+  );
+  assert.equal(
+    trainingIntensityLabel(TRAINING_INTENSITIES[4], allExercises),
+    "5단계 · 130~400 EXP",
+  );
 });
 
 test("lower totals recalculate EXP and level, clamp daily counts, and ignore forged derived fields", () => {

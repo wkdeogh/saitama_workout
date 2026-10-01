@@ -6,6 +6,8 @@ import {
   TRAINING_INTENSITIES,
   TRAINING_FREQUENCIES,
   trainingFrequency,
+  minimumVirtualWorkoutUnits,
+  trainingIntensityRange,
 } from "../src/cloud/virtualLimits.js";
 import { createHash } from "node:crypto";
 import {
@@ -76,35 +78,49 @@ export function nextVirtualWorkoutDay(bot, after) {
 // Called only on a scheduled workout day; retain ten-EXP exercise units.
 export function plannedWorkout(bot, day) {
   const intensity = bot.intensity ?? DEFAULT_TRAINING_INTENSITY;
-  const { minExp, maxExp } = TRAINING_INTENSITIES[intensity - 1];
+  const preferences = bot.preferredExercises ?? DEFAULT_PREFERRED_EXERCISES;
+  const { minExp, maxExp } = trainingIntensityRange(
+    TRAINING_INTENSITIES[intensity - 1],
+    preferences,
+  );
   const units =
     minExp / 10 +
     (draw(bot.seed, `exp:${intensity}:${day}`) % ((maxExp - minExp) / 10 + 1));
-  const preferences = bot.preferredExercises ?? DEFAULT_PREFERRED_EXERCISES;
   const others = Object.keys(emptyCounts()).filter(
     (key) => !preferences.includes(key),
   );
-  const mixLimit = Math.min(
-    Math.floor(units / 3),
-    Math.max(0, units - preferences.length),
+  const preferredMinimum = preferences.reduce(
+    (sum, key) => sum + minimumVirtualWorkoutUnits(key),
+    0,
   );
+  const mixLimit = Math.min(Math.floor(units / 3), units - preferredMinimum);
+  // Only mix in an exercise when its minimum fits without reducing preferences.
+  const eligibleOthers = others.filter(
+    (key) => minimumVirtualWorkoutUnits(key) <= mixLimit,
+  );
+  const secondary = eligibleOthers.length
+    ? eligibleOthers[draw(bot.seed, `secondary:${day}`) % eligibleOthers.length]
+    : null;
+  const secondaryMinimum = secondary
+    ? minimumVirtualWorkoutUnits(secondary)
+    : 0;
   const mixedUnits =
-    others.length && mixLimit > 0 && draw(bot.seed, `mix:${day}`) % 10 < 3
-      ? 1 + (draw(bot.seed, `mix-units:${day}`) % mixLimit)
+    secondary && draw(bot.seed, `mix:${day}`) % 10 < 3
+      ? secondaryMinimum +
+        (draw(bot.seed, `mix-units:${day}`) % (mixLimit - secondaryMinimum + 1))
       : 0;
   const counts = emptyCounts();
-  const mainUnits = units - mixedUnits;
+  const extraUnits = units - mixedUnits - preferredMinimum;
   const offset = draw(bot.seed, `balance:${day}`) % preferences.length;
   for (let i = 0; i < preferences.length; i++) {
     const key = preferences[(i + offset) % preferences.length];
     const share =
-      Math.floor(mainUnits / preferences.length) +
-      (i < mainUnits % preferences.length ? 1 : 0);
+      minimumVirtualWorkoutUnits(key) +
+      Math.floor(extraUnits / preferences.length) +
+      (i < extraUnits % preferences.length ? 1 : 0);
     counts[key] = share * (key === "runningKm" ? 0.5 : 10);
   }
   if (mixedUnits) {
-    const secondary =
-      others[draw(bot.seed, `secondary:${day}`) % others.length];
     counts[secondary] = mixedUnits * (secondary === "runningKm" ? 0.5 : 10);
   }
   return counts;
