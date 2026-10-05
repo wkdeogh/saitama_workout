@@ -71,11 +71,6 @@ export function LoginScreen({ account }) {
           height="88"
         />
         <h1>싸이따마훈련소</h1>
-        <p>
-          양심껏.
-          <br />
-          실제로 운동한 만큼만 입력하시오.
-        </p>
         {account.authLoading || (account.user && !account.ready) ? (
           <p role="status">계정과 기록을 불러오는 중…</p>
         ) : (
