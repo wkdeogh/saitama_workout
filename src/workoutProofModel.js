@@ -15,6 +15,11 @@ export const PROOF_POSES = [
   "lunge-flex",
   "knee-raise",
   "side-chest",
+  "hands-on-hips",
+  "boxing-guard",
+  "straight-punch",
+  "overhead-flex",
+  "running-man",
 ];
 export function nextProofPose(previous, random = Math.random) {
   const choices = PROOF_POSES.filter((pose) => pose !== previous);
@@ -92,6 +97,46 @@ export function armPose(p, side, pose = "idle") {
       elbow: [side * (p.shoulder + 0.16), side === -1 ? 1.62 : 1.8, 0.12],
       hand: [side * 0.12, 1.8, p.shoulder * 0.62 + 0.26],
     };
+  if (pose === "hands-on-hips")
+    return {
+      shoulder,
+      elbow: [side * (p.shoulder + 0.36), 1.72, 0.04],
+      hand: [side * (p.waist + 0.08), 1.43, p.waist * 0.62 + 0.12],
+    };
+  if (pose === "boxing-guard")
+    return {
+      shoulder,
+      elbow: [side * (p.shoulder + 0.12), 1.8, 0.28],
+      hand: [side * 0.24, side === -1 ? 2.4 : 2.28, p.shoulder * 0.62 + 0.38],
+    };
+  if (pose === "straight-punch")
+    return side === 1
+      ? {
+          shoulder,
+          elbow: [p.shoulder + 0.38, 2.05, 0.38],
+          hand: [p.shoulder + 0.72, 2.08, 0.82],
+        }
+      : {
+          shoulder,
+          elbow: [-p.shoulder - 0.18, 1.73, 0.1],
+          hand: [-p.waist - 0.12, 1.67, p.shoulder * 0.62 + 0.23],
+        };
+  if (pose === "overhead-flex")
+    return {
+      shoulder,
+      elbow: [side * (p.shoulder + 0.28), 2.9, 0.12],
+      hand: [side * 0.25, 3.65, 0.65],
+    };
+  if (pose === "running-man")
+    return {
+      shoulder,
+      elbow: [side * (p.shoulder + 0.1), 1.7, side === -1 ? 0.3 : -0.32],
+      hand: [
+        side * (p.shoulder * 0.6),
+        side === -1 ? 2.13 : 1.9,
+        side === -1 ? 0.62 : -0.5,
+      ],
+    };
   return {
     shoulder,
     elbow: [side * (p.shoulder + 0.08 + 0.1 * p.growth), 1.67, 0.005],
@@ -109,6 +154,11 @@ export function bodyPose(pose = "idle") {
     "lunge-flex": [0.24, 0.22],
     "knee-raise": [0, -0.18],
     "side-chest": [0.11, -0.55],
+    "hands-on-hips": [0.08, 0.12],
+    "boxing-guard": [0.16, -0.3],
+    "straight-punch": [0.18, -0.4],
+    "overhead-flex": [0.06, -0.08],
+    "running-man": [0.08, 0.35],
   };
   const [drop, turn] = stances[pose] || stances.idle;
   return { drop, turn };
@@ -136,6 +186,19 @@ export function legPose(p, side, pose = "idle") {
       side * ((side === 1 ? 0.26 : 0.18) + 0.17 * g),
       0.31,
       side === 1 ? 0.2 : -0.17,
+    ];
+  if (pose === "hands-on-hips") ankle = [side * (0.24 + 0.16 * g), 0.31, 0];
+  if (pose === "boxing-guard")
+    ankle = [side * (0.22 + 0.16 * g), 0.31, side === -1 ? 0.27 : -0.2];
+  if (pose === "straight-punch")
+    ankle = [side * (0.28 + 0.16 * g), 0.31, side === 1 ? 0.3 : -0.22];
+  if (pose === "overhead-flex")
+    ankle = [side * (0.19 + 0.18 * g), 0.31, side * 0.05];
+  if (pose === "running-man")
+    ankle = [
+      side * (0.18 + 0.12 * g),
+      side === 1 ? 0.76 : 0.31,
+      side === 1 ? 0.4 : -0.22,
     ];
   ankle[1] += drop;
   let knee = restKnee;
