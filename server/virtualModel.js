@@ -139,6 +139,8 @@ export function dueDay(now = new Date()) {
 }
 export function advanceVirtual(source, until) {
   const bot = structuredClone(source);
+  // Legacy documents have no streak history; only the last workout is certain.
+  bot.streak ??= bot.totalExp > 0 ? 1 : 0;
   if (until <= bot.processedThrough) return bot;
   bot.intensity ??= DEFAULT_TRAINING_INTENSITY;
   bot.frequency ??= trainingFrequency(bot);
@@ -169,6 +171,7 @@ export function advanceVirtual(source, until) {
     bot.totalExp += exp;
     bot.weeklyExp += exp;
     if (exp) {
+      bot.streak = daysBetween(bot.lastWorkout, day) === 1 ? bot.streak + 1 : 1;
       const earned = bot.progressExp + exp;
       bot.level = Math.min(1000, bot.level + Math.floor(earned / 100));
       bot.progressExp = bot.level === 1000 ? 0 : earned % 100;
@@ -180,6 +183,73 @@ export function advanceVirtual(source, until) {
     bot.processedThrough = day;
   }
   return bot;
+}
+// Replay the deterministic schedule with audited setting changes to recover
+// existing trainees' streaks without inventing workouts from cumulative totals.
+export function recoverVirtualStreak(source, history = []) {
+  const fallback = source.totalExp > 0 ? 1 : 0;
+  if (
+    !source.createdDay ||
+    daysBetween(source.createdDay, source.processedThrough) > 365
+  )
+    return fallback;
+  const events = history
+    .filter((event) => event.at && event.action !== "virtual-delete")
+    .sort((a, b) => a.at - b.at);
+  const initial =
+    events[0]?.action === "virtual-create"
+      ? events[0].after
+      : events[0]?.before || source;
+  let replay = {
+    ...source,
+    ...initial,
+    enabled: initial.enabled ?? true,
+    frequency: trainingFrequency(initial),
+    streak: 0,
+    processedThrough: shiftDate(source.createdDay, -1),
+    calculatedOn: source.createdDay,
+    lastWorkout: source.createdDay,
+    totals: emptyCounts(),
+    todayCounts: emptyCounts(),
+    totalExp: 0,
+    weeklyExp: 0,
+    weekStart: weekStart(source.createdDay),
+    level: 1,
+    progressExp: 0,
+  };
+  replay.nextWorkoutDay = nextVirtualWorkoutDay(
+    replay,
+    replay.processedThrough,
+  );
+  for (const event of events) {
+    if (event.action !== "virtual-update") continue;
+    const until = dueDay(new Date(event.at));
+    if (until > source.processedThrough) break;
+    replay = advanceVirtual(replay, until);
+    const before = replay;
+    replay = {
+      ...replay,
+      ...event.after,
+      frequency: trainingFrequency(event.after),
+    };
+    if (
+      replay.frequency !== before.frequency ||
+      (!before.enabled && replay.enabled)
+    )
+      replay.nextWorkoutDay = nextVirtualWorkoutDay(
+        replay,
+        replay.processedThrough,
+      );
+    if (event.after.totalExp === 0) replay.streak = 0;
+  }
+  replay = advanceVirtual(replay, source.processedThrough);
+  // If old schedules cannot be reproduced, retain only the confirmed last day.
+  return source.totalExp === 0
+    ? 0
+    : replay.lastWorkout === source.lastWorkout &&
+        replay.nextWorkoutDay === source.nextWorkoutDay
+      ? replay.streak
+      : fallback;
 }
 export function publicVirtual(bot, day = koreaDay()) {
   const counts = bot.activityDay === day ? bot.todayCounts : emptyCounts();
@@ -194,6 +264,10 @@ export function publicVirtual(bot, day = koreaDay()) {
     totals: bot.totals,
     calculatedOn: day,
     lastWorkout: bot.lastWorkout,
+    streak:
+      bot.lastWorkout === day || bot.lastWorkout === shiftDate(day, -1)
+        ? (bot.streak ?? (bot.totalExp > 0 ? 1 : 0))
+        : 0,
     activityDay: day,
     todayCounts: counts,
     todayExp: recordExp(counts),
