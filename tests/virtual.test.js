@@ -5,9 +5,11 @@ import {
   shiftDate,
   recordExp,
   daysBetween,
+  stats,
 } from "../src/model.js";
 import {
   advanceVirtual,
+  recoverVirtualStreak,
   plannedWorkout,
   nextVirtualWorkoutDay,
   validateTrainingIntensity,
@@ -42,6 +44,79 @@ const bot = () => ({
   level: 1,
   progressExp: 0,
   enabled: true,
+});
+test("virtual streaks match real workout records before and after each daily workout", () => {
+  for (const frequency of [1, 4, 5]) {
+    let trainee = { ...bot(), frequency, intensity: 5, streak: 0 };
+    const data = { records: {} };
+    for (let i = 0; i < 75; i++) {
+      const day = shiftDate(trainee.createdDay, i);
+      assert.equal(publicVirtual(trainee, day).streak, stats(data, day).streak);
+      trainee = advanceVirtual(trainee, day);
+      data.records[day] = trainee.todayCounts;
+      assert.equal(publicVirtual(trainee, day).streak, stats(data, day).streak);
+    }
+    if (frequency === 5) assert.equal(trainee.streak, 75);
+  }
+});
+test("streaks survive retries and today-before-workout, reset after a missed day, and restart at one", () => {
+  const daily = advanceVirtual(
+    { ...bot(), frequency: 5, streak: 0 },
+    "2026-09-10",
+  );
+  assert.equal(publicVirtual(daily, "2026-09-10").streak, 10);
+  assert.equal(publicVirtual(daily, "2026-09-11").streak, 10);
+  assert.equal(publicVirtual(daily, "2026-09-12").streak, 0);
+  assert.deepEqual(advanceVirtual(daily, "2026-09-10"), daily);
+  const paused = advanceVirtual({ ...daily, enabled: false }, "2026-09-11");
+  assert.equal(publicVirtual(paused, "2026-09-11").streak, 10);
+  const resumed = advanceVirtual({ ...paused, enabled: true }, "2026-09-12");
+  assert.equal(publicVirtual(resumed, "2026-09-12").streak, 1);
+  assert.equal(publicVirtual(bot(), "2026-09-01").streak, 0);
+});
+test("legacy streak recovery replays creation and audited frequency/pause changes", () => {
+  const settings = { frequency: 5, intensity: 5, enabled: true };
+  let source = advanceVirtual(
+    { ...bot(), ...settings, streak: 0 },
+    "2026-09-10",
+  );
+  delete source.streak;
+  assert.equal(recoverVirtualStreak(source), 10);
+  const history = [
+    {
+      action: "virtual-create",
+      at: Date.parse("2026-09-01T00:00:00Z"),
+      after: settings,
+    },
+  ];
+  const paused = { ...source, enabled: false };
+  history.push({
+    action: "virtual-update",
+    at: Date.parse("2026-09-10T13:00:00Z"),
+    before: settings,
+    after: { ...settings, enabled: false },
+  });
+  source = advanceVirtual(paused, "2026-09-15");
+  const resumed = { ...source, enabled: true, frequency: 4 };
+  resumed.nextWorkoutDay = nextVirtualWorkoutDay(
+    resumed,
+    resumed.processedThrough,
+  );
+  history.push({
+    action: "virtual-update",
+    at: Date.parse("2026-09-15T13:00:00Z"),
+    before: { ...settings, enabled: false },
+    after: { ...settings, frequency: 4 },
+  });
+  source = advanceVirtual(resumed, "2026-09-20");
+  const expected = source.streak;
+  delete source.streak;
+  assert.equal(recoverVirtualStreak(source, history), expected);
+  assert.equal(recoverVirtualStreak({ ...source, totalExp: 0 }, history), 0);
+  assert.equal(
+    recoverVirtualStreak({ ...source, nextWorkoutDay: "2026-09-30" }, history),
+    1,
+  );
 });
 test("all 25 frequency/intensity combinations respect interval and EXP ranges across seeds and daily/catch-up runs", () => {
   const ranges = [

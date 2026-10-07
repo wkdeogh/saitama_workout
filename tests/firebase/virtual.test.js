@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import { test, after } from "node:test";
 import assert from "node:assert/strict";
 import { initializeApp, deleteApp } from "firebase-admin/app";
-import { getFirestore } from "firebase-admin/firestore";
+import { FieldValue, getFirestore } from "firebase-admin/firestore";
 import { virtualService } from "../../server/virtualService.js";
 import { friendsService } from "../../server/friendsService.js";
 import {
@@ -54,6 +54,25 @@ test("seed, concurrent daily ticks, server-owned edits, auto acceptance and both
   const [label] = await friends.labels(uid, [FIRST_VIRTUAL_UID]);
   assert.equal(label.seed, undefined);
   assert.equal(label.level, entry.level);
+  assert.equal(label.streak, entry.streak);
+  assert.equal(
+    (await friends.ranking(uid, "all")).find(
+      (row) => row.uid === FIRST_VIRTUAL_UID,
+    ).streak,
+    entry.streak,
+  );
+  assert.equal(
+    (await db.doc(`rankings/${FIRST_VIRTUAL_UID}`).get()).data().streak,
+    entry.streak,
+  );
+  // Existing trainees migrate even when today's scheduled job already ran.
+  await db
+    .doc(`virtualTrainees/${FIRST_VIRTUAL_UID}`)
+    .update({ streak: FieldValue.delete() });
+  await virtual.refresh();
+  const previousStreak = entry.streak;
+  [entry] = await virtual.list();
+  assert.equal(entry.streak, previousStreak);
   assert.equal(
     (await db.doc(`rankings/${FIRST_VIRTUAL_UID}`).get()).data().characterName,
     "고구마똥",
@@ -88,6 +107,7 @@ test("seed, concurrent daily ticks, server-owned edits, auto acceptance and both
   assert.equal(reset.level, 1);
   assert.equal(reset.weeklyExp, 0);
   assert.equal(reset.todayExp, 0);
+  assert.equal(reset.streak, 0);
   assert.deepEqual(reset.todayCounts, emptyCounts());
   assert.equal(
     (await db.doc(`rankings/${entry.uid}`).get()).data().totalExp,

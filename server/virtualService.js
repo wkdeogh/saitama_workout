@@ -12,6 +12,7 @@ import { accountTag, FriendError } from "./friendsModel.js";
 import {
   FIRST_VIRTUAL_UID,
   advanceVirtual,
+  recoverVirtualStreak,
   dueDay,
   publicVirtual,
   validateVirtualEdit,
@@ -102,6 +103,7 @@ export function virtualService(db, now = () => new Date()) {
           totals: emptyCounts(),
           todayCounts: emptyCounts(),
           totalExp: 0,
+          streak: 0,
           weeklyExp: 0,
           weekStart: weekStart(day),
           level: 1,
@@ -143,8 +145,22 @@ export function virtualService(db, now = () => new Date()) {
       const snapshot = await tx.get(ref(uid));
       if (!snapshot.exists) return null;
       const old = snapshot.data();
-      const bot = advanceVirtual(old, dueDay(now()));
-      if (bot.processedThrough !== old.processedThrough) {
+      let source = old;
+      if (old.streak === undefined) {
+        const audit = await tx.get(
+          db.collection("adminAudit").where("target", "==", uid),
+        );
+        const history = audit.docs.map((doc) => {
+          const event = doc.data();
+          return { ...event, at: event.at?.toMillis() };
+        });
+        source = { ...old, streak: recoverVirtualStreak(old, history) };
+      }
+      const bot = advanceVirtual(source, dueDay(now()));
+      if (
+        bot.processedThrough !== old.processedThrough ||
+        old.streak === undefined
+      ) {
         bot.revision++;
         tx.set(ref(uid), bot);
         publish(tx, bot);
@@ -197,6 +213,7 @@ export function virtualService(db, now = () => new Date()) {
       const next = {
         ...bot,
         ...edited,
+        streak: edited.totalExp === 0 ? 0 : bot.streak,
         calculatedOn: koreaDay(now()),
         progressExp: edited.level === 1000 ? 0 : edited.totalExp % 100,
         activityDay: koreaDay(now()),
