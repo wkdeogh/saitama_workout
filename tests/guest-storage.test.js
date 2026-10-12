@@ -8,6 +8,7 @@ import {
   stats,
 } from "../src/model.js";
 import { mergeChanges } from "../src/cloud/rankingModel.js";
+import { guestCharacterName } from "../src/guestModel.js";
 import {
   mergeGuestData,
   readGuest,
@@ -58,7 +59,7 @@ test("new account inherits guest history, name, goals and recalculated growth", 
   assert.equal(
     mergeGuestData(initialData(), { ...guest, characterName: "" })
       .characterName,
-    "비회원",
+    "빡빡이",
   );
 });
 
@@ -189,4 +190,15 @@ test("empty guest browsing creates no transfer and keeps a fresh account unnamed
     ).data.characterName,
     "",
   );
+});
+
+test("guest default and legacy default display as 빡빡이 while personal names survive", () => {
+  assert.equal(guestCharacterName(""), "빡빡이");
+  assert.equal(guestCharacterName("나의 사이타마"), "빡빡이");
+  assert.equal(guestCharacterName("내 훈련생"), "내 훈련생");
+  assert.equal(guestCharacterName("비회원"), "비회원");
+  const guest = { ...initialData(), characterName: "나의 사이타마" };
+  assert.equal(mergeGuestData(initialData(), guest).characterName, "빡빡이");
+  const member = { ...initialData(), characterName: "나의 사이타마" };
+  assert.equal(mergeGuestData(member, guest).characterName, "나의 사이타마");
 });

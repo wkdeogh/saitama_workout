@@ -6,6 +6,7 @@ import {
   validateData,
 } from "../model.js";
 import { mergeChanges } from "./rankingModel.js";
+import { guestCharacterName } from "../guestModel.js";
 
 // A date is a daily total, so importing it must not add the same workout twice.
 export function mergeGuestData(account, guest) {
@@ -30,7 +31,8 @@ export function mergeGuestData(account, guest) {
   return validateData({
     ...account,
     records,
-    characterName: account.characterName || guest.characterName || "비회원",
+    characterName:
+      account.characterName || guestCharacterName(guest.characterName),
     goals: established ? account.goals : guest.goals,
     goalDefaultsVersion: Math.max(
       account.goalDefaultsVersion,

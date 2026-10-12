@@ -27,6 +27,7 @@ import WorkoutProofCard from "./WorkoutProofCard";
 import OnboardingGuide from "./OnboardingGuide";
 import { claimOnboarding } from "./onboardingModel";
 import { workoutProof } from "./workoutProofModel";
+import { guestCharacterName } from "./guestModel";
 import {
   workoutSoundsEnabled,
   setWorkoutSoundsEnabled,
@@ -37,7 +38,10 @@ import AdminPanel from "./cloud/AdminPanel";
 import { friendApi } from "./cloud/friendsClient";
 import FriendsPanel from "./cloud/FriendsPanel";
 import useFriends from "./cloud/useFriends";
-import { LoginScreen, AccountControls } from "./cloud/RankingPanel";
+import RankingPanel, {
+  LoginScreen,
+  AccountControls,
+} from "./cloud/RankingPanel";
 import { displayedLevel } from "./cloud/rankingModel";
 import { displayedDailyActivity, dailyExpColor } from "./cloud/dailyActivity";
 import useKoreaDay from "./cloud/useKoreaDay";
@@ -572,7 +576,11 @@ function SettingsPanel({
       )}
       <section className="settings-section">
         <CharacterNameForm
-          initialName={data.characterName}
+          initialName={
+            account.user
+              ? data.characterName
+              : guestCharacterName(data.characterName)
+          }
           onSave={(characterName) => {
             if (!persist({ ...data, characterName })) return false;
             notify("캐릭터 이름을 저장했습니다.");
@@ -686,6 +694,9 @@ export default function App() {
   const workoutRef = useRef(null);
   const onboardingSeen = useRef(new Set());
   const summary = stats(data, today);
+  const characterName = account.user
+    ? data.characterName
+    : guestCharacterName(data.characterName);
   const appearance = characterAppearance(summary.level, summary.streak);
   const record = data.records[selected],
     goals = record?.goals || data.goals;
@@ -881,12 +892,7 @@ export default function App() {
       if (selected !== day) throw new Error("오늘 날짜를 선택해 주세요.");
       const saved = dirty || !record ? save() : data;
       if (saved)
-        setProof(
-          workoutProof(
-            { ...saved, characterName: saved.characterName || "비회원" },
-            day,
-          ),
-        );
+        setProof(workoutProof({ ...saved, characterName: characterName }, day));
     } catch (e) {
       setFormError(e.message);
     }
@@ -1004,7 +1010,7 @@ export default function App() {
                   </span>
                 </div>
                 <div className="hero-title">
-                  <h2>{data.characterName || "캐릭터"}</h2>
+                  <h2>{characterName || "캐릭터"}</h2>
                   <p>LV. {summary.level}</p>
                 </div>
                 <div
@@ -1096,13 +1102,22 @@ export default function App() {
                   onUser={setRankingUser}
                 />
               ) : (
-                <section className="panel friends-panel">
-                  <h2>친구</h2>
-                  <p className="hint">
-                    로그인하면 친구와 랭킹을 이용할 수 있어요.
-                  </p>
-                  <AccountControls account={account} />
-                </section>
+                <>
+                  <RankingPanel
+                    account={account}
+                    data={data}
+                    onUser={setRankingUser}
+                    friends={friends}
+                    showAccountControls={false}
+                  />
+                  <section className="panel friends-panel">
+                    <h2>친구</h2>
+                    <p className="hint">
+                      친구 기능은 로그인 후 이용할 수 있어요.
+                    </p>
+                    <AccountControls account={account} />
+                  </section>
+                </>
               ))}
             {(tab === "home" || tab === "calendar") && (
               <>

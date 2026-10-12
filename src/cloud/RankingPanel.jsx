@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import { friendApi } from "./friendsClient";
 import { fetchRanking, cloudError } from "./firebaseClient";
+import { fetchPublicRanking } from "./publicRankingClient";
 import { displayedLevel, rankingSummary, weekStart } from "./rankingModel";
 
 import {
@@ -203,7 +204,13 @@ export function AccountControls({ account, showLink = false }) {
     </section>
   );
 }
-export default function RankingPanel({ account, data, onUser, friends }) {
+export default function RankingPanel({
+  account,
+  data,
+  onUser,
+  friends,
+  showAccountControls = true,
+}) {
   const [scope, setScope] = useState("all");
   const [period, setPeriod] = useState("all"),
     [entries, setEntries] = useState([]),
@@ -224,12 +231,14 @@ export default function RankingPanel({ account, data, onUser, friends }) {
     setLoading(true);
     setError("");
     try {
-      if (scope === "all") await friendApi("prepare-ranking");
+      if (scope === "all" && account.user) await friendApi("prepare-ranking");
       const rows =
         scope === "friends"
           ? await friendApi("ranking", { period })
-          : await fetchRanking(period);
-      if (scope === "all") {
+          : account.user
+            ? await fetchRanking(period)
+            : await fetchPublicRanking(period);
+      if (scope === "all" && account.user) {
         const labels = await friendApi("labels", {
           ids: rows.map((row) => row.uid),
         });
@@ -272,7 +281,7 @@ export default function RankingPanel({ account, data, onUser, friends }) {
     scope,
     week,
     day,
-    account.user.uid,
+    account.user?.uid,
     account.lastSync,
     friends?.revision,
   ]);
@@ -291,6 +300,7 @@ export default function RankingPanel({ account, data, onUser, friends }) {
         </button>
         <button
           aria-pressed={scope === "friends"}
+          disabled={!account.user}
           onClick={() => setScope("friends")}
         >
           친구 랭킹
@@ -325,30 +335,32 @@ export default function RankingPanel({ account, data, onUser, friends }) {
           <RefreshCw size={18} />
         </button>
       </div>
-      <button
-        className="my-ranking"
-        aria-haspopup="dialog"
-        aria-label={`${data.characterName} 내 캐릭터 상세 보기`}
-        onClick={() =>
-          onUser({ ...summary, uid: account.user.uid, tag: friends?.me?.tag })
-        }
-      >
-        <div>
-          <strong>
-            <StreakNickname
-              name={data.characterName}
-              streak={summary.streak}
-              dark
-            />
-          </strong>
-          <DailyExp entry={summary} day={day} dark />
-        </div>
-        <div className="my-ranking-score">
-          <b>LV. {summary.level}</b>
-          <small>{summary[field].toLocaleString("ko-KR")} EXP</small>
-        </div>
-        <ChevronRight size={18} aria-hidden="true" />
-      </button>
+      {account.user && (
+        <button
+          className="my-ranking"
+          aria-haspopup="dialog"
+          aria-label={`${data.characterName} 내 캐릭터 상세 보기`}
+          onClick={() =>
+            onUser({ ...summary, uid: account.user.uid, tag: friends?.me?.tag })
+          }
+        >
+          <div>
+            <strong>
+              <StreakNickname
+                name={data.characterName}
+                streak={summary.streak}
+                dark
+              />
+            </strong>
+            <DailyExp entry={summary} day={day} dark />
+          </div>
+          <div className="my-ranking-score">
+            <b>LV. {summary.level}</b>
+            <small>{summary[field].toLocaleString("ko-KR")} EXP</small>
+          </div>
+          <ChevronRight size={18} aria-hidden="true" />
+        </button>
+      )}
       {account.message && (
         <p className="error-box" role="alert">
           {account.message}
@@ -376,7 +388,7 @@ export default function RankingPanel({ account, data, onUser, friends }) {
             {entries.map((entry) => (
               <li key={entry.uid}>
                 <button
-                  className={`ranking-row ${entry.uid === account.user.uid ? "is-me" : ""}`}
+                  className={`ranking-row ${entry.uid === account.user?.uid ? "is-me" : ""}`}
                   onClick={() => onUser(entry)}
                   aria-haspopup="dialog"
                   aria-label={`${entry.rank}위 ${entry.characterName}, 레벨 ${displayedLevel(entry)}, 상세 보기`}
@@ -394,7 +406,7 @@ export default function RankingPanel({ account, data, onUser, friends }) {
                         name={entry.characterName}
                         streak={entry.calculatedOn === day ? entry.streak : 0}
                       />
-                      {entry.uid === account.user.uid && <em>나</em>}
+                      {entry.uid === account.user?.uid && <em>나</em>}
                     </strong>
                     <DailyExp entry={entry} day={day} />
                   </span>
@@ -420,7 +432,7 @@ export default function RankingPanel({ account, data, onUser, friends }) {
           ? ` · ${updated.toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit" })} 갱신`
           : ""}
       </p>
-      <AccountControls account={account} />
+      {showAccountControls && <AccountControls account={account} />}
     </section>
   );
 }
