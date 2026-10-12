@@ -19,12 +19,19 @@ import {
   RotateCcw,
   ArrowRight,
   Camera,
+  Volume2,
+  VolumeX,
 } from "lucide-react";
 import Character from "./Character";
 import WorkoutProofCard from "./WorkoutProofCard";
 import OnboardingGuide from "./OnboardingGuide";
 import { claimOnboarding } from "./onboardingModel";
 import { workoutProof } from "./workoutProofModel";
+import {
+  workoutSoundsEnabled,
+  setWorkoutSoundsEnabled,
+  playWorkoutSound,
+} from "./workoutSounds";
 import useWorkoutAccount from "./cloud/useWorkoutAccount";
 import AdminPanel from "./cloud/AdminPanel";
 import { friendApi } from "./cloud/friendsClient";
@@ -479,7 +486,16 @@ function Calendar({ data, selected, onSelect, today, month, setMonth }) {
     </section>
   );
 }
-function SettingsPanel({ data, persist, onClose, notify, error, account }) {
+function SettingsPanel({
+  data,
+  persist,
+  onClose,
+  notify,
+  error,
+  account,
+  soundEnabled,
+  onSoundChange,
+}) {
   const [isAdmin, setIsAdmin] = useState(false);
   const [adminOpen, setAdminOpen] = useState(false);
   const [adminError, setAdminError] = useState("");
@@ -488,6 +504,7 @@ function SettingsPanel({ data, persist, onClose, notify, error, account }) {
     let active = true;
     setIsAdmin(false);
     setAdminError("");
+    if (!account.user) return;
     friendApi("admin-status")
       .then((result) => {
         if (active) setIsAdmin(result.allowed);
@@ -516,6 +533,17 @@ function SettingsPanel({ data, persist, onClose, notify, error, account }) {
   return (
     <Modal title="훈련소 설정" onClose={onClose}>
       <AccountControls account={account} showLink />
+      <section className="settings-section">
+        <button
+          className="secondary-button"
+          aria-label="효과음"
+          aria-pressed={soundEnabled}
+          onClick={() => onSoundChange(!soundEnabled)}
+        >
+          {soundEnabled ? <Volume2 size={18} /> : <VolumeX size={18} />}
+          효과음 {soundEnabled ? "켜짐" : "꺼짐"}
+        </button>
+      </section>
       {isAdmin && (
         <section className="settings-section">
           <button
@@ -652,6 +680,7 @@ export default function App() {
     [deleteOpen, setDeleteOpen] = useState(false);
   const [draft, setDraft] = useState(emptyCounts);
   const [formError, setFormError] = useState("");
+  const [soundEnabled, setSoundEnabled] = useState(workoutSoundsEnabled);
   const toastTimer = useRef(null),
     celebrateTimer = useRef(null);
   const workoutRef = useRef(null);
@@ -820,9 +849,12 @@ export default function App() {
       );
       const oldLevel = summary.level;
       if (persist(nextData)) {
+        const nextLevel = stats(nextData).level;
+        if (dirty && hasWorkout(nextData.records[selected]))
+          void playWorkoutSound(nextLevel > oldLevel ? "levelUp" : "workout");
         setFormError("");
         if (
-          stats(nextData).level > oldLevel ||
+          nextLevel > oldLevel ||
           (isComplete(nextData.records[selected]) && !isComplete(record))
         ) {
           setCelebrate(true);
@@ -830,7 +862,7 @@ export default function App() {
           celebrateTimer.current = setTimeout(() => setCelebrate(false), 2600);
         }
         notify(
-          stats(nextData).level > oldLevel
+          nextLevel > oldLevel
             ? "레벨이 올랐습니다. 캐릭터 외형이 진화했습니다."
             : isComplete(nextData.records[selected])
               ? "운동 기록 저장 완료. 설정한 목표를 달성했습니다."
@@ -848,7 +880,13 @@ export default function App() {
       const day = dateKey();
       if (selected !== day) throw new Error("오늘 날짜를 선택해 주세요.");
       const saved = dirty || !record ? save() : data;
-      if (saved) setProof(workoutProof(saved, day));
+      if (saved)
+        setProof(
+          workoutProof(
+            { ...saved, characterName: saved.characterName || "비회원" },
+            day,
+          ),
+        );
     } catch (e) {
       setFormError(e.message);
     }
@@ -859,7 +897,8 @@ export default function App() {
     ["growth", Sparkles, "성장 도감"],
     ["ranking", Trophy, "친구"],
   ];
-  if (!account.user || !account.ready) return <LoginScreen account={account} />;
+  if (account.authLoading || !account.ready)
+    return <LoginScreen account={account} />;
   return (
     <>
       <header className="site-header">
@@ -1048,14 +1087,23 @@ export default function App() {
             </aside>
           )}
           <div className="content-column">
-            {tab === "ranking" && (
-              <FriendsPanel
-                friends={friends}
-                account={account}
-                data={data}
-                onUser={setRankingUser}
-              />
-            )}
+            {tab === "ranking" &&
+              (account.user ? (
+                <FriendsPanel
+                  friends={friends}
+                  account={account}
+                  data={data}
+                  onUser={setRankingUser}
+                />
+              ) : (
+                <section className="panel friends-panel">
+                  <h2>친구</h2>
+                  <p className="hint">
+                    로그인하면 친구와 랭킹을 이용할 수 있어요.
+                  </p>
+                  <AccountControls account={account} />
+                </section>
+              ))}
             {(tab === "home" || tab === "calendar") && (
               <>
                 <div className="stats-row">
@@ -1187,7 +1235,9 @@ export default function App() {
                             ? "동기화 중…"
                             : account.pending
                               ? "기기 저장 · 동기화 대기"
-                              : "계정에 저장됨"}
+                              : account.user
+                                ? "계정에 저장됨"
+                                : "이 기기에만 저장됨"}
                       </span>
                       {record && (
                         <button
@@ -1305,7 +1355,7 @@ export default function App() {
           onClose={() => setStageDetail(null)}
         />
       )}
-      {!data.characterName && !error && !settings && (
+      {account.user && !data.characterName && !error && !settings && (
         <Modal title="캐릭터 이름 설정" dismissible={false}>
           <CharacterNameForm
             autofocus
@@ -1325,7 +1375,11 @@ export default function App() {
       )}
       {settings && (
         <SettingsPanel
-          {...{ data, persist, notify, error, account }}
+          {...{ data, persist, notify, error, account, soundEnabled }}
+          onSoundChange={(enabled) => {
+            setSoundEnabled(setWorkoutSoundsEnabled(enabled));
+            if (enabled) void playWorkoutSound("workout");
+          }}
           onClose={() => setSettings(false)}
         />
       )}{" "}

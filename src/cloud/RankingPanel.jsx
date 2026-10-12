@@ -59,8 +59,47 @@ export function GoogleLoginButton({ onClick, disabled }) {
     </button>
   );
 }
-export function LoginScreen({ account }) {
+export function LoginOptions({ account }) {
   const [opening, setOpening] = useState(false);
+  return (
+    <div className="login-options" aria-busy={opening}>
+      <GoogleLoginButton
+        disabled={!account.configured || opening || account.authLoading}
+        onClick={async () => {
+          setOpening(true);
+          await account.login();
+          setOpening(false);
+        }}
+      />
+      <button
+        className="kakao-login"
+        aria-label="카카오 로그인"
+        disabled={!account.kakao?.enabled || opening || account.authLoading}
+        onClick={async () => {
+          setOpening(true);
+          await account.kakaoLogin();
+          setOpening(false);
+        }}
+      >
+        <img
+          src={`${import.meta.env.BASE_URL}icons/kakao-login.svg`}
+          alt="카카오 로그인"
+        />
+      </button>
+      {opening && <p role="status">로그인하는 중…</p>}
+      {!account.configured && (
+        <p role="status">로그인 서비스를 준비 중입니다.</p>
+      )}
+      {account.message && (
+        <p className="error-box" role="alert">
+          {account.message}
+        </p>
+      )}
+      <small>로그인한 캐릭터 이름·레벨·운동량은 랭킹에 공개됩니다.</small>
+    </div>
+  );
+}
+export function LoginScreen({ account }) {
   return (
     <main className="login-screen">
       <section className="login-card">
@@ -71,54 +110,31 @@ export function LoginScreen({ account }) {
           height="88"
         />
         <h1>싸이따마훈련소</h1>
-        {account.authLoading || (account.user && !account.ready) ? (
-          <p role="status">계정과 기록을 불러오는 중…</p>
-        ) : (
-          <div className="login-options" aria-busy={opening}>
-            <GoogleLoginButton
-              disabled={!account.configured || opening}
-              onClick={async () => {
-                setOpening(true);
-                await account.login();
-                setOpening(false);
-              }}
-            />
-            <button
-              className="kakao-login"
-              aria-label="카카오 로그인"
-              disabled={!account.kakao?.enabled || opening}
-              onClick={async () => {
-                setOpening(true);
-                await account.kakaoLogin();
-                setOpening(false);
-              }}
-            >
-              <img
-                src={`${import.meta.env.BASE_URL}icons/kakao-login.svg`}
-                alt="카카오 로그인"
-              />
-            </button>
-            {opening && <p role="status">로그인하는 중…</p>}
-            {!account.kakao?.enabled && <small>카카오 로그인 준비 중</small>}
-          </div>
-        )}
-        {!account.configured && (
-          <p role="status">로그인 서비스를 준비 중입니다.</p>
-        )}
+        <p role="status">기록을 불러오는 중…</p>
         {account.message && (
           <p className="error-box" role="alert">
             {account.message}
           </p>
         )}
-        <small>
-          캐릭터 이름·레벨·누적 운동량·오늘 운동량은 랭킹에 공개됩니다.
-        </small>
       </section>
     </main>
   );
 }
 export function AccountControls({ account, showLink = false }) {
   const [linking, setLinking] = useState(false);
+  if (!account.user)
+    return (
+      <section className="account-controls">
+        <div className="account-identity">
+          <UserRound size={18} />
+          <span>비회원</span>
+        </div>
+        <p className="hint">
+          기록은 이 기기에만 저장돼요. 가입·로그인하면 계정으로 이어집니다.
+        </p>
+        <LoginOptions account={account} />
+      </section>
+    );
   return (
     <section className="account-controls">
       <div className="account-identity">

@@ -24,6 +24,7 @@ import {
 } from "firebase/firestore";
 import { firebaseConfig, firebaseConfigured } from "./firebaseConfig";
 import { initialData, parseBackup, upgradeDefaultGoals } from "../model";
+import { mergeGuestData } from "./guestStorage.js";
 import {
   mergeChanges,
   rankingSummary,
@@ -69,7 +70,7 @@ export async function fetchAccount(uid) {
     participating: value.participating,
   };
 }
-export async function syncAccount(uid, base, local) {
+export async function syncAccount(uid, base, local, guestImport = null) {
   if (auth?.currentUser?.uid !== uid)
     throw new Error("로그인 계정이 변경되었습니다.");
   return runTransaction(db, async (transaction) => {
@@ -79,7 +80,11 @@ export async function syncAccount(uid, base, local) {
     const remote = previous
       ? upgradeDefaultGoals(parseBackup(previous.payload))
       : initialData();
-    const merged = mergeChanges(base, local, remote);
+    const merged = mergeChanges(
+      base,
+      local,
+      mergeGuestData(remote, guestImport),
+    );
     const payload = JSON.stringify(merged);
     if (new TextEncoder().encode(payload).length > 850000)
       throw new Error(

@@ -12,6 +12,13 @@ import {
 import { mergeChanges, needsAccountSync } from "./rankingModel";
 import { disablePush, setPushIdentity } from "./pushClient";
 import { kakaoStatus, startKakao, finishKakao } from "./kakaoClient";
+import {
+  readGuest,
+  storeGuest,
+  claimGuestTransfer,
+  completeGuestTransfer,
+  prepareAccountScope,
+} from "./guestStorage.js";
 
 export const accountKey = (uid) =>
   uid ? `${STORAGE_KEY}:account:${uid}` : STORAGE_KEY;
@@ -33,12 +40,17 @@ function loadLocal(uid) {
     return {
       key,
       uid,
-      data: parseBackup(JSON.stringify(uid ? packet.data : packet)),
+      data: uid
+        ? parseBackup(JSON.stringify(packet.data))
+        : readGuest(localStorage).data,
       base:
         uid && packet.base
           ? parseBackup(JSON.stringify(packet.base))
           : initialData(),
       participating: uid ? !!packet.participating : false,
+      guestImport: uid ? packet.guestImport || null : null,
+      guestReceipt: uid ? packet.guestReceipt || null : null,
+      needsPublication: uid ? !!packet.needsPublication : false,
       error: "",
       exists: true,
     };
@@ -50,23 +62,27 @@ function loadLocal(uid) {
       base: initialData(),
       participating: false,
       exists: true,
-      error:
-        "이 기기에 저장된 기록을 불러오지 못했습니다. 다른 브라우저에서 같은 계정으로 로그인해 서버에 저장된 기록을 확인해 주세요.",
+      error: uid
+        ? "이 기기에 저장된 기록을 불러오지 못했습니다. 다른 브라우저에서 같은 계정으로 로그인해 서버에 저장된 기록을 확인해 주세요."
+        : "이 기기의 운동 기록을 읽을 수 없습니다. 브라우저 저장 공간과 권한을 확인해 주세요.",
     };
   }
 }
 function storeLocal(scope) {
+  if (!scope.uid) {
+    storeGuest(localStorage, scope.data);
+    return;
+  }
   localStorage.setItem(
     scope.key,
-    JSON.stringify(
-      scope.uid
-        ? {
-            data: scope.data,
-            base: scope.base,
-            participating: scope.participating,
-          }
-        : scope.data,
-    ),
+    JSON.stringify({
+      data: scope.data,
+      base: scope.base,
+      participating: scope.participating,
+      guestImport: scope.guestImport || null,
+      guestReceipt: scope.guestReceipt || null,
+      needsPublication: !!scope.needsPublication,
+    }),
   );
 }
 const withTimeout = async (promise) => {
@@ -150,7 +166,12 @@ export default function useWorkoutAccount() {
     setMessage("");
     try {
       const result = await withTimeout(
-        syncAccount(current.uid, current.base, current.data),
+        syncAccount(
+          current.uid,
+          current.base,
+          current.data,
+          current.guestImport?.data,
+        ),
       );
       if (ticket !== generation.current) return false;
       // Preserve edits made while the transaction was in flight.
@@ -161,9 +182,22 @@ export default function useWorkoutAccount() {
         base: result.data,
         participating: result.participating,
         needsPublication: false,
+        guestImport: null,
+        guestReceipt: current.guestImport?.id || current.guestReceipt || null,
       };
       storeLocal(next);
       publish(next);
+      // The receipt is durable before cleanup, so a reload cannot reimport an
+      // acknowledged transfer if localStorage cleanup fails.
+      try {
+        completeGuestTransfer(
+          localStorage,
+          current.uid,
+          current.guestImport?.id,
+        );
+      } catch {
+        /* The account receipt will finish cleanup at the next login. */
+      }
       setLastSync(new Date());
       return true;
     } catch (error) {
@@ -192,19 +226,25 @@ export default function useWorkoutAccount() {
         const local = loadLocal(account?.uid || null);
         publish(local);
         if (account && !local.error) {
+          let guestImport = local.guestImport || null;
           try {
+            guestImport = claimGuestTransfer(
+              localStorage,
+              account.uid,
+              local.guestReceipt,
+            );
+            // Persist the claimed import before any network request. Offline
+            // sessions and interrupted login redirects can resume safely.
+            const staged = prepareAccountScope(
+              local,
+              { data: local.base, participating: local.participating },
+              guestImport,
+            );
+            publish(staged);
+            storeLocal(staged);
             const remote = await withTimeout(fetchAccount(account.uid));
             if (ticket !== generation.current) return;
-            const data = local.exists
-              ? mergeChanges(local.base, local.data, remote.data)
-              : remote.data;
-            const next = {
-              ...local,
-              data,
-              base: remote.data,
-              participating: remote.participating,
-              needsPublication: true,
-            };
+            const next = prepareAccountScope(local, remote, guestImport);
             storeLocal(next);
             publish(next);
             setLastSync(new Date());
@@ -322,7 +362,7 @@ export default function useWorkoutAccount() {
       login,
       logout,
       synchronize,
-      pending: needsAccountSync(scope),
+      pending: !!scope.uid && needsAccountSync(scope),
     },
   };
 }
