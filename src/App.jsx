@@ -1010,6 +1010,7 @@ export default function App() {
                   </span>
                 </div>
                 <div className="hero-title">
+                  {!account.user && <span className="guest-label">비회원</span>}
                   <h2>{characterName || "캐릭터"}</h2>
                   <p>LV. {summary.level}</p>
                 </div>
