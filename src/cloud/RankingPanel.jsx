@@ -20,6 +20,7 @@ import {
 import { stats } from "../model";
 import StreakNickname from "../StreakNickname";
 import useKoreaDay from "./useKoreaDay";
+import PrivacyLink from "../PrivacyLink";
 
 function DailyExp({ entry, day, dark = false }) {
   const { todayExp } = displayedDailyActivity(entry, day);
@@ -97,6 +98,7 @@ export function LoginOptions({ account }) {
         </p>
       )}
       <small>로그인한 캐릭터 이름·레벨·운동량은 랭킹에 공개됩니다.</small>
+      <PrivacyLink />
     </div>
   );
 }
@@ -112,6 +114,7 @@ export function LoginScreen({ account }) {
         />
         <h1>싸이따마훈련소</h1>
         <p role="status">기록을 불러오는 중…</p>
+        <PrivacyLink />
         {account.message && (
           <p className="error-box" role="alert">
             {account.message}

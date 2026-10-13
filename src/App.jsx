@@ -25,6 +25,7 @@ import {
 import Character from "./Character";
 import WorkoutProofCard from "./WorkoutProofCard";
 import OnboardingGuide from "./OnboardingGuide";
+import PrivacyLink from "./PrivacyLink";
 import { claimOnboarding } from "./onboardingModel";
 import { workoutProof } from "./workoutProofModel";
 import { guestCharacterName } from "./guestModel";
@@ -662,6 +663,9 @@ function SettingsPanel({
         <Zap size={14} />
         싸이따마훈련소 <span>v1.0</span>
       </p>
+      <div className="settings-privacy">
+        <PrivacyLink />
+      </div>
     </Modal>
   );
 }
@@ -1336,6 +1340,7 @@ export default function App() {
         </div>
         <footer className="page-footer">
           <span>SAITAMA TRAINING © {new Date().getFullYear()}</span>
+          <PrivacyLink />
         </footer>
       </main>
       <nav className="mobile-nav" aria-label="모바일 주 메뉴">

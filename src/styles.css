@@ -859,12 +859,12 @@ main {
   font-size: 8px;
   color: #777777;
 }
-.page-footer span:first-child {
+.page-footer > span {
   display: flex;
   gap: 5px;
   align-items: center;
 }
-.page-footer span:last-child {
+.page-footer > span {
   font-size: 7px;
   letter-spacing: 1px;
 }
@@ -1608,7 +1608,7 @@ main {
     font-size: 8px;
     justify-content: center;
   }
-  .page-footer span:last-child {
+  .page-footer > span {
     display: none;
   }
   .mobile-nav {
@@ -3064,6 +3064,35 @@ main {
   display: grid;
   gap: 12px;
   width: 100%;
+}
+.privacy-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: 8px 4px;
+  color: #555;
+  font-size: 12px;
+  line-height: 1.5;
+  letter-spacing: 0;
+  text-underline-offset: 3px;
+}
+.privacy-link:hover {
+  color: #171717;
+}
+.privacy-link:focus-visible {
+  outline: 2px solid #171717;
+  outline-offset: 3px;
+  border-radius: 3px;
+}
+.page-footer {
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.settings-privacy {
+  display: flex;
+  justify-content: center;
 }
 .kakao-login {
   width: 100%;

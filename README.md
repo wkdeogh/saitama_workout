@@ -105,6 +105,10 @@ Vercel **Production 전용 Secret 환경 변수**:
 
 Firestore는 `google.com` 또는 서버가 발급한 `custom` 인증 + `kakao: true` 클레임만 허용합니다. 일반 custom/anonymous 인증과 다른 사용자의 기록 접근은 거절합니다. `npm test`는 OAuth state·origin·재인증·오류 흐름을 검증하고 `npm run test:rules`는 Google/Kakao 계정 격리를 검증합니다.
 
+## 개인정보처리방침
+
+`public/privacy.html`은 로그인·앱 JavaScript 없이 읽을 수 있는 공개 페이지입니다. 앱 하단·설정·로그인 영역에서 새 창으로 열며, Vercel에서는 `/privacy.html`, 로컬에서는 `/saitama_workout/privacy.html`로 접근합니다. 담당자는 장대호, 문의 이메일은 `wkdeoghq@gmail.com`입니다. 계정 전체 삭제는 현재 이메일로 접수하며, 실제 처리 범위와 운영 점검은 `docs/privacy-operations.md`를 참고합니다.
+
 ## 오운완 인증 이미지
 
 오늘의 훈련에서 ‘오운완’을 누르면 입력 중인 운동량을 먼저 저장하고, 그 기록과 갱신된 레벨로 1080×1440 PNG를 생성합니다. 날짜·이름·레벨·푸쉬업·스쿼트·기타운동·달리기·앱 주소가 한 이미지에 포함됩니다. 목표를 전부 채우지 않았어도 실제 운동 기록이 있으면 사용할 수 있습니다.
