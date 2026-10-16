@@ -59,6 +59,8 @@ GitHub Actions는 Firestore 규칙 테스트와 앱 테스트·빌드를 수행�
 
 사용자 제공 `pic/` 원본은 보존하며 서비스에서 제공하지 않습니다. 훈련소의 만화 이미지와 기존 얼굴 로고·앱 아이콘은 공개 자산에서 제거했습니다. 사용자 제공 `new_logo.png`를 적용한 로고 원본은 `public/icons/new-logo.png`이고, 상단 로고·홈 화면 앱 아이콘·파비콘에 같은 그림을 사용합니다. 바깥 흰색 배경만 투명하게 처리했으며 원본은 `new_logo.original.png`로 보존합니다. 배포 크기는 32/180/192/512px PNG입니다.
 
+Safari 홈 화면 추가용 `apple-touch-icon`은 `public/icons/apple-touch-icon-180-v2.png`를 사용합니다. 주황 배경이 사방 끝까지 채워진 불투명 정사각형 PNG이며 둥근 모서리는 기기에 맡깁니다. 파일명을 변경해 이전 투명 아이콘과 구분합니다. 기존 홈 화면 아이콘은 배포 후 다시 추가하여 확인합니다. [Apple Web Clip 아이콘 지정 안내](https://developer.apple.com/library/archive/documentation/AppleApplications/Reference/SafariWebContent/ConfiguringWebApplications/ConfiguringWebApplications.html) · [앱 아이콘 모서리 처리 안내](https://developer.apple.com/design/human-interface-guidelines/app-icons).
+
 로딩 화면은 주황색 판과 테두리를 제거한 `new_logo_transparent.png`를 원본으로, `public/icons/trainee-cutout-192.png`를 사용합니다. 상단 로고와 앱 아이콘은 주황 배경 버전을 유지합니다.
 
 표시 이름만 빡빡이훈련소로 변경했으며 기존 localStorage 키, Firebase 프로젝트·계정 UID, manifest ID·시작 주소, 서비스 URL은 유지합니다.
