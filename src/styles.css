@@ -3163,7 +3163,7 @@ main {
 }
 .proof-actions {
   display: grid;
-  grid-template-columns: 1fr 1.25fr 1fr;
+  grid-template-columns: 1fr 1fr 0.8fr;
   gap: 8px;
   margin-top: 16px;
 }
@@ -3174,14 +3174,6 @@ main {
   font-size: 12px;
   gap: 5px;
   margin: 0;
-}
-.proof-download {
-  text-decoration: none;
-  cursor: pointer;
-}
-.proof-download.disabled {
-  opacity: 0.4;
-  cursor: default;
 }
 .proof-message {
   font-size: 12px;

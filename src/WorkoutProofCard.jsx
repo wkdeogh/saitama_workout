@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Download, Share2, Shuffle, RotateCcw } from "lucide-react";
+import { Link, Share2, Shuffle, RotateCcw } from "lucide-react";
 import { characterPortrait } from "./Character";
 import { EXERCISES, recordExp } from "./model";
 import {
@@ -162,10 +162,10 @@ export default function WorkoutProofCard({ proof }) {
   }, [proof, pose, attempt]);
   async function share() {
     if (!image || sharing) return;
-    const payload = proofShareData(proof, image.file);
+    const payload = proofShareData(image.file);
     if (!navigator.share || !navigator.canShare?.(payload)) {
       setMessage(
-        "이 브라우저는 이미지 공유를 지원하지 않습니다. 이미지를 저장해 공유해 주세요.",
+        "이 브라우저는 이미지 공유를 지원하지 않습니다. 이미지 공유를 지원하는 브라우저에서 다시 시도해 주세요.",
       );
       return;
     }
@@ -175,7 +175,7 @@ export default function WorkoutProofCard({ proof }) {
       await navigator.share(payload);
     } catch (e) {
       if (e.name !== "AbortError")
-        setMessage("공유창을 열지 못했습니다. 이미지를 저장해 공유해 주세요.");
+        setMessage("공유창을 열지 못했습니다. 다시 시도해 주세요.");
     } finally {
       setSharing(false);
     }
@@ -210,20 +210,23 @@ export default function WorkoutProofCard({ proof }) {
           onClick={() => setPose(nextProofPose(pose))}
         >
           <Shuffle size={17} />
-          다른 포즈
+          다른포즈
         </button>
-        <a
-          className={`secondary-button proof-download ${!image ? "disabled" : ""}`}
-          href={image?.url}
-          download={image?.file.name}
-          aria-disabled={!image}
-          onClick={(e) => {
-            if (!image) e.preventDefault();
+        <button
+          className="secondary-button"
+          disabled={sharing}
+          onClick={async () => {
+            try {
+              await navigator.clipboard.writeText(APP_SHARE_URL);
+              setMessage("링크를 복사했어요.");
+            } catch {
+              setMessage("링크를 복사하지 못했습니다. 다시 시도해 주세요.");
+            }
           }}
         >
-          <Download size={17} />
-          이미지 저장
-        </a>
+          <Link size={17} />
+          링크복사
+        </button>
         <button
           className="primary-button"
           disabled={!image || sharing}

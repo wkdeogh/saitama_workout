@@ -16,7 +16,6 @@ import {
   legPose,
   bodyPose,
   proofShareData,
-  APP_SHARE_URL,
 } from "../src/workoutProofModel.js";
 const day = "2026-09-28";
 test("proof takes a detached snapshot of saved counts and the updated level", () => {
@@ -52,27 +51,11 @@ test("proof requires a real workout on the requested date, but not full goals", 
   assert.equal(workoutProof(data, day).counts.runningKm, 0.1);
   assert.throws(() => workoutProof(data, "2026-09-29"), /먼저 입력/);
 });
-test("file sharing includes all four counts and the canonical app link", () => {
+test("sharing sends exactly one image without a message, title or link", () => {
   const file = new File(["png"], "proof.png", { type: "image/png" });
-  const payload = proofShareData(
-    {
-      day,
-      name: "대호",
-      counts: { pushups: 50, squats: 30, situps: 0, runningKm: 2.5 },
-    },
-    file,
-  );
-  assert.deepEqual(Object.keys(payload).sort(), ["files", "text"]);
-  assert.equal(payload.text.split(APP_SHARE_URL).length - 1, 1);
-  const lines = payload.text.split("\n");
-  assert.equal(lines[0], "=============");
-  assert.equal(lines.at(-1), lines[0]);
-  assert.equal(lines[1], "💪 대호.. 오늘의 훈련 완료..");
-  assert.equal(lines[2], day);
-  for (const value of ["50개", "30개", "0개", "2.5km", day])
-    assert.ok(payload.text.includes(value));
-  assert.equal(payload.files[0], file);
-  assert.equal(payload.files.length, 1);
+  const payload = proofShareData(file);
+  assert.deepEqual(payload, { files: [file] });
+  assert.equal(payload.files[0].type, "image/png");
 });
 test("random pose changes do not repeat and remain in the supported set", () => {
   for (const previous of [undefined, ...PROOF_POSES])

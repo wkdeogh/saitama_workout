@@ -44,26 +44,8 @@ export function workoutProof(data, day) {
     ),
   };
 }
-export function proofShareData(proof, file) {
-  const frame = "=============";
-  const icons = { pushups: "👊", squats: "🏋️", situps: "🔥", runningKm: "🏃" };
-  return {
-    text: [
-      frame,
-      `💪 ${proof.name}.. 오늘의 훈련 완료..`,
-      proof.day,
-      ...(proof.streak >= 2 ? [`${proof.streak}일 연속 운동 중!`] : []),
-      "",
-      ...EXERCISES.map(
-        ({ key, label, unit }) =>
-          `${icons[key]} ${label} ${proof.counts[key]}${unit}`,
-      ),
-      "",
-      `빡빡이훈련소 ${APP_SHARE_URL}`,
-      frame,
-    ].join("\n"),
-    ...(file ? { files: [file] } : {}),
-  };
+export function proofShareData(file) {
+  return { files: [file] };
 }
 
 // Posed arm endpoints also drive fists, fingers and wrist wraps.
