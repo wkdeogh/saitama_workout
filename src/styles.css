@@ -1728,18 +1728,18 @@ main {
     display: none;
   }
 }
-.image-brand {
+.brand-mark.image-brand {
   overflow: hidden;
-  background: #fff;
+  background: transparent;
   transform: rotate(-5deg);
-  border: 1px solid #e5e5e5;
+  border: 2px solid #171717;
 }
 .image-brand img {
   width: 100%;
   height: 100%;
   object-fit: cover;
+  object-position: center;
   transform: scale(1.3);
-  object-position: 50% 33%;
 }
 .growth-rules {
   display: flex;
@@ -1786,7 +1786,7 @@ main {
 @media (max-width: 760px) {
 }
 
-/* Saitama: hard ink, hero yellow and glove red. */
+/* Training theme: hard ink, warm yellow and workout red. */
 :root {
   --orange: #e52c29;
   --ink: #171717;
@@ -2488,26 +2488,6 @@ main {
     transition: none;
   }
 }
-.training-poster {
-  margin-top: 18px;
-  overflow: hidden;
-  border: 2px solid #171717;
-  border-radius: 7px;
-  background: #fff;
-}
-.training-poster > img {
-  display: block;
-  width: 100%;
-  height: auto;
-}
-@media (max-width: 760px) {
-  .dashboard:not(.growth-layout):not(.calendar-layout) .training-poster {
-    order: 1;
-    width: 100%;
-    margin-top: 0;
-  }
-}
-
 .name-form {
   display: grid;
   gap: 12px;

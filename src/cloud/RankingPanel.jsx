@@ -107,12 +107,12 @@ export function LoginScreen({ account }) {
     <main className="login-screen">
       <section className="login-card">
         <img
-          src={`${import.meta.env.BASE_URL}images/hero-chibi.jpeg`}
+          src={`${import.meta.env.BASE_URL}icons/new-logo-transparent-192.png`}
           alt=""
           width="88"
           height="88"
         />
-        <h1>싸이따마훈련소</h1>
+        <h1>빡빡이훈련소</h1>
         <p role="status">기록을 불러오는 중…</p>
         <PrivacyLink />
         {account.message && (

@@ -59,7 +59,7 @@ export function proofShareData(proof, file) {
           `${icons[key]} ${label} ${proof.counts[key]}${unit}`,
       ),
       "",
-      `싸이따마훈련소 ${APP_SHARE_URL}`,
+      `빡빡이훈련소 ${APP_SHARE_URL}`,
       frame,
     ].join("\n"),
     ...(file ? { files: [file] } : {}),

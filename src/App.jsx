@@ -661,7 +661,7 @@ function SettingsPanel({
       )}
       <p className="settings-footer">
         <Zap size={14} />
-        싸이따마훈련소 <span>v1.0</span>
+        빡빡이훈련소 <span>v1.0</span>
       </p>
       <div className="settings-privacy">
         <PrivacyLink />
@@ -916,13 +916,13 @@ export default function App() {
           <button className="brand" onClick={() => navigate("home")}>
             <span className="brand-mark image-brand">
               <img
-                src={`${import.meta.env.BASE_URL}images/hero-chibi.jpeg`}
+                src={`${import.meta.env.BASE_URL}icons/new-logo-transparent-192.png`}
                 alt=""
               />
             </span>
             <span>
-              싸이따마<span className="brand-thin">훈련소</span>
-              <small>SAITAMA TRAINING</small>
+              빡빡이<span className="brand-thin">훈련소</span>
+              <small>BBAKBAK TRAINING</small>
             </span>
           </button>
           <nav aria-label="주 메뉴">
@@ -1085,16 +1085,6 @@ export default function App() {
                 </div>
                 <span className="streak-deco">↗</span>
               </div>
-              <section className="training-poster" aria-label="사이타마 훈련법">
-                <img
-                  src={`${import.meta.env.BASE_URL}images/training-manga.jpg`}
-                  alt="사이타마 훈련법: 팔굽혀펴기 100회, 윗몸일으키기 100회, 스쿼트 100회, 10km 달리기를 매일 한다는 만화 장면"
-                  width="620"
-                  height="685"
-                  loading="lazy"
-                  decoding="async"
-                />
-              </section>
             </aside>
           )}
           <div className="content-column">
@@ -1339,7 +1329,7 @@ export default function App() {
           </div>
         </div>
         <footer className="page-footer">
-          <span>SAITAMA TRAINING © {new Date().getFullYear()}</span>
+          <span>BBAKBAK TRAINING © {new Date().getFullYear()}</span>
           <PrivacyLink />
         </footer>
       </main>

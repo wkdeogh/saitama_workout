@@ -148,7 +148,7 @@ const pages = [
       <>
         <ol>
           <li>
-            <strong>Safari</strong>에서 싸이따마훈련소를 엽니다.
+            <strong>Safari</strong>에서 빡빡이훈련소를 엽니다.
           </li>
           <li>
             <strong>공유 버튼</strong>을 누릅니다. 메뉴 안에 있을 수도 있습니다.
@@ -183,7 +183,7 @@ const pages = [
           <strong>Chrome</strong>
         </p>
         <ol>
-          <li>Chrome에서 싸이따마훈련소를 엽니다.</li>
+          <li>Chrome에서 빡빡이훈련소를 엽니다.</li>
           <li>
             오른쪽 위 <strong>⋮ → 홈 화면에 추가</strong>를 누릅니다.
           </li>

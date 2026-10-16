@@ -43,7 +43,7 @@ export async function createProofImage(proof, pose) {
   text(ctx, "오늘의 훈련 완료", 54, 135, 68, "#ffdf48", 900, 650);
   ctx.textAlign = "right";
   text(ctx, proof.day.replaceAll("-", "."), 1026, 84, 38, "#ffffff");
-  text(ctx, "싸이따마훈련소", 1026, 141, 32, "#ffffff", 600);
+  text(ctx, "빡빡이훈련소", 1026, 141, 32, "#ffffff", 600);
   ctx.textAlign = "left";
 
   const glow = ctx.createRadialGradient(540, 610, 40, 540, 610, 570);
@@ -117,7 +117,7 @@ export async function createProofImage(proof, pose) {
   });
   ctx.fillStyle = "#171717";
   ctx.fillRect(0, 1310, 1080, 130);
-  text(ctx, "싸이따마훈련소", 54, 1360, 28, "#ffdf48");
+  text(ctx, "빡빡이훈련소", 54, 1360, 28, "#ffdf48");
   text(ctx, APP_SHARE_URL, 54, 1404, 29, "#ffffff", 600);
   const blob = await new Promise((resolve) =>
     canvas.toBlob(resolve, "image/png"),
