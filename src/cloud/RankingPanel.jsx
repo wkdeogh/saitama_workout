@@ -107,7 +107,8 @@ export function LoginScreen({ account }) {
     <main className="login-screen">
       <section className="login-card">
         <img
-          src={`${import.meta.env.BASE_URL}icons/new-logo-transparent-192.png`}
+          className="loading-logo"
+          src={`${import.meta.env.BASE_URL}icons/trainee-cutout-192.png`}
           alt=""
           width="88"
           height="88"

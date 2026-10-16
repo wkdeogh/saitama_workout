@@ -2590,10 +2590,11 @@ main {
   box-shadow: 5px 5px 0 #171717;
   text-align: center;
 }
-.login-card > img {
-  border: 2px solid #171717;
-  border-radius: 12px;
-  object-fit: cover;
+.login-card > .loading-logo {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  object-fit: contain;
 }
 .login-card h1 {
   font-size: 28px;
