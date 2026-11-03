@@ -1,0 +1,566 @@
+.dashboard.field-layout {
+  grid-template-columns: minmax(0, 1fr);
+}
+.field-lobby {
+  width: min(100%, 580px);
+  margin: 0 auto;
+  text-align: center;
+  padding: 30px 28px;
+  overflow: hidden;
+}
+.field-lobby-heading .eyebrow {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 7px;
+  color: #5b7152;
+}
+.field-lobby-heading h2 {
+  margin-top: 10px;
+  font-size: 25px;
+}
+.field-lobby-heading p {
+  margin-top: 9px;
+  color: #666;
+  font-size: 13px;
+}
+.field-lobby-character {
+  position: relative;
+  height: 295px;
+  margin: 12px -20px 0;
+  background: radial-gradient(
+    ellipse at 50% 85%,
+    #e9efdf 0,
+    #f6f8f1 28%,
+    transparent 66%
+  );
+}
+.field-lobby-character > div {
+  height: 100%;
+}
+.field-lobby-name {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 9px;
+  margin: 0 0 24px;
+}
+.field-lobby-name strong {
+  font-size: 18px;
+  overflow-wrap: anywhere;
+}
+.field-lobby-name > span {
+  font-size: 11px;
+  color: #666;
+  white-space: nowrap;
+}
+.field-enter {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 52px;
+  border-radius: 12px;
+  background: #344a35;
+  color: #fff;
+  font-size: 15px;
+  font-weight: 700;
+}
+.field-enter:hover {
+  background: #243d29;
+}
+.field-loading {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 18px;
+  background: #edf2e6;
+  color: #344a35;
+}
+.field-loading button {
+  min-height: 44px;
+  padding: 0 20px;
+  border: 1px solid #bac6ad;
+  border-radius: 10px;
+}
+.field-world {
+  --field-glass: rgba(255, 252, 243, 0.94);
+  --field-ink: #273d2d;
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  height: 100dvh;
+  z-index: 10000;
+  overflow: hidden;
+  background: #c9e1e5;
+  color: var(--field-ink);
+  outline: none;
+  font-family: "Noto Sans KR", sans-serif;
+  isolation: isolate;
+}
+.field-canvas,
+.field-labels {
+  position: absolute;
+  inset: 0;
+}
+.field-canvas canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  touch-action: none;
+  cursor: grab;
+}
+.field-canvas canvas:active {
+  cursor: grabbing;
+}
+.field-labels {
+  pointer-events: none;
+  overflow: hidden;
+}
+.field-label {
+  position: absolute;
+  left: 0;
+  top: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 7px;
+  will-change: transform;
+}
+.field-label[hidden],
+.field-bubble[hidden] {
+  display: none;
+}
+.field-nickname {
+  max-width: 190px;
+  padding: 3px 9px;
+  border-radius: 20px;
+  background: rgba(36, 53, 37, 0.73);
+  color: #fff;
+  font-size: 11px;
+  line-height: 1.5;
+  font-weight: 600;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-shadow: 0 1px 2px #263b29;
+}
+.field-label.is-self .field-nickname {
+  background: rgba(255, 252, 243, 0.93);
+  color: #2e4432;
+  text-shadow: none;
+  box-shadow: 0 1px 5px #263b2920;
+}
+.field-bubble {
+  position: relative;
+  display: block;
+  width: max-content;
+  max-width: min(230px, 70vw);
+  padding: 10px 13px;
+  border-radius: 13px;
+  background: #fffef8;
+  box-shadow: 0 2px 12px #273d2d22;
+  color: #273d2d;
+  font-size: 13px;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+  text-align: center;
+}
+.field-bubble::after {
+  content: "";
+  position: absolute;
+  bottom: -5px;
+  left: calc(50% - 5px);
+  border: 5px solid transparent;
+  border-top-color: #fffef8;
+  border-bottom: 0;
+}
+.field-topbar {
+  position: absolute;
+  top: max(18px, env(safe-area-inset-top));
+  left: max(20px, env(safe-area-inset-left));
+  right: max(20px, env(safe-area-inset-right));
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  pointer-events: none;
+}
+.field-topbar > * {
+  pointer-events: auto;
+}
+.field-world-title {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  background: var(--field-glass);
+  border: 1px solid #fff6;
+  padding: 11px 15px;
+  border-radius: 14px;
+  box-shadow: 0 3px 14px #263b2910;
+}
+.field-world-title strong {
+  font-size: 14px;
+}
+.field-world-title > span {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 10px;
+  color: #4c6050;
+}
+.field-world-title i {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #9a967b;
+}
+.field-world-title i.online {
+  background: #518047;
+}
+.field-exit {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 44px;
+  padding: 0 15px;
+  border-radius: 12px;
+  background: var(--field-glass);
+  font-size: 12px;
+  font-weight: 700;
+  box-shadow: 0 3px 14px #263b2910;
+}
+.field-world button {
+  touch-action: manipulation;
+}
+.field-world button:active:not(:disabled) {
+  transform: none;
+  background-color: #dbe6d0;
+}
+.field-world button:focus-visible,
+.field-world input:focus-visible {
+  outline: 3px solid #28593e;
+  outline-offset: 3px;
+}
+.field-camera-tools {
+  position: absolute;
+  left: max(20px, env(safe-area-inset-left));
+  top: calc(max(18px, env(safe-area-inset-top)) + 85px);
+  display: flex;
+  border-radius: 12px;
+  background: var(--field-glass);
+  overflow: visible;
+}
+.field-camera-tools button {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  display: grid;
+  place-items: center;
+}
+.field-help {
+  position: absolute;
+  left: max(20px, env(safe-area-inset-left));
+  top: calc(max(18px, env(safe-area-inset-top)) + 137px);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-width: calc(100% - 40px);
+  padding: 14px;
+  background: var(--field-glass);
+  border-radius: 12px;
+  font-size: 11px;
+}
+.field-connection {
+  position: absolute;
+  top: calc(max(18px, env(safe-area-inset-top)) + 145px);
+  left: 50%;
+  transform: translateX(-50%);
+  width: max-content;
+  max-width: calc(100% - 40px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 6px 12px;
+  background: var(--field-glass);
+  padding: 10px 14px;
+  border-radius: 12px;
+  font-size: 12px;
+  text-align: center;
+}
+.field-connection button {
+  min-height: 44px;
+  padding: 0 10px;
+  color: #295439;
+  font-weight: 700;
+  text-decoration: underline;
+}
+.field-bottom-controls {
+  position: absolute;
+  bottom: max(25px, env(safe-area-inset-bottom));
+  left: max(25px, env(safe-area-inset-left));
+  right: max(25px, env(safe-area-inset-right));
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  pointer-events: none;
+}
+.field-bottom-controls > * {
+  pointer-events: auto;
+}
+.field-joystick {
+  position: relative;
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  border: 2px solid #fff9;
+  background: #f8faef66;
+  box-shadow:
+    inset 0 1px 15px #ffffff44,
+    0 3px 20px #243a2915;
+  touch-action: none;
+  user-select: none;
+}
+.field-joystick-cross {
+  position: absolute;
+  inset: 16px;
+  border-radius: 50%;
+  border: 1px solid #fff5;
+}
+.field-joystick-cross::before,
+.field-joystick-cross::after {
+  content: "";
+  position: absolute;
+  background: #fff7;
+  left: calc(50% - 1px);
+  width: 2px;
+  height: 100%;
+}
+.field-joystick-cross::after {
+  transform: rotate(90deg);
+}
+.field-joystick-knob {
+  position: absolute;
+  width: 52px;
+  height: 52px;
+  left: 32px;
+  top: 32px;
+  border-radius: 50%;
+  background: #fcfbeecc;
+  border: 1px solid #fff;
+  box-shadow: 0 3px 12px #263b2933;
+  pointer-events: none;
+}
+.field-chat-toggle {
+  width: 48px;
+  height: 48px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--field-glass);
+  margin: 0 10px 4px;
+  box-shadow: 0 3px 14px #263b2915;
+}
+.field-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+.field-exercises {
+  display: flex;
+  gap: 9px;
+}
+.field-exercises button {
+  width: 65px;
+  min-height: 67px;
+  background: var(--field-glass);
+  border: 1px solid #fff9;
+  border-radius: 15px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  box-shadow: 0 3px 14px #263b2915;
+  font-size: 11px;
+  font-weight: 700;
+}
+.field-run {
+  min-height: 44px;
+  padding: 0 14px;
+  border-radius: 13px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: var(--field-glass);
+  font-size: 11px;
+  font-weight: 700;
+  box-shadow: 0 3px 14px #263b2915;
+}
+.field-actions button[aria-pressed="true"] {
+  background: #385c3d;
+  color: #fff;
+  border-color: #9bb384;
+}
+.field-chat-form {
+  position: absolute;
+  left: 50%;
+  bottom: var(
+    --field-chat-bottom,
+    max(170px, calc(env(safe-area-inset-bottom) + 145px))
+  );
+  transform: translateX(-50%);
+  width: min(480px, calc(100% - 32px));
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 5px 6px 5px 14px;
+  border-radius: 14px;
+  background: #fffef9;
+  box-shadow: 0 3px 24px #263b2933;
+}
+.field-chat-form input {
+  flex: 1;
+  width: 0;
+  min-width: 0;
+  padding: 8px 0;
+  border: none;
+  background: transparent;
+  font-size: 16px;
+  outline-offset: 0;
+}
+.field-chat-form > button {
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  border-radius: 10px;
+  flex-shrink: 0;
+}
+.field-chat-error {
+  position: absolute;
+  bottom: 100%;
+  left: 0;
+  margin-bottom: 7px;
+  background: #fffef9;
+  padding: 8px 12px;
+  border-radius: 10px;
+  font-size: 11px;
+}
+.field-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+@media (max-width: 600px) {
+  .field-lobby {
+    padding: 24px 20px;
+  }
+  .field-lobby-character {
+    height: 260px;
+  }
+  .field-topbar {
+    top: max(12px, env(safe-area-inset-top));
+    left: max(12px, env(safe-area-inset-left));
+    right: max(12px, env(safe-area-inset-right));
+  }
+  .field-camera-tools {
+    left: max(12px, env(safe-area-inset-left));
+    top: calc(max(12px, env(safe-area-inset-top)) + 83px);
+  }
+  .field-bottom-controls {
+    bottom: max(20px, env(safe-area-inset-bottom));
+    left: max(16px, env(safe-area-inset-left));
+    right: max(16px, env(safe-area-inset-right));
+  }
+  .field-joystick {
+    width: 106px;
+    height: 106px;
+  }
+  .field-joystick-knob {
+    left: 25px;
+    top: 25px;
+  }
+  .field-exercises button {
+    width: 58px;
+    min-height: 63px;
+  }
+  .field-chat-toggle {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    bottom: 130px;
+    margin: 0;
+  }
+  .field-world .field-chat-toggle:active:not(:disabled) {
+    transform: translateX(-50%);
+  }
+  .field-connection {
+    top: calc(max(12px, env(safe-area-inset-top)) + 140px);
+    font-size: 11px;
+  }
+  .field-help {
+    top: calc(max(12px, env(safe-area-inset-top)) + 138px);
+    left: 12px;
+    z-index: 2;
+  }
+  .field-chat-form {
+    bottom: var(
+      --field-chat-bottom,
+      max(215px, calc(env(safe-area-inset-bottom) + 190px))
+    );
+  }
+}
+@media (max-height: 480px) and (orientation: landscape) {
+  .field-joystick {
+    width: 96px;
+    height: 96px;
+  }
+  .field-joystick-knob {
+    top: 20px;
+    left: 20px;
+  }
+  .field-topbar {
+    top: max(8px, env(safe-area-inset-top));
+  }
+  .field-world-title {
+    padding: 7px 12px;
+    gap: 2px;
+  }
+  .field-camera-tools {
+    top: 70px;
+  }
+  .field-chat-toggle {
+    position: static;
+    transform: none;
+    margin-bottom: 4px;
+  }
+  .field-world .field-chat-toggle:active:not(:disabled) {
+    transform: none;
+  }
+  .field-chat-form {
+    bottom: var(--field-chat-bottom, 145px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .field-world *,
+  .field-lobby * {
+    scroll-behavior: auto;
+    transition: none;
+  }
+}

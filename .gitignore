@@ -9,5 +9,6 @@ dist/
 !.env.example
 firebase-debug.log*
 firestore-debug.log*
+database-debug.log*
 ui-debug.log*
 *-firebase-adminsdk-*.json

@@ -21,10 +21,12 @@ import {
   Camera,
   Volume2,
   VolumeX,
+  TreePine,
 } from "lucide-react";
 import Character from "./Character";
 import WorkoutProofCard from "./WorkoutProofCard";
 import OnboardingGuide from "./OnboardingGuide";
+import OutdoorTraining from "./field/OutdoorTraining";
 import PrivacyLink from "./PrivacyLink";
 import { claimOnboarding } from "./onboardingModel";
 import { workoutProof } from "./workoutProofModel";
@@ -903,7 +905,7 @@ export default function App() {
   }
   const nav = [
     ["home", Dumbbell, "훈련소"],
-    ["calendar", CalendarDays, "운동 기록"],
+    ["field", TreePine, "야외 훈련장"],
     ["growth", Sparkles, "성장 도감"],
     ["ranking", Trophy, "친구"],
   ];
@@ -976,8 +978,8 @@ export default function App() {
                 ? "캐릭터 성장"
                 : tab === "ranking"
                   ? "친구"
-                  : tab === "calendar"
-                    ? "운동 기록"
+                  : tab === "field"
+                    ? "야외 훈련장"
                     : "훈련소"}
             </h1>
           </div>
@@ -995,7 +997,7 @@ export default function App() {
           </button>
         )}
         <div
-          className={`dashboard ${tab === "growth" ? "growth-layout" : ""} ${tab === "ranking" ? "ranking-layout" : ""} ${tab === "calendar" ? "calendar-layout" : ""}`}
+          className={`dashboard ${tab === "growth" ? "growth-layout" : ""} ${tab === "ranking" ? "ranking-layout" : ""} ${tab === "field" ? "field-layout" : ""}`}
         >
           {tab === "home" && (
             <aside className="hero-column">
@@ -1088,6 +1090,14 @@ export default function App() {
             </aside>
           )}
           <div className="content-column">
+            {tab === "field" && (
+              <OutdoorTraining
+                user={account.user}
+                name={characterName}
+                level={summary.level}
+                streak={summary.streak}
+              />
+            )}
             {tab === "ranking" &&
               (account.user ? (
                 <FriendsPanel
@@ -1114,7 +1124,7 @@ export default function App() {
                   </section>
                 </>
               ))}
-            {(tab === "home" || tab === "calendar") && (
+            {tab === "home" && (
               <>
                 <div className="stats-row">
                   <div>
@@ -1148,12 +1158,6 @@ export default function App() {
                     </strong>
                   </div>
                 </div>
-                {tab === "calendar" && (
-                  <Calendar
-                    {...{ data, selected, today, month, setMonth }}
-                    onSelect={selectDate}
-                  />
-                )}
                 <section className="panel workout-panel" ref={workoutRef}>
                   <div className="section-heading">
                     <div>

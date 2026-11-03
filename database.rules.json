@@ -1,0 +1,55 @@
+{
+  "rules": {
+    ".read": false,
+    ".write": false,
+    "worlds": {
+      "meadow": {
+        "players": {
+          ".read": "auth != null",
+          "$uid": {
+            "$session": {
+              ".write": "auth != null && auth.uid === $uid && $session.length <= 60",
+              ".validate": "newData.hasChildren([\"name\", \"level\", \"streak\", \"guest\", \"x\", \"z\", \"yaw\", \"action\", \"updatedAt\", \"chat\", \"chatAt\"]) && (newData.child('chat').val() === '' || newData.child('chatAt').val() > 0) && (!data.exists() || newData.child('chat').val() === '' || newData.child('chat').val() === data.child('chat').val() || (newData.child('chatAt').val() >= data.child('chatAt').val() + 2000 && newData.child('chatAt').val() >= now - 15000))",
+              "name": {
+                ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 24"
+              },
+              "level": {
+                ".validate": "newData.isNumber() && newData.val() >= 1 && newData.val() <= 1000"
+              },
+              "streak": {
+                ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 10000"
+              },
+              "guest": {
+                ".validate": "newData.isBoolean()"
+              },
+              "x": {
+                ".validate": "newData.isNumber() && newData.val() >= -34 && newData.val() <= 34"
+              },
+              "z": {
+                ".validate": "newData.isNumber() && newData.val() >= -34 && newData.val() <= 34"
+              },
+              "yaw": {
+                ".validate": "newData.isNumber() && newData.val() >= -6.284 && newData.val() <= 6.284"
+              },
+              "action": {
+                ".validate": "newData.val() === 'idle' || newData.val() === 'walk' || newData.val() === 'run' || newData.val() === 'pushup' || newData.val() === 'squat'"
+              },
+              "updatedAt": {
+                ".validate": "newData.isNumber() && newData.val() >= now - 15000 && newData.val() <= now + 1000"
+              },
+              "chat": {
+                ".validate": "newData.isString() && newData.val().length <= 80"
+              },
+              "chatAt": {
+                ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= now + 1000 && (!data.exists() || newData.val() === data.val() || newData.val() >= data.val() + 2000)"
+              },
+              "$other": {
+                ".validate": false
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

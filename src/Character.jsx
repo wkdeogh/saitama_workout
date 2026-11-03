@@ -3,7 +3,7 @@ import * as THREE from "three";
 import { characterAppearance } from "./characterAppearance";
 import { armPose, legPose, bodyPose } from "./workoutProofModel.js";
 
-function disposeGroup(group) {
+export function disposeGroup(group) {
   const geometries = new Set(),
     materials = new Set();
   group.traverse((node) => {
@@ -17,8 +17,10 @@ function disposeGroup(group) {
   materials.forEach((m) => m.dispose());
 }
 
-function createFigure(p, pose = "idle") {
+export function createFigure(p, pose = "idle", animated = false) {
   const root = new THREE.Group();
+  let activeGroup = root;
+  const limbs = [];
   const geometry = new THREE.SphereGeometry(1, 28, 20);
   const skin = new THREE.MeshStandardMaterial({
     color: 0xeab68a,
@@ -61,7 +63,7 @@ function createFigure(p, pose = "idle") {
     mesh.scale.set(...scale);
     mesh.castShadow = true;
     mesh.receiveShadow = true;
-    parent.add(mesh);
+    (parent === root ? activeGroup : parent).add(mesh);
     return mesh;
   };
   const limb = (from, to, radius, material = skin) => {
@@ -83,7 +85,7 @@ function createFigure(p, pose = "idle") {
       delta.normalize(),
     );
     mesh.castShadow = true;
-    root.add(mesh);
+    activeGroup.add(mesh);
     return mesh;
   };
   const g = p.growth,
@@ -169,14 +171,21 @@ function createFigure(p, pose = "idle") {
   const fists = [];
   for (const side of [-1, 1]) {
     const { shoulder, elbow, hand } = armPose(p, side, pose);
+    const arm = animated ? new THREE.Group() : root;
+    const forearm = animated ? new THREE.Group() : root;
+    if (animated) root.add(arm, forearm);
+    activeGroup = arm;
     limb(shoulder, elbow, p.arm);
+    activeGroup = forearm;
     limb(elbow, hand, p.arm * 0.8);
+    activeGroup = arm;
     if (g > 0.015)
       sphere(root, skinLight, shoulder, [
         0.066 + 0.21 * g,
         0.105 + 0.13 * g,
         0.068 + 0.19 * g,
       ]);
+    activeGroup = forearm;
     sphere(root, skin, hand, [
       0.08 + 0.11 * g,
       0.11 + 0.07 * g,
@@ -196,14 +205,22 @@ function createFigure(p, pose = "idle") {
         );
       }
     const { hip: hipJoint, knee, ankle } = legPose(p, side, pose);
+    const thigh = animated ? new THREE.Group() : root;
+    const shin = animated ? new THREE.Group() : root;
+    const foot = animated ? new THREE.Group() : root;
+    if (animated) root.add(thigh, shin, foot);
+    activeGroup = thigh;
     limb(hipJoint, knee, 0.064 + 0.15 * g);
+    activeGroup = shin;
     limb(knee, ankle, 0.046 + 0.12 * g);
+    activeGroup = foot;
     sphere(
       root,
       skin,
       [ankle[0], ankle[1] - 0.025, ankle[2] + 0.1],
       [0.09 + 0.08 * g, 0.075 + 0.025 * g, 0.15 + 0.11 * g],
     );
+    activeGroup = forearm;
     if (p.wraps)
       limb(
         pose === "idle"
@@ -215,19 +232,23 @@ function createFigure(p, pose = "idle") {
         p.arm * 0.84,
         navy,
       );
+    activeGroup = thigh;
     if (p.shorts)
       limb(hipJoint, knee, 0.082 + 0.17 * g, p.pants ? orange : navy);
     if (p.pants) {
+      activeGroup = shin;
       const shinPoint = (fraction) =>
         ankle.map((v, i) => v + (knee[i] - v) * fraction);
       limb(knee, shinPoint(0.39), 0.065 + 0.15 * g, orange);
       limb(shinPoint(0.56), ankle, 0.058 + 0.13 * g, navy);
+      activeGroup = foot;
       sphere(
         root,
         navy,
         [ankle[0], ankle[1] - 0.025, ankle[2] + 0.12],
         [0.12 + 0.08 * g, 0.105, 0.18 + 0.11 * g],
       );
+      activeGroup = shin;
       const cuff = sphere(root, orange, shinPoint(0.5), [
         0.065 + 0.14 * g,
         0.035,
@@ -238,6 +259,7 @@ function createFigure(p, pose = "idle") {
         new THREE.Vector3(...knee).sub(new THREE.Vector3(...ankle)).normalize(),
       );
     }
+    activeGroup = forearm;
     if (p.fists) {
       const glow = new THREE.Mesh(
         geometry,
@@ -251,7 +273,7 @@ function createFigure(p, pose = "idle") {
       );
       glow.position.set(...hand);
       glow.scale.setScalar(0.27);
-      root.add(glow);
+      activeGroup.add(glow);
       fists.push(glow);
       const cuff = new THREE.Mesh(
         new THREE.TorusGeometry(0.23, 0.014, 6, 36),
@@ -259,9 +281,36 @@ function createFigure(p, pose = "idle") {
       );
       cuff.position.set(...hand);
       cuff.rotation.x = 0.5;
-      root.add(cuff);
+      activeGroup.add(cuff);
       fists.push(cuff);
     }
+    if (animated) {
+      // Keep the original geometry and give each limb two movable joints.
+      const pivot = (group, point) => {
+        group.position.set(...point);
+        group.children.forEach((child) => child.position.sub(group.position));
+      };
+      pivot(arm, shoulder);
+      pivot(forearm, elbow);
+      pivot(thigh, hipJoint);
+      pivot(shin, knee);
+      pivot(foot, ankle);
+      limbs.push({
+        side,
+        arm,
+        forearm,
+        thigh,
+        shin,
+        foot,
+        shoulder,
+        elbow,
+        hand,
+        hip: hipJoint,
+        knee,
+        ankle,
+      });
+    }
+    activeGroup = root;
   }
   if (p.vest) {
     const vest = new THREE.Mesh(torso.geometry.clone(), orange);
@@ -423,7 +472,7 @@ function createFigure(p, pose = "idle") {
   // Feet remain on the platform while the whole silhouette grows from 64% to 100% height.
   const floorOffset = 0.21 * (1 - p.height);
   root.position.y = floorOffset;
-  return { root, floorOffset, eyeFlames, fists };
+  return { root, floorOffset, eyeFlames, fists, limbs };
 }
 
 const auraVertex = `varying vec2 vUv; void main(){vUv=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);}`;
@@ -444,7 +493,7 @@ const auraFragment = `
     vec3 color=mix(tint,edge,smoothstep(w-.16,w,d));
     gl_FragColor=vec4(color,alpha*(.65+power*.28));
   }`;
-function createEnergy(p) {
+export function createEnergy(p) {
   const root = new THREE.Group(),
     rings = [],
     bolts = [];
