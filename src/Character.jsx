@@ -214,6 +214,14 @@ export function createFigure(p, pose = "idle", animated = false) {
     limb(hipJoint, knee, 0.064 + 0.15 * g);
     activeGroup = shin;
     limb(knee, ankle, 0.046 + 0.12 * g);
+    if (animated) {
+      const kneeRadius = p.pants ? 0.07 + 0.15 * g : 0.055 + 0.13 * g;
+      sphere(root, p.pants ? orange : skin, knee, [
+        kneeRadius,
+        kneeRadius,
+        kneeRadius,
+      ]);
+    }
     activeGroup = foot;
     sphere(
       root,

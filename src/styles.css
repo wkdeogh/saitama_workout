@@ -2911,6 +2911,82 @@ main {
 .help-button:hover {
   background: #ffdf48;
 }
+.account-button {
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  border-radius: 5px;
+  color: #171717;
+}
+.account-button:hover {
+  background: #eee;
+}
+.super-account-section label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 700;
+}
+.super-code-input {
+  display: flex;
+  align-items: stretch;
+  gap: 8px;
+}
+.super-code-input input {
+  min-width: 0;
+  flex: 1;
+  width: 100%;
+  min-height: 44px;
+  border: 1px solid #999;
+  border-radius: 4px;
+  padding: 10px 12px;
+  font-size: 16px;
+}
+.super-code-input .primary-button {
+  width: auto;
+  min-width: 76px;
+  margin: 0;
+}
+.super-account-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  padding: 10px 14px;
+  border: 2px solid #171717;
+  border-radius: 4px;
+  background: #ffdf48;
+  font-weight: 800;
+}
+@media (max-width: 360px) {
+  .header-inner {
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+  .brand {
+    font-size: 16px;
+    gap: 6px;
+  }
+  .brand > span:last-child {
+    white-space: nowrap;
+  }
+  .brand-mark.image-brand {
+    width: 30px;
+    flex-shrink: 0;
+  }
+  .brand small {
+    letter-spacing: 1px;
+  }
+  .header-actions {
+    gap: 2px;
+  }
+  .header-actions .settings-button {
+    width: 44px;
+    min-height: 44px;
+    padding: 0;
+    justify-content: center;
+  }
+}
 .guide-progress {
   display: flex;
   align-items: center;
@@ -3808,4 +3884,35 @@ main {
 :lang(en) .kakao-login {
   font-size: 15px;
   font-weight: 700;
+}
+
+.guide-goals label {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.guide-goals .guide-goal-input {
+  min-height: 44px;
+  padding: 0 10px;
+  gap: 6px;
+}
+.guide-goal-input input {
+  width: 100%;
+  min-width: 0;
+  min-height: 44px;
+  border: 0;
+  padding: 4px 0;
+  background: transparent;
+  font: inherit;
+  font-size: 16px;
+  font-weight: 700;
+}
+.guide-goal-input > span {
+  flex-shrink: 0;
+}
+.guide-goal-form > .primary-button {
+  width: 100%;
+  min-height: 44px;
+  margin-top: 12px;
 }

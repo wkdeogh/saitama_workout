@@ -233,11 +233,12 @@ export function stats(data, today = dateKey()) {
     ...growth,
   };
 }
-function validateCounts(input, goals = false, legacy = false) {
+function validateCounts(input, goals = false, legacy = false, limits = null) {
   if (!input || typeof input !== "object" || Array.isArray(input))
     throw new Error("운동 기록과 목표를 확인해 주세요.");
   const result = {};
-  for (const { key, label, step, max } of EXERCISES) {
+  for (const { key, label, step, max: storedMax } of EXERCISES) {
+    const max = limits?.[key] ?? storedMax;
     const value =
       legacy && ["situps", "runningKm"].includes(key) ? 0 : input[key];
     const min = goals && ["pushups", "squats"].includes(key) ? 1 : 0;
@@ -328,6 +329,26 @@ export function updateGoals(data, goals, today = dateKey()) {
         }
       : data.records,
   };
+}
+export function updateGoalsFromDraft(data, draft, today = dateKey()) {
+  if (
+    EXERCISES.some(
+      ({ key }) =>
+        !["string", "number"].includes(typeof draft?.[key]) ||
+        (typeof draft[key] === "string" && !draft[key].trim()),
+    )
+  )
+    throw new Error(
+      "모든 운동 목표를 입력해 주세요. 선택 운동은 0으로 입력하세요.",
+    );
+  const goals = Object.fromEntries(
+    EXERCISES.map(({ key }) => [key, Number(draft[key])]),
+  );
+  return updateGoals(
+    data,
+    validateCounts(goals, true, false, DAILY_WORKOUT_LIMITS),
+    today,
+  );
 }
 export function saveRecord(data, date, counts, today = dateKey()) {
   if (!isDateKey(date) || date > today)

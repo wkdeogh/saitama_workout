@@ -15,6 +15,11 @@ export default function AdSenseRuntime({ access }) {
     ) {
       if (!reloading.current) {
         reloading.current = true;
+        if (document.querySelector(".super-account-section")) {
+          const url = new URL(window.location.href);
+          url.searchParams.set("view", "account");
+          window.history.replaceState(null, "", url);
+        }
         window.location.reload();
       }
       return;

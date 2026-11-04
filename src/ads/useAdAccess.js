@@ -7,6 +7,7 @@ export default function useAdAccess(account) {
     uid: null,
     ready: !auth,
     adFree: false,
+    superAccount: false,
   });
   useEffect(() => {
     if (!auth) return;

@@ -248,3 +248,21 @@ test("virtual management and audit are server-only, even with owner email claims
     await assertFails(setDoc(doc(db, "rankings/virtual-goguma-v1"), entry()));
   }
 });
+
+test("super account grants and attempt limits are server-only, even for the account owner", async () => {
+  await env.withSecurityRulesDisabled(async (context) => {
+    await setDoc(doc(context.firestore(), "accountEntitlements/super-owner"), {
+      superAccount: true,
+    });
+  });
+  for (const db of [
+    authed("super-owner"),
+    authed("other"),
+    env.unauthenticatedContext().firestore(),
+  ]) {
+    const ref = doc(db, "accountEntitlements/super-owner");
+    await assertFails(getDoc(ref));
+    await assertFails(setDoc(ref, { superAccount: true, attempts: 0 }));
+    await assertFails(deleteDoc(ref));
+  }
+});

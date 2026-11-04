@@ -4,6 +4,8 @@ import { characterAppearance } from "../characterAppearance";
 import {
   pushupBody,
   exerciseArms,
+  squatDrop,
+  squatJoints,
   locomotionBody,
   locomotionJoints,
 } from "./fieldPose";
@@ -51,7 +53,7 @@ export function createAvatar(level, streak) {
     const pushup = action === "pushup";
     const push = (1 - Math.cos(time * 4.1)) / 2;
     const plank = pushup ? pushupBody(appearance, push) : null;
-    const drop = squat * 0.54;
+    const drop = action === "squat" ? squatDrop(squat) : 0;
     const baseY = -(appearance.pants ? 0.18 : 0.21) * appearance.height;
     figure.root.rotation.x = plank?.angle || gait?.angle || 0;
     figure.root.position.y = pushup
@@ -67,7 +69,8 @@ export function createAvatar(level, streak) {
         legAnkle = [...ankle];
       let armElbow = [...elbow],
         armHand = [...hand];
-      let footPitch = 0;
+      let footPitch = 0,
+        footYaw = 0;
       if (moving) {
         const joints = locomotionJoints(
           appearance,
@@ -81,8 +84,10 @@ export function createAvatar(level, streak) {
         armHand = joints.hand;
         footPitch = joints.footPitch;
       } else if (action === "squat") {
-        legKnee = [knee[0], knee[1] + drop * 0.35, knee[2] + squat * 0.43];
-        legAnkle = [ankle[0], ankle[1] + drop, ankle[2]];
+        const joints = squatJoints(appearance, limb, squat);
+        legKnee = joints.knee;
+        legAnkle = joints.ankle;
+        footYaw = joints.footYaw;
         const arms = exerciseArms(appearance, limb);
         armElbow = arms.elbow;
         armHand = arms.hand;
@@ -96,7 +101,7 @@ export function createAvatar(level, streak) {
       segment(limb.thigh, hip, knee, legHip, legKnee);
       segment(limb.shin, knee, ankle, legKnee, legAnkle);
       limb.foot.position.set(...legAnkle);
-      limb.foot.rotation.set(footPitch, 0, 0);
+      limb.foot.rotation.set(footPitch, footYaw, 0);
     }
     energy.root.visible = !pushup;
     if (energy.flame)

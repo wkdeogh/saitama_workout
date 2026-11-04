@@ -7,6 +7,7 @@ import {
   Dumbbell,
   Sparkles,
   Settings,
+  UserRound,
   CircleHelp,
   ChevronLeft,
   ChevronRight,
@@ -42,6 +43,7 @@ import {
 } from "./workoutSounds";
 import useWorkoutAccount from "./cloud/useWorkoutAccount";
 import AdminPanel from "./cloud/AdminPanel";
+import SuperAccountSection from "./cloud/SuperAccountSection";
 import { friendApi } from "./cloud/friendsClient";
 import FriendsPanel from "./cloud/FriendsPanel";
 import useFriends from "./cloud/useFriends";
@@ -69,7 +71,7 @@ import {
   saveTodayRecord,
   deleteTodayRecord,
   DAILY_WORKOUT_LIMITS,
-  updateGoals,
+  updateGoalsFromDraft,
   monthCells,
   stageIndex,
 } from "./model";
@@ -132,10 +134,25 @@ function Modal({
     </dialog>
   );
 }
-export function HelpDialog({ onClose }) {
+export function HelpDialog({ onClose, data, persist, error }) {
   return (
     <Modal title={t("사용 가이드")} onClose={onClose}>
-      <OnboardingGuide onClose={onClose} />
+      <OnboardingGuide
+        onClose={onClose}
+        goals={data?.goals}
+        onSaveGoals={
+          persist
+            ? (draft) => {
+                if (error) throw new Error(error);
+                if (!persist(updateGoalsFromDraft(data, draft)))
+                  throw new Error(
+                    "기록을 저장하지 못했습니다. 연결 상태와 저장 공간을 확인해 주세요.",
+                  );
+                return true;
+              }
+            : undefined
+        }
+      />
     </Modal>
   );
 }
@@ -425,7 +442,7 @@ function WorkoutCard({ type, label, value, goal, onChange }) {
         />
       </div>
       <div className="quick-add">
-        {(running ? [0.1, 1] : [10, 25]).map((n) => (
+        {(running ? [1, 3] : [10, 25]).map((n) => (
           <button
             type="button"
             key={n}
@@ -566,15 +583,14 @@ function Calendar({ data, selected, onSelect, today, month, setMonth }) {
     </section>
   );
 }
-function SettingsPanel({
+function AccountPanel({
   data,
   persist,
   onClose,
   notify,
   error,
   account,
-  soundEnabled,
-  onSoundChange,
+  access,
 }) {
   const [isAdmin, setIsAdmin] = useState(false);
   const [adminOpen, setAdminOpen] = useState(false);
@@ -596,8 +612,6 @@ function SettingsPanel({
       active = false;
     };
   }, [account.user?.uid, adminRetry]);
-  const [goals, setGoals] = useState(data.goals),
-    [message, setMessage] = useState("");
   if (adminOpen && isAdmin)
     return (
       <Modal title={t("관리자 페이지")} onClose={onClose}>
@@ -605,27 +619,14 @@ function SettingsPanel({
           className="secondary-button admin-back"
           onClick={() => setAdminOpen(false)}
         >
-          {t("설정으로 돌아가기")}
+          {t("계정으로 돌아가기")}
         </button>
         <AdminPanel />
       </Modal>
     );
   return (
-    <Modal title={t("훈련소 설정")} onClose={onClose}>
+    <Modal title={t("내 계정")} onClose={onClose}>
       <AccountControls account={account} showLink />
-      <LanguageSettings />
-      <section className="settings-section">
-        <button
-          className="secondary-button"
-          aria-label={t("효과음")}
-          aria-pressed={soundEnabled}
-          onClick={() => onSoundChange(!soundEnabled)}
-        >
-          {soundEnabled ? <Volume2 size={18} /> : <VolumeX size={18} />}
-          {t("효과음 ")}
-          {soundEnabled ? t("켜짐") : t("꺼짐")}
-        </button>
-      </section>
       {isAdmin && (
         <section className="settings-section">
           <button
@@ -675,39 +676,78 @@ function SettingsPanel({
           }}
         />
       </section>
+      {account.user && (
+        <SuperAccountSection
+          key={account.user.uid}
+          account={account}
+          access={access}
+        />
+      )}
+    </Modal>
+  );
+}
+function SettingsPanel({
+  data,
+  persist,
+  onClose,
+  notify,
+  error,
+  soundEnabled,
+  onSoundChange,
+}) {
+  const [goals, setGoals] = useState(data.goals),
+    [message, setMessage] = useState("");
+  return (
+    <Modal title={t("훈련소 설정")} onClose={onClose}>
+      <LanguageSettings />
+      <section className="settings-section">
+        <button
+          className="secondary-button"
+          aria-label={t("효과음")}
+          aria-pressed={soundEnabled}
+          onClick={() => onSoundChange(!soundEnabled)}
+        >
+          {soundEnabled ? <Volume2 size={18} /> : <VolumeX size={18} />}
+          {t("효과음 ")}
+          {soundEnabled ? t("켜짐") : t("꺼짐")}
+        </button>
+      </section>
+      {error && (
+        <p className="error-box" role="alert">
+          {t(error)}
+        </p>
+      )}
       <section className="settings-section">
         <h3>
           <Dumbbell size={18} />
           {t("하루 운동 목표")}
         </h3>
         <div className="goal-fields">
-          {EXERCISES.map(localizeExercise).map(
-            ({ key, label, unit, step, max }) => (
-              <label key={key}>
-                {label}
-                <div>
-                  <input
-                    type="number"
-                    inputMode={step === 1 ? "numeric" : "decimal"}
-                    min={key === "pushups" || key === "squats" ? 1 : 0}
-                    max={max}
-                    step={step}
-                    value={goals[key]}
-                    aria-label={t("{0} 하루 목표", {
-                      0: label,
-                    })}
-                    onChange={(e) =>
-                      setGoals({
-                        ...goals,
-                        [key]: e.target.value,
-                      })
-                    }
-                  />
-                  <span>{unit}</span>
-                </div>
-              </label>
-            ),
-          )}
+          {EXERCISES.map(localizeExercise).map(({ key, label, unit, step }) => (
+            <label key={key}>
+              {label}
+              <div>
+                <input
+                  type="number"
+                  inputMode={step === 1 ? "numeric" : "decimal"}
+                  min={key === "pushups" || key === "squats" ? 1 : 0}
+                  max={DAILY_WORKOUT_LIMITS[key]}
+                  step={step}
+                  value={goals[key]}
+                  aria-label={t("{0} 하루 목표", {
+                    0: label,
+                  })}
+                  onChange={(e) =>
+                    setGoals({
+                      ...goals,
+                      [key]: e.target.value,
+                    })
+                  }
+                />
+                <span>{unit}</span>
+              </div>
+            </label>
+          ))}
         </div>
         <div className="goal-presets">
           <button
@@ -742,15 +782,7 @@ function SettingsPanel({
           className="primary-button"
           onClick={() => {
             try {
-              const next = updateGoals(
-                data,
-                Object.fromEntries(
-                  EXERCISES.map(localizeExercise).map(({ key }) => [
-                    key,
-                    Number(goals[key]),
-                  ]),
-                ),
-              );
+              const next = updateGoalsFromDraft(data, goals);
               if (persist(next)) {
                 notify("새로운 목표를 저장했어요.");
                 onClose();
@@ -797,6 +829,10 @@ export default function App() {
     [month, setMonth] = useState(new Date()),
     [tab, setTab] = useState("home"),
     [settings, setSettings] = useState(false),
+    [accountOpen, setAccountOpen] = useState(
+      () =>
+        new URLSearchParams(window.location.search).get("view") === "account",
+    ),
     [nameEditOpen, setNameEditOpen] = useState(false),
     [helpOpen, setHelpOpen] = useState(false),
     [toast, setToast] = useState(""),
@@ -810,6 +846,18 @@ export default function App() {
     celebrateTimer = useRef(null);
   const workoutRef = useRef(null);
   const onboardingSeen = useRef(new Set());
+  useEffect(() => {
+    if (!accountOpen) return;
+    const url = new URL(window.location.href);
+    if (url.searchParams.get("view") === "account") {
+      url.searchParams.delete("view");
+      window.history.replaceState(
+        null,
+        "",
+        url.pathname + url.search + url.hash,
+      );
+    }
+  }, [accountOpen]);
   const summary = stats(data, today);
   const characterName = account.user
     ? data.characterName
@@ -865,6 +913,7 @@ export default function App() {
       !data.characterName ||
       error ||
       settings ||
+      accountOpen ||
       nameEditOpen ||
       helpOpen ||
       proof ||
@@ -890,6 +939,7 @@ export default function App() {
     data.characterName,
     error,
     settings,
+    accountOpen,
     nameEditOpen,
     helpOpen,
     proof,
@@ -1087,6 +1137,14 @@ export default function App() {
             ))}
           </nav>
           <div className="header-actions">
+            <button
+              className="account-button"
+              onClick={() => setAccountOpen(true)}
+              aria-label={t("내 계정")}
+              aria-haspopup="dialog"
+            >
+              <UserRound size={20} />
+            </button>
             <button
               className="settings-button"
               onClick={() => setSettings(true)}
@@ -1553,20 +1611,29 @@ export default function App() {
           onClose={() => setStageDetail(null)}
         />
       )}
-      {account.user && !data.characterName && !error && !settings && (
-        <Modal title={t("캐릭터 이름 설정")} dismissible={false}>
-          <CharacterNameForm
-            autofocus
-            onSave={(characterName) =>
-              persist({
-                ...data,
-                characterName,
-              })
-            }
-          />
-        </Modal>
+      {account.user &&
+        !data.characterName &&
+        !error &&
+        !settings &&
+        !accountOpen && (
+          <Modal title={t("캐릭터 이름 설정")} dismissible={false}>
+            <CharacterNameForm
+              autofocus
+              onSave={(characterName) =>
+                persist({
+                  ...data,
+                  characterName,
+                })
+              }
+            />
+          </Modal>
+        )}
+      {helpOpen && (
+        <HelpDialog
+          {...{ data, persist, error }}
+          onClose={() => setHelpOpen(false)}
+        />
       )}
-      {helpOpen && <HelpDialog onClose={() => setHelpOpen(false)} />}
       {proof && (
         <Modal
           title={t("오늘의 훈련 완료 공유")}
@@ -1576,6 +1643,14 @@ export default function App() {
           <WorkoutProofCard proof={proof} />
         </Modal>
       )}
+      {accountOpen && (
+        <AccountPanel
+          key={account.user?.uid || "guest"}
+          {...{ data, persist, notify, error, account }}
+          access={adAccess}
+          onClose={() => setAccountOpen(false)}
+        />
+      )}
       {settings && (
         <SettingsPanel
           {...{
@@ -1583,7 +1658,6 @@ export default function App() {
             persist,
             notify,
             error,
-            account,
             soundEnabled,
           }}
           onSoundChange={(enabled) => {

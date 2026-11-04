@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {
   hasAdFreeAccess,
+  hasSuperAccountAccess,
   canRequestAds,
   observeAdEntitlements,
 } from "../src/ads/adAccess.js";
@@ -87,15 +88,30 @@ test("late claim reads cannot replace the new account; failed checks hide ads", 
   const bob = callback({ uid });
   reads.get("bob").resolve({ adFree: true });
   await bob;
-  assert.deepEqual(latest, { uid: "bob", ready: true, adFree: true });
+  assert.deepEqual(latest, {
+    uid: "bob",
+    ready: true,
+    adFree: true,
+    superAccount: false,
+  });
   reads.get("alice").resolve({});
   await alice;
-  assert.deepEqual(latest, { uid: "bob", ready: true, adFree: true });
+  assert.deepEqual(latest, {
+    uid: "bob",
+    ready: true,
+    adFree: true,
+    superAccount: false,
+  });
   uid = "charlie";
   const failed = callback({ uid });
   reads.get("charlie").reject(new Error("offline"));
   await failed;
-  assert.deepEqual(latest, { uid: "charlie", ready: true, adFree: true });
+  assert.deepEqual(latest, {
+    uid: "charlie",
+    ready: true,
+    adFree: true,
+    superAccount: false,
+  });
   uid = "dana";
   const pending = callback({ uid });
   stop();
@@ -104,4 +120,60 @@ test("late claim reads cannot replace the new account; failed checks hide ads", 
   await pending;
   assert.equal(latest, before);
   assert.equal(stopped, true);
+});
+
+test("super account benefits require a strict signed claim and feed the shared ad entitlement", () => {
+  assert.equal(hasSuperAccountAccess({ superAccount: true }), true);
+  assert.equal(hasAdFreeAccess({ superAccount: true }), true);
+  for (const claims of [
+    null,
+    {},
+    { superAccount: "true" },
+    { superAccount: 1 },
+    { data: { superAccount: true } },
+    { adFree: true },
+  ]) {
+    assert.equal(hasSuperAccountAccess(claims), false);
+  }
+});
+
+test("super account state is cleared immediately on account changes and sign-out", async () => {
+  let callback,
+    latest,
+    uid = "alice";
+  const stop = observeAdEntitlements(
+    {
+      subscribe: (listener) => {
+        callback = listener;
+        return () => {};
+      },
+      currentUid: () => uid,
+      readClaims: async (user) =>
+        user.uid === "alice" ? { superAccount: true } : {},
+    },
+    (value) => {
+      latest = value;
+    },
+  );
+  await callback({ uid });
+  assert.equal(latest.superAccount, true);
+  uid = "bob";
+  const pending = callback({ uid });
+  assert.deepEqual(latest, {
+    uid: "bob",
+    ready: false,
+    adFree: false,
+    superAccount: false,
+  });
+  await pending;
+  assert.equal(latest.superAccount, false);
+  uid = null;
+  await callback(null);
+  assert.deepEqual(latest, {
+    uid: null,
+    ready: true,
+    adFree: false,
+    superAccount: false,
+  });
+  stop();
 });

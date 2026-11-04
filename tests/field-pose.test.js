@@ -3,6 +3,8 @@ import assert from "node:assert/strict";
 import {
   pushupBody,
   exerciseArms,
+  squatDrop,
+  squatJoints,
   locomotionBody,
   locomotionJoints,
 } from "../src/field/fieldPose.js";
@@ -87,6 +89,61 @@ test("squat holds hands at the chest without stretching the arms at every level"
       assert.ok(Math.abs(next.hand[0]) < p.shoulder * 0.4);
       assert.ok(next.hand[2] < p.shoulder * 0.62 + 0.14);
     }
+  }
+});
+
+test("squat keeps both leg lengths and planted feet throughout the rep at every level", () => {
+  for (let level = 1; level <= 1000; level++) {
+    const p = characterAppearance(level);
+    for (const side of [-1, 1]) {
+      const limb = { side, ...legPose(p, side) };
+      const standing = squatJoints(p, limb, 0);
+      for (let step = 0; step <= 20; step++) {
+        const phase = step / 20;
+        const next = squatJoints(p, limb, phase);
+        close(
+          distance(limb.hip, next.knee),
+          distance(limb.hip, limb.knee),
+          "thigh",
+        );
+        close(
+          distance(next.knee, next.ankle),
+          distance(limb.knee, limb.ankle),
+          "shin",
+        );
+        close(next.ankle[0], standing.ankle[0], "planted foot x");
+        close(next.ankle[2], standing.ankle[2], "planted foot z");
+        close(
+          next.ankle[1] - squatDrop(phase),
+          limb.ankle[1],
+          "planted foot height",
+        );
+        assert.ok(
+          [...next.knee, ...next.ankle, next.footYaw].every(Number.isFinite),
+        );
+      }
+    }
+  }
+});
+
+test("squat knees open symmetrically toward the outward-facing toes as the body lowers", () => {
+  for (const level of [1, 200, 650, 1000]) {
+    const p = characterAppearance(level);
+    const poses = [-1, 1].map((side) => {
+      const limb = { side, ...legPose(p, side) };
+      const top = squatJoints(p, limb, 0);
+      const bottom = squatJoints(p, limb, 1);
+      assert.ok(side * bottom.knee[0] > side * top.knee[0] + 0.05);
+      assert.ok(side * bottom.ankle[0] > side * limb.ankle[0]);
+      assert.ok(side * bottom.footYaw > 0.2 && side * bottom.footYaw < 0.4);
+      const forward = bottom.knee[2] - bottom.ankle[2];
+      assert.ok(forward > 0.3);
+      assert.ok(side * (bottom.knee[0] - bottom.ankle[0]) > -0.01);
+      return bottom;
+    });
+    close(poses[0].knee[0], -poses[1].knee[0], "mirrored knee x");
+    close(poses[0].knee[1], poses[1].knee[1], "mirrored knee y");
+    close(poses[0].knee[2], poses[1].knee[2], "mirrored knee z");
   }
 });
 

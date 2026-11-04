@@ -57,6 +57,31 @@ export function exerciseArms(p, limb, body) {
   };
 }
 
+export function squatDrop(phase) {
+  // A small bend at the top leaves room for a wider, planted stance.
+  return 0.035 + phase * 0.505;
+}
+
+export function squatJoints(p, limb, phase) {
+  const { side, hip, knee, ankle } = limb;
+  const nextAnkle = [
+    ankle[0] + side * (0.09 + p.growth * 0.02),
+    ankle[1] + squatDrop(phase),
+    ankle[2],
+  ];
+  return {
+    ankle: nextAnkle,
+    knee: bendJoint(
+      hip,
+      nextAnkle,
+      distance(hip, knee),
+      distance(knee, ankle),
+      [side * 0.35, 0, 1],
+    ),
+    footYaw: side * Math.atan(0.35),
+  };
+}
+
 const turn = Math.PI * 2;
 const smooth = (value) => {
   const t = Math.max(0, Math.min(1, value));
