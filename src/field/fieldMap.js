@@ -1,3 +1,4 @@
+import { t } from "../i18n/index.js";
 import * as THREE from "three";
 import {
   TREES,
@@ -241,7 +242,7 @@ export function createMap(scene) {
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
   ctx.font = "bold 74px sans-serif";
-  ctx.fillText("숲속 훈련장", 384, 93);
+  ctx.fillText(t("숲속 훈련장"), 384, 93);
   const signTexture = new THREE.CanvasTexture(signCanvas);
   signTexture.colorSpace = THREE.SRGBColorSpace;
   const sign = mesh(

@@ -1,3 +1,4 @@
+import { t } from "../i18n/index.js";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Search,
@@ -29,7 +30,9 @@ export default function FriendsPanel({ account, data, onUser, friends }) {
     setError("");
     setSearched(true);
     try {
-      const result = await friendApi("search", { query: value });
+      const result = await friendApi("search", {
+        query: value,
+      });
       if (ticket === sequence.current) setResults(result);
     } catch (e) {
       if (ticket === sequence.current) setError(e.message);
@@ -85,7 +88,7 @@ export default function FriendsPanel({ account, data, onUser, friends }) {
           : "none";
   const identity = (user) => (
     <div className="friend-person">
-      <strong>{user.name || "이름 미설정"}</strong>
+      <strong>{user.name || t("이름 미설정")}</strong>
       <small>#{user.tag}</small>
     </div>
   );
@@ -95,11 +98,11 @@ export default function FriendsPanel({ account, data, onUser, friends }) {
         <div className="section-heading">
           <div>
             <span className="eyebrow">FRIENDS</span>
-            <h2>친구</h2>
+            <h2>{t("친구")}</h2>
           </div>
           <button
             className="icon-button"
-            aria-label="친구 새로고침"
+            aria-label={t("친구 새로고침")}
             disabled={friends.loading || !!working}
             onClick={friends.refresh}
           >
@@ -108,15 +111,15 @@ export default function FriendsPanel({ account, data, onUser, friends }) {
         </div>
         <div className="my-account-tag">
           <div>
-            <span>내 계정 태그</span>
+            <span>{t("내 계정 태그")}</span>
             <strong>
-              {friends.me ? `#${friends.me.tag}` : "불러오는 중…"}
+              {friends.me ? `#${friends.me.tag}` : t("불러오는 중…")}
             </strong>
           </div>
           <button
             className="icon-button"
             disabled={!friends.me}
-            aria-label="내 계정 태그 복사"
+            aria-label={t("내 계정 태그 복사")}
             onClick={async () => {
               try {
                 await navigator.clipboard.writeText(`#${friends.me.tag}`);
@@ -130,11 +133,21 @@ export default function FriendsPanel({ account, data, onUser, friends }) {
           </button>
         </div>
         <PushControls uid={account.user.uid} />
-        <div className="friend-tabs" role="group" aria-label="친구 메뉴">
+        <div className="friend-tabs" role="group" aria-label={t("친구 메뉴")}>
           {[
-            ["search", "친구 찾기"],
-            ["requests", `받은 요청 ${friends.incoming.length}`],
-            ["friends", `내 친구 ${friends.friends.length}`],
+            ["search", t("친구 찾기")],
+            [
+              "requests",
+              t("받은 요청 {0}", {
+                0: friends.incoming.length,
+              }),
+            ],
+            [
+              "friends",
+              t("내 친구 {0}", {
+                0: friends.friends.length,
+              }),
+            ],
           ].map(([id, label]) => (
             <button
               key={id}
@@ -151,25 +164,25 @@ export default function FriendsPanel({ account, data, onUser, friends }) {
         </div>
         {(error || friends.error) && (
           <p className="error-box" role="alert">
-            {error || friends.error}
+            {t(error || friends.error)}
           </p>
         )}
         {message && (
           <p className="friend-message" role="status">
-            {message}
+            {t(message)}
           </p>
         )}
         {section === "search" && (
           <>
             <form className="friend-search" onSubmit={search}>
               <label className="sr-only" htmlFor="friend-search">
-                닉네임 또는 계정 태그
+                {t("닉네임 또는 계정 태그")}
               </label>
               <input
                 id="friend-search"
                 value={query}
                 maxLength={32}
-                placeholder="닉네임 또는 #ST-계정태그"
+                placeholder={t("닉네임 또는 #ST-계정태그")}
                 autoComplete="off"
                 aria-controls="friend-search-results"
                 onCompositionStart={() => {
@@ -199,26 +212,28 @@ export default function FriendsPanel({ account, data, onUser, friends }) {
                 disabled={!query.trim() || searching}
               >
                 <Search size={17} />
-                {searching ? "검색 중" : "검색"}
+                {searching ? t("검색 중") : t("검색")}
               </button>
             </form>
             <p className="hint">
-              닉네임이나 계정 태그를 입력하면 자동으로 검색됩니다.
+              {t("닉네임이나 계정 태그를 입력하면 자동으로 검색됩니다.")}
             </p>
             {searched && !searching && !error && results.length === 0 && (
-              <p className="ranking-empty">검색 결과가 없습니다.</p>
+              <p className="ranking-empty">{t("검색 결과가 없습니다.")}</p>
             )}
             <p className="sr-only" role="status">
               {searching
-                ? "검색 중"
+                ? t("검색 중")
                 : searched
-                  ? `${results.length}명 검색됨`
+                  ? t("{0}명 검색됨", {
+                      0: results.length,
+                    })
                   : ""}
             </p>
             <ul
               id="friend-search-results"
               className="friend-list"
-              aria-label="친구 검색 결과"
+              aria-label={t("친구 검색 결과")}
               aria-busy={searching}
             >
               {results.map((user) => (
@@ -232,21 +247,23 @@ export default function FriendsPanel({ account, data, onUser, friends }) {
                         action(
                           user.uid,
                           "request",
-                          { tag: user.tag },
-                          "친구 요청을 보냈습니다.",
+                          {
+                            tag: user.tag,
+                          },
+                          t("친구 요청을 보냈습니다."),
                         )
                       }
                     >
                       <UserPlus size={16} />
-                      요청
+                      {t("요청")}
                     </button>
                   ) : (
                     <span className="friend-relation">
                       {relation(user) === "friend"
-                        ? "친구"
+                        ? t("친구")
                         : relation(user) === "incoming"
-                          ? "받은 요청 있음"
-                          : "요청 보냄"}
+                          ? t("받은 요청 있음")
+                          : t("요청 보냄")}
                     </span>
                   )}
                 </li>
@@ -256,9 +273,9 @@ export default function FriendsPanel({ account, data, onUser, friends }) {
         )}
         {section === "requests" && (
           <>
-            <h3>받은 요청</h3>
+            <h3>{t("받은 요청")}</h3>
             {friends.incoming.length === 0 && (
-              <p className="ranking-empty">받은 친구 요청이 없습니다.</p>
+              <p className="ranking-empty">{t("받은 친구 요청이 없습니다.")}</p>
             )}
             <ul className="friend-list">
               {friends.incoming.map((r) => (
@@ -272,13 +289,16 @@ export default function FriendsPanel({ account, data, onUser, friends }) {
                         action(
                           r.id,
                           "respond",
-                          { id: r.id, action: "accept" },
-                          "친구가 되었습니다.",
+                          {
+                            id: r.id,
+                            action: "accept",
+                          },
+                          t("친구가 되었습니다."),
                         )
                       }
                     >
                       <Check size={15} />
-                      수락
+                      {t("수락")}
                     </button>
                     <button
                       className="secondary-button"
@@ -287,21 +307,24 @@ export default function FriendsPanel({ account, data, onUser, friends }) {
                         action(
                           r.id,
                           "respond",
-                          { id: r.id, action: "reject" },
-                          "친구 요청을 거절했습니다.",
+                          {
+                            id: r.id,
+                            action: "reject",
+                          },
+                          t("친구 요청을 거절했습니다."),
                         )
                       }
                     >
                       <X size={15} />
-                      거절
+                      {t("거절")}
                     </button>
                   </div>
                 </li>
               ))}
             </ul>
-            <h3>보낸 요청</h3>
+            <h3>{t("보낸 요청")}</h3>
             {friends.outgoing.length === 0 && (
-              <p className="ranking-empty">보낸 친구 요청이 없습니다.</p>
+              <p className="ranking-empty">{t("보낸 친구 요청이 없습니다.")}</p>
             )}
             <ul className="friend-list">
               {friends.outgoing.map((r) => (
@@ -314,12 +337,15 @@ export default function FriendsPanel({ account, data, onUser, friends }) {
                       action(
                         r.id,
                         "respond",
-                        { id: r.id, action: "cancel" },
-                        "요청을 취소했습니다.",
+                        {
+                          id: r.id,
+                          action: "cancel",
+                        },
+                        t("요청을 취소했습니다."),
                       )
                     }
                   >
-                    취소
+                    {t("취소")}
                   </button>
                 </li>
               ))}
@@ -330,7 +356,8 @@ export default function FriendsPanel({ account, data, onUser, friends }) {
           <>
             {friends.friends.length === 0 && (
               <p className="ranking-empty">
-                <Users size={20} /> 아직 추가한 친구가 없습니다.
+                <Users size={20} />
+                {t(" 아직 추가한 친구가 없습니다.")}
               </p>
             )}
             <ul className="friend-list">
@@ -342,17 +369,23 @@ export default function FriendsPanel({ account, data, onUser, friends }) {
                     disabled={!!working}
                     onClick={() => {
                       if (
-                        window.confirm(`${user.name}님을 친구에서 삭제할까요?`)
+                        window.confirm(
+                          t("{0}님을 친구에서 삭제할까요?", {
+                            0: user.name,
+                          }),
+                        )
                       )
                         action(
                           user.uid,
                           "remove",
-                          { tag: user.tag },
-                          "친구를 삭제했습니다.",
+                          {
+                            tag: user.tag,
+                          },
+                          t("친구를 삭제했습니다."),
                         );
                     }}
                   >
-                    삭제
+                    {t("삭제")}
                   </button>
                 </li>
               ))}
@@ -361,7 +394,7 @@ export default function FriendsPanel({ account, data, onUser, friends }) {
         )}
         {!!working && (
           <p className="hint" role="status">
-            처리 중…
+            {t("처리 중…")}
           </p>
         )}
       </section>

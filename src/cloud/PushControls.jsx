@@ -1,3 +1,4 @@
+import { t } from "../i18n/index.js";
 import { useEffect, useState } from "react";
 import { Bell } from "lucide-react";
 import {
@@ -27,9 +28,9 @@ export default function PushControls({ uid }) {
       <div>
         <strong>
           <Bell size={16} />
-          친구 요청 알림
+          {t("친구 요청 알림")}
         </strong>
-        <p>아이폰: 홈 화면에 추가한 앱에서 알림 허용</p>
+        <p>{t("아이폰: 홈 화면에 추가한 앱에서 알림 허용")}</p>
       </div>
       <button
         className="secondary-button"
@@ -48,14 +49,16 @@ export default function PushControls({ uid }) {
           }
         }}
       >
-        {busy ? "설정 중…" : enabled ? "알림 끄기" : "알림 켜기"}
+        {busy ? t("설정 중…") : enabled ? t("알림 끄기") : t("알림 켜기")}
       </button>
       {!pushAvailable() && (
-        <p className="hint">현재 브라우저는 푸시 알림을 지원하지 않습니다.</p>
+        <p className="hint">
+          {t("현재 브라우저는 푸시 알림을 지원하지 않습니다.")}
+        </p>
       )}
       {error && (
         <p className="error-box" role="alert">
-          {error}
+          {t(error)}
         </p>
       )}
     </div>

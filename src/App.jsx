@@ -1,3 +1,4 @@
+import { t, getLocale, localizeExercise } from "./i18n/index.js";
 import { useEffect, useRef, useState } from "react";
 import {
   Zap,
@@ -26,6 +27,9 @@ import {
 import Character from "./Character";
 import WorkoutProofCard from "./WorkoutProofCard";
 import OnboardingGuide from "./OnboardingGuide";
+import AdCard from "./ads/AdCard";
+import AdSenseRuntime from "./ads/AdSenseRuntime";
+import useAdAccess from "./ads/useAdAccess";
 import OutdoorTraining from "./field/OutdoorTraining";
 import PrivacyLink from "./PrivacyLink";
 import { claimOnboarding } from "./onboardingModel";
@@ -69,9 +73,11 @@ import {
   monthCells,
   stageIndex,
 } from "./model";
-const number = (value) => value.toLocaleString("ko-KR");
+import useLanguage from "./i18n/useLanguage.js";
+import LanguageSettings from "./i18n/LanguageSettings.jsx";
+const number = (value) => value.toLocaleString(getLocale());
 const dateLabel = (key) =>
-  parseDate(key).toLocaleDateString("ko-KR", {
+  parseDate(key).toLocaleDateString(getLocale(), {
     month: "long",
     day: "numeric",
     weekday: "long",
@@ -112,7 +118,11 @@ function Modal({
         >
           <h2 className={hideTitle ? "sr-only" : undefined}>{title}</h2>
           {dismissible && (
-            <button className="icon-button" aria-label="닫기" onClick={onClose}>
+            <button
+              className="icon-button"
+              aria-label={t("닫기")}
+              onClick={onClose}
+            >
               <X size={21} />
             </button>
           )}
@@ -124,7 +134,7 @@ function Modal({
 }
 export function HelpDialog({ onClose }) {
   return (
-    <Modal title="사용 가이드" onClose={onClose}>
+    <Modal title={t("사용 가이드")} onClose={onClose}>
       <OnboardingGuide onClose={onClose} />
     </Modal>
   );
@@ -133,8 +143,13 @@ function StageDialog({ stage, currentLevel, onClose }) {
   const locked = stage.level > currentLevel;
   const appearance = characterAppearance(stage.level);
   return (
-    <Modal title={`LV. ${stage.level} 성장 단계`} onClose={onClose}>
-      <p className="stage-reveal-name">{stage.name}</p>
+    <Modal
+      title={t("LV. {0} 성장 단계", {
+        0: stage.level,
+      })}
+      onClose={onClose}
+    >
+      <p className="stage-reveal-name">{t(stage.name)}</p>
       <div
         className={`stage-reveal character-stage character-evolved ${locked ? "stage-concealed" : "stage-unlocked"}`}
         data-powered={appearance.aura}
@@ -146,7 +161,11 @@ function StageDialog({ stage, currentLevel, onClose }) {
           level={stage.level}
           stage={stageIndex(stage.level)}
           label={
-            locked ? `${stage.level}레벨 잠긴 외형의 어두운 실루엣` : undefined
+            locked
+              ? t("{0}레벨 잠긴 외형의 어두운 실루엣", {
+                  0: stage.level,
+                })
+              : undefined
           }
         />
         {locked && <div className="conceal-veil" aria-hidden="true" />}
@@ -154,8 +173,11 @@ function StageDialog({ stage, currentLevel, onClose }) {
       <p className={`stage-reveal-status ${locked ? "is-locked" : ""}`}>
         {locked ? <LockKeyhole size={17} /> : <Check size={17} />}
         {locked
-          ? `LV. ${stage.level} 해금 · ${stage.level - currentLevel}레벨 남음`
-          : "해금한 외형"}
+          ? t("LV. {0} 해금 · {1}레벨 남음", {
+              0: stage.level,
+              1: stage.level - currentLevel,
+            })
+          : t("해금한 외형")}
       </p>
     </Modal>
   );
@@ -179,11 +201,14 @@ function RankingUserDialog({ entry, onClose }) {
       >
         <Character level={level} streak={streak} stage={stageIndex(level)} />
         {streak >= 2 && (
-          <span className="character-streak">{streak}일 연속 운동 중!</span>
+          <span className="character-streak">
+            {streak}
+            {t("일 연속 운동 중!")}
+          </span>
         )}
       </div>
       <div className="ranking-user-totals">
-        {EXERCISES.map(({ key, label, unit }) => (
+        {EXERCISES.map(localizeExercise).map(({ key, label, unit }) => (
           <div key={key}>
             <span>{label}</span>
             <strong>
@@ -192,15 +217,21 @@ function RankingUserDialog({ entry, onClose }) {
             </strong>
             <small
               className="daily-count"
-              style={{ color: dailyExpColor(todayExp) }}
+              style={{
+                color: dailyExpColor(todayExp),
+              }}
             >
-              오늘 ▲ {number(todayCounts[key])}
+              {t("오늘 ▲ ")}
+              {number(todayCounts[key])}
               {unit}
             </small>
           </div>
         ))}
       </div>
-      <p className="hint">누적 운동량 · {number(entry.totalExp)} EXP</p>
+      <p className="hint">
+        {t("누적 운동량 · ")}
+        {number(entry.totalExp)} EXP
+      </p>
     </Modal>
   );
 }
@@ -226,7 +257,7 @@ function CharacterNameForm({ initialName = "", onSave, autofocus = false }) {
         }
       }}
     >
-      <label htmlFor="character-name">캐릭터 이름</label>
+      <label htmlFor="character-name">{t("캐릭터 이름")}</label>
       <input
         id="character-name"
         type="text"
@@ -234,7 +265,7 @@ function CharacterNameForm({ initialName = "", onSave, autofocus = false }) {
         maxLength={MAX_NAME_LENGTH}
         autoFocus={autofocus}
         autoComplete="off"
-        placeholder="이름 입력"
+        placeholder={t("이름 입력")}
         required
         aria-describedby="character-name-hint"
         aria-invalid={!!message}
@@ -244,15 +275,15 @@ function CharacterNameForm({ initialName = "", onSave, autofocus = false }) {
         }}
       />
       <p id="character-name-hint" className="hint">
-        최대 20자
+        {t("최대 20자")}
       </p>
       {message && (
         <p className="error-box" role="alert">
-          {message}
+          {t(message)}
         </p>
       )}
       <button type="submit" className="primary-button">
-        이름 저장
+        {t("이름 저장")}
       </button>
     </form>
   );
@@ -292,7 +323,9 @@ function ExerciseIcon({ type }) {
   );
 }
 function WorkoutCard({ type, label, value, goal, onChange }) {
-  const { unit, step } = EXERCISES.find(({ key }) => key === type);
+  const { unit, step } = EXERCISES.map(localizeExercise).find(
+    ({ key }) => key === type,
+  );
   const max = DAILY_WORKOUT_LIMITS[type];
   const running = type === "runningKm";
   const done = goal > 0 && Number(value) >= goal;
@@ -311,15 +344,22 @@ function WorkoutCard({ type, label, value, goal, onChange }) {
         <div>
           <h3>{label}</h3>
           <span>
-            {goal > 0 ? `목표 ${goal}${unit}` : "선택 운동"}
+            {goal > 0
+              ? t("목표 {0}{1}", {
+                  0: goal,
+                  1: unit,
+                })
+              : t("선택 운동")}
             <br />
-            {running ? "0.1km=2 EXP" : "1개=1 EXP"}
+            {running ? "0.1km=2 EXP" : t("1개=1 EXP")}
           </span>
         </div>
         <button
           type="button"
           className={`complete-toggle ${done ? "checked" : ""}`}
-          aria-label={`${label} 목표 채우기`}
+          aria-label={t("{0} 목표 채우기", {
+            0: label,
+          })}
           disabled={!goal}
           aria-pressed={done}
           onClick={() =>
@@ -335,7 +375,11 @@ function WorkoutCard({ type, label, value, goal, onChange }) {
         <button
           type="button"
           className="counter-btn"
-          aria-label={`${label} ${step}${unit} 빼기`}
+          aria-label={t("{0} {1}{2} 빼기", {
+            0: label,
+            1: step,
+            2: unit,
+          })}
           disabled={!Number(value)}
           onClick={() => add(-step)}
         >
@@ -345,7 +389,7 @@ function WorkoutCard({ type, label, value, goal, onChange }) {
           className={`count-field ${String(value).length > 3 ? "count-long" : String(value).length > 2 ? "count-medium" : ""}`}
         >
           <input
-            aria-label={`${label} ${running ? "거리" : "횟수"}`}
+            aria-label={`${label} ${running ? t("거리") : t("횟수")}`}
             type="number"
             inputMode={running ? "decimal" : "numeric"}
             min="0"
@@ -362,7 +406,11 @@ function WorkoutCard({ type, label, value, goal, onChange }) {
         <button
           type="button"
           className="counter-btn"
-          aria-label={`${label} ${step}${unit} 더하기`}
+          aria-label={t("{0} {1}{2} 더하기", {
+            0: label,
+            1: step,
+            2: unit,
+          })}
           disabled={Number(value) >= max}
           onClick={() => add(step)}
         >
@@ -395,7 +443,8 @@ function WorkoutCard({ type, label, value, goal, onChange }) {
             onChange(Math.min(max, Math.max(Number(value) || 0, goal)))
           }
         >
-          목표 채우기 <Check size={13} />
+          {t("목표 채우기 ")}
+          <Check size={13} />
         </button>
       </div>
     </div>
@@ -413,15 +462,19 @@ function Calendar({ data, selected, onSelect, today, month, setMonth }) {
       <div className="section-heading">
         <div>
           <span className="eyebrow">TRAINING LOG</span>
-          <h2>운동 캘린더</h2>
+          <h2>{t("운동 캘린더")}</h2>
         </div>
         <span className="month-badge">
-          <span>{complete}</span>일 달성
+          <span>{complete}</span>
+          {t("일 달성")}
         </span>
       </div>
       <div className="calendar-toolbar">
         <strong>
-          {y}년 {m + 1}월
+          {month.toLocaleDateString(getLocale(), {
+            year: "numeric",
+            month: "long",
+          })}
         </strong>
         <div>
           <button
@@ -431,11 +484,11 @@ function Calendar({ data, selected, onSelect, today, month, setMonth }) {
               onSelect(today);
             }}
           >
-            오늘
+            {t("오늘")}
           </button>
           <button
             className="icon-button"
-            aria-label="이전 달"
+            aria-label={t("이전 달")}
             disabled={y === 2000 && m === 0}
             onClick={() => setMonth(new Date(y, m - 1, 1, 12))}
           >
@@ -443,7 +496,7 @@ function Calendar({ data, selected, onSelect, today, month, setMonth }) {
           </button>
           <button
             className="icon-button"
-            aria-label="다음 달"
+            aria-label={t("다음 달")}
             disabled={
               y === parseDate(today).getFullYear() &&
               m === parseDate(today).getMonth()
@@ -456,7 +509,15 @@ function Calendar({ data, selected, onSelect, today, month, setMonth }) {
       </div>
       <div className="calendar-grid">
         <div className="weekdays">
-          {["일", "월", "화", "수", "목", "금", "토"].map((d) => (
+          {Array.from(
+            {
+              length: 7,
+            },
+            (_, i) =>
+              new Date(2026, 0, 4 + i).toLocaleDateString(getLocale(), {
+                weekday: "short",
+              }),
+          ).map((d) => (
             <span key={d}>{d}</span>
           ))}
         </div>
@@ -467,7 +528,7 @@ function Calendar({ data, selected, onSelect, today, month, setMonth }) {
                 key={key}
                 className={`day ${isComplete(data.records[key]) ? "complete" : hasWorkout(data.records[key]) ? "partial" : ""} ${key === selected ? "selected" : ""} ${key === today ? "is-today" : ""}`}
                 disabled={key > today}
-                aria-label={`${dateLabel(key)}${isComplete(data.records[key]) ? ", 목표 달성" : hasWorkout(data.records[key]) ? ", 운동 기록 있음" : ""}`}
+                aria-label={`${dateLabel(key)}${isComplete(data.records[key]) ? t(", 목표 달성") : hasWorkout(data.records[key]) ? t(", 운동 기록 있음") : ""}`}
                 aria-pressed={key === selected}
                 onClick={() => onSelect(key)}
               >
@@ -491,15 +552,15 @@ function Calendar({ data, selected, onSelect, today, month, setMonth }) {
       <div className="calendar-legend">
         <span>
           <i className="legend-complete" />
-          목표 달성
+          {t("목표 달성")}
         </span>
         <span>
           <i className="legend-partial" />
-          부분 기록
+          {t("부분 기록")}
         </span>
         <span>
           <i className="legend-today" />
-          오늘
+          {t("오늘")}
         </span>
       </div>
     </section>
@@ -539,28 +600,30 @@ function SettingsPanel({
     [message, setMessage] = useState("");
   if (adminOpen && isAdmin)
     return (
-      <Modal title="관리자 페이지" onClose={onClose}>
+      <Modal title={t("관리자 페이지")} onClose={onClose}>
         <button
           className="secondary-button admin-back"
           onClick={() => setAdminOpen(false)}
         >
-          설정으로 돌아가기
+          {t("설정으로 돌아가기")}
         </button>
         <AdminPanel />
       </Modal>
     );
   return (
-    <Modal title="훈련소 설정" onClose={onClose}>
+    <Modal title={t("훈련소 설정")} onClose={onClose}>
       <AccountControls account={account} showLink />
+      <LanguageSettings />
       <section className="settings-section">
         <button
           className="secondary-button"
-          aria-label="효과음"
+          aria-label={t("효과음")}
           aria-pressed={soundEnabled}
           onClick={() => onSoundChange(!soundEnabled)}
         >
           {soundEnabled ? <Volume2 size={18} /> : <VolumeX size={18} />}
-          효과음 {soundEnabled ? "켜짐" : "꺼짐"}
+          {t("효과음 ")}
+          {soundEnabled ? t("켜짐") : t("꺼짐")}
         </button>
       </section>
       {isAdmin && (
@@ -569,24 +632,27 @@ function SettingsPanel({
             className="secondary-button"
             onClick={() => setAdminOpen(true)}
           >
-            관리자 페이지
+            {t("관리자 페이지")}
           </button>
         </section>
       )}
       {adminError && (
         <div className="error-box" role="alert">
-          <p>관리자 권한을 확인하지 못했습니다. {adminError}</p>
+          <p>
+            {t("관리자 권한을 확인하지 못했습니다. ")}
+            {t(adminError)}
+          </p>
           <button
             className="secondary-button"
             onClick={() => setAdminRetry((n) => n + 1)}
           >
-            권한 확인 다시 시도
+            {t("권한 확인 다시 시도")}
           </button>
         </div>
       )}
       {error && (
         <p className="error-box" role="alert">
-          {error}
+          {t(error)}
         </p>
       )}
       <section className="settings-section">
@@ -597,7 +663,13 @@ function SettingsPanel({
               : guestCharacterName(data.characterName)
           }
           onSave={(characterName) => {
-            if (!persist({ ...data, characterName })) return false;
+            if (
+              !persist({
+                ...data,
+                characterName,
+              })
+            )
+              return false;
             notify("캐릭터 이름을 저장했습니다.");
             return true;
           }}
@@ -606,45 +678,65 @@ function SettingsPanel({
       <section className="settings-section">
         <h3>
           <Dumbbell size={18} />
-          하루 운동 목표
+          {t("하루 운동 목표")}
         </h3>
         <div className="goal-fields">
-          {EXERCISES.map(({ key, label, unit, step, max }) => (
-            <label key={key}>
-              {label}
-              <div>
-                <input
-                  type="number"
-                  inputMode={step === 1 ? "numeric" : "decimal"}
-                  min={key === "pushups" || key === "squats" ? 1 : 0}
-                  max={max}
-                  step={step}
-                  value={goals[key]}
-                  aria-label={`${label} 하루 목표`}
-                  onChange={(e) =>
-                    setGoals({ ...goals, [key]: e.target.value })
-                  }
-                />
-                <span>{unit}</span>
-              </div>
-            </label>
-          ))}
+          {EXERCISES.map(localizeExercise).map(
+            ({ key, label, unit, step, max }) => (
+              <label key={key}>
+                {label}
+                <div>
+                  <input
+                    type="number"
+                    inputMode={step === 1 ? "numeric" : "decimal"}
+                    min={key === "pushups" || key === "squats" ? 1 : 0}
+                    max={max}
+                    step={step}
+                    value={goals[key]}
+                    aria-label={t("{0} 하루 목표", {
+                      0: label,
+                    })}
+                    onChange={(e) =>
+                      setGoals({
+                        ...goals,
+                        [key]: e.target.value,
+                      })
+                    }
+                  />
+                  <span>{unit}</span>
+                </div>
+              </label>
+            ),
+          )}
         </div>
         <div className="goal-presets">
           <button
-            onClick={() => setGoals({ ...goals, pushups: 50, squats: 50 })}
+            onClick={() =>
+              setGoals({
+                ...goals,
+                pushups: 50,
+                squats: 50,
+              })
+            }
           >
-            푸쉬업·스쿼트 50개
+            {t("푸쉬업·스쿼트 50개")}
           </button>
           <button
-            onClick={() => setGoals({ ...goals, pushups: 100, squats: 100 })}
+            onClick={() =>
+              setGoals({
+                ...goals,
+                pushups: 100,
+                squats: 100,
+              })
+            }
           >
-            푸쉬업·스쿼트 100개
+            {t("푸쉬업·스쿼트 100개")}
           </button>
         </div>
         <p className="hint">
-          기타운동·달리기 목표 0은 선택 운동입니다. EXP는 목표와 관계없이
-          적립됩니다. 새 목표는 오늘부터 적용되며 과거 기록의 목표는 유지됩니다.
+          {t(
+            "기타운동·달리기 목표 0은 선택 운동입니다. EXP는 목표와 관계없이 적립됩니다. 새 목표는 오늘부터 적용되며 과거 기록의 목표는 유지됩니다.",
+          )}
         </p>
         <button
           className="primary-button"
@@ -653,7 +745,10 @@ function SettingsPanel({
               const next = updateGoals(
                 data,
                 Object.fromEntries(
-                  EXERCISES.map(({ key }) => [key, Number(goals[key])]),
+                  EXERCISES.map(localizeExercise).map(({ key }) => [
+                    key,
+                    Number(goals[key]),
+                  ]),
                 ),
               );
               if (persist(next)) {
@@ -665,17 +760,18 @@ function SettingsPanel({
             }
           }}
         >
-          목표 저장
+          {t("목표 저장")}
         </button>
       </section>
       {message && (
         <p role="alert" className="error-box">
-          {message}
+          {t(message)}
         </p>
       )}
       <p className="settings-footer">
         <Zap size={14} />
-        빡빡이훈련소 <span>v1.0</span>
+        {t("빡빡이훈련소 ")}
+        <span>v1.0</span>
       </p>
       <div className="settings-privacy">
         <PrivacyLink />
@@ -684,6 +780,7 @@ function SettingsPanel({
   );
 }
 export default function App() {
+  useLanguage();
   const {
     data,
     error,
@@ -691,6 +788,7 @@ export default function App() {
     storageKey,
     account,
   } = useWorkoutAccount();
+  const adAccess = useAdAccess(account);
   const friends = useFriends(account);
   const [rankingUser, setRankingUser] = useState(null);
   const [proof, setProof] = useState(null);
@@ -814,7 +912,12 @@ export default function App() {
   }
   useEffect(() => {
     setDraft(
-      Object.fromEntries(EXERCISES.map(({ key }) => [key, record?.[key] || 0])),
+      Object.fromEntries(
+        EXERCISES.map(localizeExercise).map(({ key }) => [
+          key,
+          record?.[key] || 0,
+        ]),
+      ),
     );
     setFormError("");
   }, [
@@ -850,7 +953,7 @@ export default function App() {
     if (
       dirty &&
       !window.confirm(
-        "저장하지 않은 횟수가 있어요. 변경 내용을 버리고 날짜를 이동할까요?",
+        t("저장하지 않은 횟수가 있어요. 변경 내용을 버리고 날짜를 이동할까요?"),
       )
     )
       return false;
@@ -864,7 +967,10 @@ export default function App() {
     }
     setStageDetail(null);
     setTab(value);
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    window.scrollTo({
+      top: 0,
+      behavior: "smooth",
+    });
   }
   function save(e) {
     e?.preventDefault();
@@ -877,7 +983,10 @@ export default function App() {
         data,
         selected,
         Object.fromEntries(
-          EXERCISES.map(({ key }) => [key, Number(draft[key])]),
+          EXERCISES.map(localizeExercise).map(({ key }) => [
+            key,
+            Number(draft[key]),
+          ]),
         ),
         dateKey(),
       );
@@ -915,22 +1024,31 @@ export default function App() {
       if (selected !== day) throw new Error("오늘 날짜를 선택해 주세요.");
       const saved = dirty || !record ? save() : data;
       if (saved)
-        setProof(workoutProof({ ...saved, characterName: characterName }, day));
+        setProof(
+          workoutProof(
+            {
+              ...saved,
+              characterName: characterName,
+            },
+            day,
+          ),
+        );
     } catch (e) {
       setFormError(e.message);
     }
   }
   const nav = [
-    ["home", Dumbbell, "훈련소"],
-    ["field", TreePine, "야외 훈련장"],
-    ["growth", Sparkles, "성장 도감"],
-    ["ranking", Trophy, "친구"],
+    ["home", Dumbbell, t("훈련소")],
+    ["field", TreePine, t("야외 훈련장")],
+    ["growth", Sparkles, t("성장 도감")],
+    ["ranking", Trophy, t("친구")],
   ];
   const mobileNav = [nav[0], nav[2], nav[1], nav[3]];
   if (account.authLoading || !account.ready)
     return <LoginScreen account={account} />;
   return (
     <>
+      <AdSenseRuntime access={adAccess} />
       <header className="site-header">
         <div className="header-inner">
           <button className="brand" onClick={() => navigate("home")}>
@@ -941,11 +1059,12 @@ export default function App() {
               />
             </span>
             <span>
-              빡빡이<span className="brand-thin">훈련소</span>
+              {t("빡빡이")}
+              <span className="brand-thin">{t("훈련소")}</span>
               <small>BBAKBAK TRAINING</small>
             </span>
           </button>
-          <nav aria-label="주 메뉴">
+          <nav aria-label={t("주 메뉴")}>
             {nav.map(([id, Icon, label]) => (
               <button
                 key={id}
@@ -957,7 +1076,9 @@ export default function App() {
                 {id === "ranking" && friends.pending > 0 && (
                   <span
                     className="friend-badge"
-                    aria-label={`${friends.pending}개 친구 요청`}
+                    aria-label={t("{0}개 친구 요청", {
+                      0: friends.pending,
+                    })}
                   >
                     {friends.pending}
                   </span>
@@ -969,14 +1090,14 @@ export default function App() {
             <button
               className="settings-button"
               onClick={() => setSettings(true)}
-              aria-label="설정"
+              aria-label={t("설정")}
             >
               <Settings size={19} />
-              <span>설정</span>
+              <span>{t("설정")}</span>
             </button>
             <button
               className="help-button"
-              aria-label="도움말"
+              aria-label={t("도움말")}
               aria-haspopup="dialog"
               onClick={() => setHelpOpen(true)}
             >
@@ -993,12 +1114,12 @@ export default function App() {
             </span>
             <h1>
               {tab === "growth"
-                ? "캐릭터 성장"
+                ? t("캐릭터 성장")
                 : tab === "ranking"
-                  ? "친구"
+                  ? t("친구")
                   : tab === "field"
-                    ? "야외 훈련장"
-                    : "훈련소"}
+                    ? t("야외 훈련장")
+                    : t("훈련소")}
             </h1>
           </div>
           <div className="date-chip">
@@ -1011,7 +1132,7 @@ export default function App() {
             className="error-box storage-error"
             onClick={() => setSettings(true)}
           >
-            {error} <ArrowRight size={16} />
+            {t(error)} <ArrowRight size={16} />
           </button>
         )}
         <div
@@ -1025,7 +1146,9 @@ export default function App() {
                     className={`eyebrow${summary.streak >= 2 ? " streak-heading" : ""}`}
                   >
                     {summary.streak >= 2
-                      ? `${summary.streak}일 연속 운동 중!`
+                      ? t("{0}일 연속 운동 중!", {
+                          0: summary.streak,
+                        })
                       : "CHARACTER"}
                   </span>
                   <span className="level-badge">
@@ -1034,8 +1157,10 @@ export default function App() {
                   </span>
                 </div>
                 <div className="hero-title">
-                  {!account.user && <span className="guest-label">비회원</span>}
-                  <h2>{characterName || "캐릭터"}</h2>
+                  {!account.user && (
+                    <span className="guest-label">{t("비회원")}</span>
+                  )}
+                  <h2>{characterName || t("캐릭터")}</h2>
                   <p>LV. {summary.level}</p>
                 </div>
                 <div
@@ -1054,20 +1179,21 @@ export default function App() {
                   />
                   <span className="drag-label">
                     <RotateCcw size={11} />
-                    드래그해서 돌려보기
+                    {t("드래그해서 돌려보기")}
                   </span>
                 </div>
                 <div className="hero-progress">
                   <div>
                     <strong>
                       {summary.level < MAX_LEVEL
-                        ? "다음 레벨까지"
-                        : "최고 레벨 달성"}
+                        ? t("다음 레벨까지")
+                        : t("최고 레벨 달성")}
                     </strong>
                     <span>
                       {summary.level < MAX_LEVEL ? (
                         <>
-                          <b>{summary.expToNext}</b> EXP 남음
+                          <b>{summary.expToNext}</b>
+                          {t(" EXP 남음")}
                         </>
                       ) : (
                         <Trophy size={18} />
@@ -1075,18 +1201,25 @@ export default function App() {
                     </span>
                   </div>
                   <div className="track">
-                    <i style={{ width: `${progress}%` }} />
+                    <i
+                      style={{
+                        width: `${progress}%`,
+                      }}
+                    />
                   </div>
                   <p>
                     {summary.level === MAX_LEVEL
                       ? "MAX LEVEL"
                       : `${summary.progressExp} / 100 EXP`}{" "}
-                    <span>· 100 EXP마다 +1레벨</span>
+                    <span>{t("· 100 EXP마다 +1레벨")}</span>
                   </p>
                   {summary.inactiveDays >= 3 && summary.level > 1 && (
                     <p className="decay-status">
-                      미기록 {summary.inactiveDays}일 · {summary.daysToDecay}일
-                      뒤 −1레벨
+                      {t("미기록 ")}
+                      {summary.inactiveDays}
+                      {t("일 · ")}
+                      {summary.daysToDecay}
+                      {t("일 뒤 −1레벨")}
                     </p>
                   )}
                 </div>
@@ -1098,10 +1231,12 @@ export default function App() {
                 <div>
                   <strong>
                     {summary.streak >= 2
-                      ? `${summary.streak}일 연속 운동 중!`
-                      : "연속 운동을 시작해 보세요"}
+                      ? t("{0}일 연속 운동 중!", {
+                          0: summary.streak,
+                        })
+                      : t("연속 운동을 시작해 보세요")}
                   </strong>
-                  <p>운동을 기록한 날 기준</p>
+                  <p>{t("운동을 기록한 날 기준")}</p>
                 </div>
                 <span className="streak-deco">↗</span>
               </div>
@@ -1135,9 +1270,9 @@ export default function App() {
                     showAccountControls={false}
                   />
                   <section className="panel friends-panel">
-                    <h2>친구</h2>
+                    <h2>{t("친구")}</h2>
                     <p className="hint">
-                      친구 기능은 로그인 후 이용할 수 있어요.
+                      {t("친구 기능은 로그인 후 이용할 수 있어요.")}
                     </p>
                     <AccountControls account={account} />
                   </section>
@@ -1149,7 +1284,7 @@ export default function App() {
                   <div>
                     <span>
                       <Dumbbell size={14} />
-                      누적 EXP
+                      {t("누적 EXP")}
                     </span>
                     <strong>
                       {number(summary.total)}
@@ -1159,21 +1294,21 @@ export default function App() {
                   <div>
                     <span>
                       <CalendarDays size={14} />
-                      운동한 날
+                      {t("운동한 날")}
                     </span>
                     <strong>
                       {summary.days}
-                      <small>일</small>
+                      <small>{t("일")}</small>
                     </strong>
                   </div>
                   <div>
                     <span>
                       <Trophy size={14} />
-                      목표 달성
+                      {t("목표 달성")}
                     </span>
                     <strong>
                       {summary.completed}
-                      <small>일</small>
+                      <small>{t("일")}</small>
                     </strong>
                   </div>
                 </div>
@@ -1187,8 +1322,11 @@ export default function App() {
                       </span>
                       <h2>
                         {selected === today
-                          ? "오늘의 훈련"
-                          : `${parseDate(selected).getMonth() + 1}월 ${parseDate(selected).getDate()}일의 훈련`}{" "}
+                          ? t("오늘의 훈련")
+                          : t("{0}월 {1}일의 훈련", {
+                              0: parseDate(selected).getMonth() + 1,
+                              1: parseDate(selected).getDate(),
+                            })}{" "}
                         <span className="heading-dot">.</span>
                       </h2>
                     </div>
@@ -1198,37 +1336,42 @@ export default function App() {
                       {isComplete(record) ? (
                         <>
                           <Check size={13} />
-                          훈련 완료
+                          {t("훈련 완료")}
                         </>
                       ) : hasWorkout(record) ? (
-                        "일부 완료"
+                        t("일부 완료")
                       ) : (
-                        "미기록"
+                        t("미기록")
                       )}
                     </span>
                   </div>
-                  <form onSubmit={save}>
+                  <form onSubmit={save} noValidate>
                     <fieldset
                       className="workout-fields"
                       disabled={!recordEditable}
                     >
                       <div className="exercise-grid">
-                        {EXERCISES.map(({ key, label }) => (
-                          <WorkoutCard
-                            key={key}
-                            type={key}
-                            label={label}
-                            value={draft[key]}
-                            goal={goals[key]}
-                            onChange={(value) =>
-                              setDraft({ ...draft, [key]: value })
-                            }
-                          />
-                        ))}
+                        {EXERCISES.map(localizeExercise).map(
+                          ({ key, label }) => (
+                            <WorkoutCard
+                              key={key}
+                              type={key}
+                              label={label}
+                              value={draft[key]}
+                              goal={goals[key]}
+                              onChange={(value) =>
+                                setDraft({
+                                  ...draft,
+                                  [key]: value,
+                                })
+                              }
+                            />
+                          ),
+                        )}
                       </div>
                       {formError && (
                         <p className="error-box" role="alert">
-                          {formError}
+                          {t(formError)}
                         </p>
                       )}
                       <div className="workout-save-actions">
@@ -1241,10 +1384,10 @@ export default function App() {
                         >
                           <Check size={18} />
                           {!dirty && record
-                            ? "기록 저장 완료"
+                            ? t("기록 저장 완료")
                             : record
-                              ? "변경한 기록 저장"
-                              : "운동 기록 저장"}
+                              ? t("변경한 기록 저장")
+                              : t("운동 기록 저장")}
                           {dirty && (
                             <span>
                               {expDelta >= 0 ? "+" : ""}
@@ -1261,7 +1404,7 @@ export default function App() {
                             aria-haspopup="dialog"
                           >
                             <Camera size={19} />
-                            오운완
+                            {t("오운완")}
                           </button>
                         )}
                       </div>
@@ -1270,23 +1413,23 @@ export default function App() {
                       <span>
                         <ShieldCheck size={12} />
                         {!recordEditable
-                          ? "지난 기록 · 조회만 가능"
+                          ? t("지난 기록 · 조회만 가능")
                           : dirty
-                            ? "아직 저장하지 않은 기록이에요"
+                            ? t("아직 저장하지 않은 기록이에요")
                             : account.busy
-                              ? "동기화 중…"
+                              ? t("동기화 중…")
                               : account.pending
-                                ? "기기 저장 · 동기화 대기"
+                                ? t("기기 저장 · 동기화 대기")
                                 : account.user
-                                  ? "계정에 저장됨"
-                                  : "이 기기에만 저장됨"}
+                                  ? t("계정에 저장됨")
+                                  : t("이 기기에만 저장됨")}
                       </span>
                       {record && recordEditable && (
                         <button
                           type="button"
                           onClick={() => setDeleteOpen(true)}
                         >
-                          기록 삭제
+                          {t("기록 삭제")}
                         </button>
                       )}
                     </div>
@@ -1294,7 +1437,13 @@ export default function App() {
                 </section>
                 {tab === "home" && (
                   <Calendar
-                    {...{ data, selected, today, month, setMonth }}
+                    {...{
+                      data,
+                      selected,
+                      today,
+                      month,
+                      setMonth,
+                    }}
                     onSelect={selectDate}
                   />
                 )}
@@ -1305,7 +1454,7 @@ export default function App() {
                 <div className="section-heading">
                   <div>
                     <span className="eyebrow">EVOLUTION ROADMAP</span>
-                    <h2>성장 단계</h2>
+                    <h2>{t("성장 단계")}</h2>
                   </div>
                   <span className="month-badge">
                     {
@@ -1317,19 +1466,21 @@ export default function App() {
                   </span>
                 </div>
                 <p className="growth-description">
-                  100 EXP마다 +1레벨 · 매 레벨 외형 변화
+                  {t("100 EXP마다 +1레벨 · 매 레벨 외형 변화")}
                   <br />
-                  최대 1000레벨 · 미기록 5일째 −1레벨, 이후 매일 −1레벨
+                  {t("최대 1000레벨 · 미기록 5일째 −1레벨, 이후 매일 −1레벨")}
                 </p>
                 <div className="growth-rules">
-                  <span>푸쉬업 · 스쿼트 · 기타운동 1개 = 1 EXP</span>
-                  <span>달리기 0.1km = 2 EXP · 하루 여러 레벨 상승 가능</span>
-                  <span>미기록 10일은 −10레벨 · 최저 1레벨</span>
+                  <span>{t("푸쉬업 · 스쿼트 · 기타운동 1개 = 1 EXP")}</span>
+                  <span>
+                    {t("달리기 0.1km = 2 EXP · 하루 여러 레벨 상승 가능")}
+                  </span>
+                  <span>{t("미기록 10일은 −10레벨 · 최저 1레벨")}</span>
                 </div>
                 <div className="stage-list">
                   {VISUAL_UNLOCKS.map((s, i) => (
                     <button
-                      key={s.name}
+                      key={s.level}
                       className={`evolution-card ${s.level <= summary.level ? "unlocked" : ""} ${s.level <= summary.level && (!VISUAL_UNLOCKS[i + 1] || VISUAL_UNLOCKS[i + 1].level > summary.level) ? "current" : ""}`}
                       aria-haspopup="dialog"
                       onClick={() => setStageDetail(s)}
@@ -1344,8 +1495,8 @@ export default function App() {
                       <span>
                         <small>LV. {s.level}</small>
                         <strong>
-                          {s.name}
-                          {s.level <= summary.level && <em>해금</em>}
+                          {t(s.name)}
+                          {s.level <= summary.level && <em>{t("해금")}</em>}
                         </strong>
                       </span>
                       <ChevronRight size={18} />
@@ -1353,11 +1504,13 @@ export default function App() {
                   ))}
                 </div>
                 <p className="hint">
-                  잠긴 단계는 실루엣만 표시됩니다. 해당 레벨에 도달하면 외형이
-                  공개됩니다.
+                  {t(
+                    "잠긴 단계는 실루엣만 표시됩니다. 해당 레벨에 도달하면 외형이 공개됩니다.",
+                  )}
                 </p>
               </section>
             )}
+            {tab === "home" && <AdCard enabled={adAccess.allowed} />}
           </div>
         </div>
         <footer className="page-footer">
@@ -1365,7 +1518,7 @@ export default function App() {
           <PrivacyLink />
         </footer>
       </main>
-      <nav className="mobile-nav" aria-label="모바일 주 메뉴">
+      <nav className="mobile-nav" aria-label={t("모바일 주 메뉴")}>
         {mobileNav.map(([id, Icon, label]) => (
           <button
             key={id}
@@ -1377,7 +1530,9 @@ export default function App() {
             {id === "ranking" && friends.pending > 0 && (
               <span
                 className="friend-badge"
-                aria-label={`${friends.pending}개 친구 요청`}
+                aria-label={t("{0}개 친구 요청", {
+                  0: friends.pending,
+                })}
               >
                 {friends.pending}
               </span>
@@ -1399,17 +1554,22 @@ export default function App() {
         />
       )}
       {account.user && !data.characterName && !error && !settings && (
-        <Modal title="캐릭터 이름 설정" dismissible={false}>
+        <Modal title={t("캐릭터 이름 설정")} dismissible={false}>
           <CharacterNameForm
             autofocus
-            onSave={(characterName) => persist({ ...data, characterName })}
+            onSave={(characterName) =>
+              persist({
+                ...data,
+                characterName,
+              })
+            }
           />
         </Modal>
       )}
       {helpOpen && <HelpDialog onClose={() => setHelpOpen(false)} />}
       {proof && (
         <Modal
-          title="오늘의 훈련 완료 공유"
+          title={t("오늘의 훈련 완료 공유")}
           hideTitle
           onClose={() => setProof(null)}
         >
@@ -1418,7 +1578,14 @@ export default function App() {
       )}
       {settings && (
         <SettingsPanel
-          {...{ data, persist, notify, error, account, soundEnabled }}
+          {...{
+            data,
+            persist,
+            notify,
+            error,
+            account,
+            soundEnabled,
+          }}
           onSoundChange={(enabled) => {
             setSoundEnabled(setWorkoutSoundsEnabled(enabled));
             if (enabled) void playWorkoutSound("workout");
@@ -1427,12 +1594,18 @@ export default function App() {
         />
       )}{" "}
       {nameEditOpen && (
-        <Modal title="닉네임 변경" onClose={() => setNameEditOpen(false)}>
+        <Modal title={t("닉네임 변경")} onClose={() => setNameEditOpen(false)}>
           <CharacterNameForm
             initialName={characterName}
             autofocus
             onSave={(characterName) => {
-              if (!persist({ ...data, characterName })) return false;
+              if (
+                !persist({
+                  ...data,
+                  characterName,
+                })
+              )
+                return false;
               setNameEditOpen(false);
               notify("캐릭터 이름을 저장했습니다.");
               return true;
@@ -1442,19 +1615,19 @@ export default function App() {
       )}
       {deleteOpen && (
         <Modal
-          title="이 날짜의 기록을 삭제할까요?"
+          title={t("이 날짜의 기록을 삭제할까요?")}
           onClose={() => setDeleteOpen(false)}
         >
           <p className="hint">
-            {dateLabel(selected)} 기록이 삭제되고 캐릭터의 누적 성장에도
-            반영돼요.
+            {dateLabel(selected)}
+            {t(" 기록이 삭제되고 캐릭터의 누적 성장에도 반영돼요.")}
           </p>
           <div className="action-buttons">
             <button
               className="secondary-button"
               onClick={() => setDeleteOpen(false)}
             >
-              취소
+              {t("취소")}
             </button>
             <button
               className="primary-button"
@@ -1473,7 +1646,7 @@ export default function App() {
                 }
               }}
             >
-              기록 삭제
+              {t("기록 삭제")}
             </button>
           </div>
         </Modal>
@@ -1481,21 +1654,26 @@ export default function App() {
       {toast && (
         <div className="toast" role="status">
           <Check size={17} />
-          {toast}
+          {t(toast)}
         </div>
       )}
       {celebrate && (
         <div className="confetti" aria-hidden="true">
-          {Array.from({ length: 22 }, (_, i) => (
-            <i
-              key={i}
-              style={{
-                left: `${i * 4.7}%`,
-                animationDelay: `${(i % 5) * 0.09}s`,
-                "--confetti-color": ["#f17a46", "#efc655", "#8ca67c"][i % 3],
-              }}
-            />
-          ))}
+          {Array.from(
+            {
+              length: 22,
+            },
+            (_, i) => (
+              <i
+                key={i}
+                style={{
+                  left: `${i * 4.7}%`,
+                  animationDelay: `${(i % 5) * 0.09}s`,
+                  "--confetti-color": ["#f17a46", "#efc655", "#8ca67c"][i % 3],
+                }}
+              />
+            ),
+          )}
         </div>
       )}
     </>

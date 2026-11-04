@@ -1,3 +1,4 @@
+import { t } from "./i18n/index.js";
 import { useEffect, useRef, useState } from "react";
 import * as THREE from "three";
 import { characterAppearance } from "./characterAppearance";
@@ -855,7 +856,18 @@ export default function Character({
       role="img"
       aria-label={
         label ??
-        `${level}레벨, 성장 ${stage + 1}단계, ${level >= 850 ? "금발 도복 전사" : level >= 650 ? "도복 전사" : level >= 200 ? "머리카락이 자라는 전사" : "빤쓰를 입은 빡빡이"} 3D 캐릭터. 좌우로 드래그하면 회전해요.`
+        t("{0}레벨, 성장 {1}단계, {2} 3D 캐릭터. 좌우로 드래그하면 회전해요.", {
+          0: level,
+          1: stage + 1,
+          2:
+            level >= 850
+              ? t("금발 도복 전사")
+              : level >= 650
+                ? t("도복 전사")
+                : level >= 200
+                  ? t("머리카락이 자라는 전사")
+                  : t("빤쓰를 입은 빡빡이"),
+        })
       }
     >
       {fallback && (
@@ -873,7 +885,7 @@ export default function Character({
           <div className="fallback-body" />
           <div className="fallback-pants" />
           <div className="fallback-legs" />
-          <p>3D를 지원하지 않아 기본 캐릭터로 표시해요.</p>
+          <p>{t("3D를 지원하지 않아 기본 캐릭터로 표시해요.")}</p>
         </div>
       )}
     </div>

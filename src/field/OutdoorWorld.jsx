@@ -1,3 +1,4 @@
+import { t } from "../i18n/index.js";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import {
@@ -17,10 +18,12 @@ import {
 import { createFieldScene } from "./fieldScene";
 import { connectField, fieldConnectionError } from "./fieldClient";
 import { cleanChat, CHAT_COOLDOWN, CHAT_MAX_LENGTH } from "./fieldModel";
-
 function Joystick({ controls }) {
   const pointer = useRef(null);
-  const [knob, setKnob] = useState({ x: 0, y: 0 });
+  const [knob, setKnob] = useState({
+    x: 0,
+    y: 0,
+  });
   function update(event) {
     const rect = event.currentTarget.getBoundingClientRect();
     let x = (event.clientX - rect.left - rect.width / 2) / 38;
@@ -30,20 +33,38 @@ function Joystick({ controls }) {
       x /= length;
       y /= length;
     }
-    controls.joystick = { x, y };
-    setKnob({ x: x * 30, y: y * 30 });
+    controls.joystick = {
+      x,
+      y,
+    };
+    setKnob({
+      x: x * 30,
+      y: y * 30,
+    });
   }
   function release(event) {
     if (pointer.current !== event.pointerId) return;
     pointer.current = null;
-    controls.joystick = { x: 0, y: 0 };
-    setKnob({ x: 0, y: 0 });
+    controls.joystick = {
+      x: 0,
+      y: 0,
+    };
+    setKnob({
+      x: 0,
+      y: 0,
+    });
   }
   useEffect(() => {
     const reset = () => {
       pointer.current = null;
-      controls.joystick = { x: 0, y: 0 };
-      setKnob({ x: 0, y: 0 });
+      controls.joystick = {
+        x: 0,
+        y: 0,
+      };
+      setKnob({
+        x: 0,
+        y: 0,
+      });
     };
     window.addEventListener("blur", reset);
     document.addEventListener("visibilitychange", reset);
@@ -55,7 +76,7 @@ function Joystick({ controls }) {
   return (
     <div
       className="field-joystick"
-      aria-label="이동 조이스틱"
+      aria-label={t("이동 조이스틱")}
       role="group"
       onPointerDown={(event) => {
         if (pointer.current !== null) return;
@@ -73,13 +94,14 @@ function Joystick({ controls }) {
       <span className="field-joystick-cross" aria-hidden="true" />
       <span
         className="field-joystick-knob"
-        style={{ transform: `translate(${knob.x}px, ${knob.y}px)` }}
+        style={{
+          transform: `translate(${knob.x}px, ${knob.y}px)`,
+        }}
         aria-hidden="true"
       />
     </div>
   );
 }
-
 export default function OutdoorWorld({ user, name, level, streak, onClose }) {
   const host = useRef(null),
     labels = useRef(null),
@@ -90,14 +112,17 @@ export default function OutdoorWorld({ user, name, level, streak, onClose }) {
     retryButton = useRef(null);
   const controls = useRef({
     keys: new Set(),
-    joystick: { x: 0, y: 0 },
+    joystick: {
+      x: 0,
+      y: 0,
+    },
     running: false,
     typing: false,
     cameraYaw: 0,
     cameraPitch: 0.36,
     now: () => Date.now(),
     player: {
-      name: name || "비회원",
+      name: name || t("비회원"),
       level,
       streak,
       guest: !user,
@@ -204,7 +229,10 @@ export default function OutdoorWorld({ user, name, level, streak, onClose }) {
     const keyup = (event) => controls.keys.delete(event.code);
     const reset = () => {
       controls.keys.clear();
-      controls.joystick = { x: 0, y: 0 };
+      controls.joystick = {
+        x: 0,
+        y: 0,
+      };
       if (["walk", "run"].includes(controls.player.action)) {
         controls.player.action = "idle";
         setAction("idle");
@@ -251,7 +279,10 @@ export default function OutdoorWorld({ user, name, level, streak, onClose }) {
     const abort = new AbortController();
     if (sceneError) return;
     let timer;
-    setStatus({ state: "connecting", message: "공유 서버에 연결 중…" });
+    setStatus({
+      state: "connecting",
+      message: "공유 서버에 연결 중…",
+    });
     timer = setTimeout(() => {
       if (!abort.signal.aborted)
         setStatus((current) =>
@@ -291,7 +322,10 @@ export default function OutdoorWorld({ user, name, level, streak, onClose }) {
       })
       .catch((error) => {
         if (!abort.signal.aborted)
-          setStatus({ state: "error", message: fieldConnectionError(error) });
+          setStatus({
+            state: "error",
+            message: fieldConnectionError(error),
+          });
       });
     return () => {
       clearTimeout(timer);
@@ -347,7 +381,11 @@ export default function OutdoorWorld({ user, name, level, streak, onClose }) {
       setChatError("잠시 후 다시 보내주세요.");
       return;
     }
-    controls.player = { ...controls.player, chat: text, chatAt: now };
+    controls.player = {
+      ...controls.player,
+      chat: text,
+      chatAt: now,
+    };
     connection.current?.publish(controls.player, true);
     setChat("");
     setChatError("");
@@ -361,7 +399,7 @@ export default function OutdoorWorld({ user, name, level, streak, onClose }) {
       className="field-world"
       role="dialog"
       aria-modal="true"
-      aria-label="야외 훈련장"
+      aria-label={t("야외 훈련장")}
       tabIndex={-1}
       ref={dialog}
     >
@@ -369,33 +407,38 @@ export default function OutdoorWorld({ user, name, level, streak, onClose }) {
       <div className="field-labels" ref={labels} aria-hidden="true" />
       <div className="field-topbar">
         <div className="field-world-title">
-          <strong>야외 훈련장</strong>
+          <strong>{t("야외 훈련장")}</strong>
           <span>
             <i className={status.state === "online" ? "online" : ""} />
             <Users size={13} aria-hidden="true" />{" "}
-            {status.state === "online" ? `${count}명 접속` : "연결 대기"}
+            {status.state === "online"
+              ? t("{0}명 접속", {
+                  0: count,
+                })
+              : t("연결 대기")}
           </span>
         </div>
         <button className="field-exit" onClick={onClose}>
-          <LogOut size={17} aria-hidden="true" /> 나가기
+          <LogOut size={17} aria-hidden="true" />
+          {t(" 나가기")}
         </button>
       </div>
       {(status.state !== "online" || sceneError) && (
         <div className="field-connection" role="status">
-          <span>{sceneError || status.message}</span>
+          <span>{t(sceneError || status.message)}</span>
           {!sceneError && ["error", "offline"].includes(status.state) && (
             <button
               ref={retryButton}
               onClick={() => setAttempt((value) => value + 1)}
             >
-              다시 연결
+              {t("다시 연결")}
             </button>
           )}
         </div>
       )}
       <div className="field-camera-tools">
         <button
-          aria-label="시점 왼쪽으로 회전"
+          aria-label={t("시점 왼쪽으로 회전")}
           onClick={() => {
             controls.cameraYaw += 0.35;
           }}
@@ -403,7 +446,7 @@ export default function OutdoorWorld({ user, name, level, streak, onClose }) {
           <ChevronLeft size={19} />
         </button>
         <button
-          aria-label="시점 오른쪽으로 회전"
+          aria-label={t("시점 오른쪽으로 회전")}
           onClick={() => {
             controls.cameraYaw -= 0.35;
           }}
@@ -411,7 +454,7 @@ export default function OutdoorWorld({ user, name, level, streak, onClose }) {
           <ChevronRight size={19} />
         </button>
         <button
-          aria-label="캐릭터 뒤로 시점 복귀"
+          aria-label={t("캐릭터 뒤로 시점 복귀")}
           onClick={() => {
             controls.cameraYaw = controls.player.yaw - Math.PI;
             controls.cameraPitch = 0.36;
@@ -420,7 +463,7 @@ export default function OutdoorWorld({ user, name, level, streak, onClose }) {
           <RotateCcw size={17} />
         </button>
         <button
-          aria-label="조작 방법"
+          aria-label={t("조작 방법")}
           aria-expanded={help}
           onClick={() => setHelp(!help)}
         >
@@ -429,17 +472,17 @@ export default function OutdoorWorld({ user, name, level, streak, onClose }) {
       </div>
       {help && (
         <div className="field-help">
-          <span>이동: WASD · 방향키 · 조이스틱</span>
-          <span>시점: 화면 드래그 · Q / E</span>
-          <span>달리기: 버튼 · R</span>
-          <span>운동 중 이동하면 동작이 멈춰요.</span>
+          <span>{t("이동: WASD · 방향키 · 조이스틱")}</span>
+          <span>{t("시점: 화면 드래그 · Q / E")}</span>
+          <span>{t("달리기: 버튼 · R")}</span>
+          <span>{t("운동 중 이동하면 동작이 멈춰요.")}</span>
         </div>
       )}
       <div className="field-bottom-controls">
         <Joystick controls={controls} />
         <button
           className="field-chat-toggle"
-          aria-label="채팅 열기"
+          aria-label={t("채팅 열기")}
           aria-expanded={chatOpen}
           onClick={() => {
             setChatOpen(!chatOpen);
@@ -455,14 +498,14 @@ export default function OutdoorWorld({ user, name, level, streak, onClose }) {
               onClick={() => exercise("pushup")}
             >
               <Dumbbell size={20} aria-hidden="true" />
-              <span>푸쉬업</span>
+              <span>{t("푸쉬업")}</span>
             </button>
             <button
               aria-pressed={action === "squat"}
               onClick={() => exercise("squat")}
             >
               <PersonStanding size={22} aria-hidden="true" />
-              <span>스쿼트</span>
+              <span>{t("스쿼트")}</span>
             </button>
           </div>
           <button
@@ -471,26 +514,32 @@ export default function OutdoorWorld({ user, name, level, streak, onClose }) {
             onClick={toggleRun}
           >
             <Footprints size={19} aria-hidden="true" />
-            <span>달리기 {running ? "ON" : "OFF"}</span>
+            <span>
+              {t("달리기 ")}
+              {running ? "ON" : "OFF"}
+            </span>
           </button>
         </div>
       </div>
       {chatOpen && (
         <form className="field-chat-form" onSubmit={send}>
           <label className="field-sr-only" htmlFor="field-chat-input">
-            말풍선 메시지
+            {t("말풍선 메시지")}
           </label>
           <input
             ref={input}
             id="field-chat-input"
             value={chat}
             maxLength={CHAT_MAX_LENGTH}
-            placeholder="함께 있는 사람들에게 한마디"
+            placeholder={t("함께 있는 사람들에게 한마디")}
             autoComplete="off"
             onFocus={() => {
               controls.typing = true;
               controls.keys.clear();
-              controls.joystick = { x: 0, y: 0 };
+              controls.joystick = {
+                x: 0,
+                y: 0,
+              };
             }}
             onBlur={() => {
               controls.typing = false;
@@ -505,14 +554,14 @@ export default function OutdoorWorld({ user, name, level, streak, onClose }) {
             }}
           />
           <button
-            aria-label="메시지 보내기"
+            aria-label={t("메시지 보내기")}
             type="submit"
             disabled={!chat.trim() || status.state !== "online"}
           >
             <Send size={19} />
           </button>
           <button
-            aria-label="채팅 닫기"
+            aria-label={t("채팅 닫기")}
             type="button"
             onClick={() => {
               setChatOpen(false);
@@ -524,16 +573,16 @@ export default function OutdoorWorld({ user, name, level, streak, onClose }) {
           </button>
           {chatError && (
             <span className="field-chat-error" role="status">
-              {chatError}
+              {t(chatError)}
             </span>
           )}
         </form>
       )}
       <span className="field-sr-only" aria-live="polite">
         {action === "pushup"
-          ? "푸쉬업 중"
+          ? t("푸쉬업 중")
           : action === "squat"
-            ? "스쿼트 중"
+            ? t("스쿼트 중")
             : ""}
       </span>
     </div>,

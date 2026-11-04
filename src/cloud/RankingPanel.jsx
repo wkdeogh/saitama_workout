@@ -1,3 +1,4 @@
+import { t, getLocale } from "../i18n/index.js";
 import { useEffect, useRef, useState } from "react";
 import {
   Trophy,
@@ -11,7 +12,6 @@ import { friendApi } from "./friendsClient";
 import { fetchRanking, cloudError } from "./firebaseClient";
 import { fetchPublicRanking } from "./publicRankingClient";
 import { displayedLevel, rankingSummary, weekStart } from "./rankingModel";
-
 import {
   dailyActivity,
   displayedDailyActivity,
@@ -22,21 +22,23 @@ import StreakNickname from "../StreakNickname";
 import useKoreaDay from "./useKoreaDay";
 import PrivacyLink from "../PrivacyLink";
 import TrainingMotto from "../TrainingMotto";
-
 function DailyExp({ entry, day, dark = false }) {
   const { todayExp } = displayedDailyActivity(entry, day);
   return (
     <span
       className="daily-exp"
-      style={{ color: dailyExpColor(todayExp, dark) }}
-      aria-label={`오늘 획득 ${todayExp.toLocaleString("ko-KR")} EXP`}
-      title="오늘 획득 EXP · 한국 시간 기준"
+      style={{
+        color: dailyExpColor(todayExp, dark),
+      }}
+      aria-label={t("오늘 획득 {0} EXP", {
+        0: todayExp.toLocaleString(getLocale()),
+      })}
+      title={t("오늘 획득 EXP · 한국 시간 기준")}
     >
-      ▲ {todayExp.toLocaleString("ko-KR")} EXP
+      ▲ {todayExp.toLocaleString(getLocale())} EXP
     </span>
   );
 }
-
 export function GoogleLoginButton({ onClick, disabled }) {
   return (
     <button className="google-login" onClick={onClick} disabled={disabled}>
@@ -58,7 +60,7 @@ export function GoogleLoginButton({ onClick, disabled }) {
           d="M24 48c6.48 0 11.93-2.13 15.91-5.8l-7.73-6c-2.15 1.45-4.92 2.3-8.18 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48Z"
         />
       </svg>
-      Google로 로그인
+      {t("Google로 로그인")}
     </button>
   );
 }
@@ -76,7 +78,7 @@ export function LoginOptions({ account }) {
       />
       <button
         className="kakao-login"
-        aria-label="카카오 로그인"
+        aria-label={t("카카오 로그인")}
         disabled={!account.kakao?.enabled || opening || account.authLoading}
         onClick={async () => {
           setOpening(true);
@@ -84,21 +86,27 @@ export function LoginOptions({ account }) {
           setOpening(false);
         }}
       >
-        <img
-          src={`${import.meta.env.BASE_URL}icons/kakao-login.svg`}
-          alt="카카오 로그인"
-        />
+        {getLocale() === "en-US" ? (
+          t("카카오 로그인")
+        ) : (
+          <img
+            src={`${import.meta.env.BASE_URL}icons/kakao-login.svg`}
+            alt={t("카카오 로그인")}
+          />
+        )}
       </button>
-      {opening && <p role="status">로그인하는 중…</p>}
+      {opening && <p role="status">{t("로그인하는 중…")}</p>}
       {!account.configured && (
-        <p role="status">로그인 서비스를 준비 중입니다.</p>
+        <p role="status">{t("로그인 서비스를 준비 중입니다.")}</p>
       )}
       {account.message && (
         <p className="error-box" role="alert">
-          {account.message}
+          {t(account.message)}
         </p>
       )}
-      <small>로그인한 캐릭터 이름·레벨·운동량은 랭킹에 공개됩니다.</small>
+      <small>
+        {t("로그인한 캐릭터 이름·레벨·운동량은 랭킹에 공개됩니다.")}
+      </small>
       <PrivacyLink />
     </div>
   );
@@ -115,11 +123,11 @@ export function LoginScreen({ account }) {
           height="88"
         />
         <TrainingMotto />
-        <p role="status">기록을 불러오는 중…</p>
+        <p role="status">{t("기록을 불러오는 중…")}</p>
         <PrivacyLink />
         {account.message && (
           <p className="error-box" role="alert">
-            {account.message}
+            {t(account.message)}
           </p>
         )}
       </section>
@@ -133,10 +141,12 @@ export function AccountControls({ account, showLink = false }) {
       <section className="account-controls">
         <div className="account-identity">
           <UserRound size={18} />
-          <span>비회원</span>
+          <span>{t("비회원")}</span>
         </div>
         <p className="hint">
-          기록은 이 기기에만 저장돼요. 가입·로그인하면 계정으로 이어집니다.
+          {t(
+            "기록은 이 기기에만 저장돼요. 가입·로그인하면 계정으로 이어집니다.",
+          )}
         </p>
         <LoginOptions account={account} />
       </section>
@@ -145,12 +155,12 @@ export function AccountControls({ account, showLink = false }) {
     <section className="account-controls">
       <div className="account-identity">
         <UserRound size={18} />
-        <span>{account.user?.email || "카카오 계정"}</span>
+        <span>{account.user?.email || t("카카오 계정")}</span>
       </div>
       {showLink &&
         account.kakao?.enabled &&
         (account.kakao.linked ? (
-          <p className="hint">카카오 계정 연결됨</p>
+          <p className="hint">{t("카카오 계정 연결됨")}</p>
         ) : (
           account.user?.providerData.some(
             (provider) => provider.providerId === "google.com",
@@ -165,23 +175,24 @@ export function AccountControls({ account, showLink = false }) {
                   setLinking(false);
                 }}
               >
-                {linking ? "계정 확인 중…" : "카카오 계정 연결"}
+                {linking ? t("계정 확인 중…") : t("카카오 계정 연결")}
               </button>
               <p className="hint">
-                연결하면 카카오 로그인으로도 현재 운동 기록을 사용할 수
-                있습니다.
+                {t(
+                  "연결하면 카카오 로그인으로도 현재 운동 기록을 사용할 수 있습니다.",
+                )}
               </p>
             </div>
           )
         ))}
       <p className="hint" role="status">
         {account.busy
-          ? "동기화 중…"
+          ? t("동기화 중…")
           : account.pending
-            ? "이 기기에 저장됨 · 동기화 대기"
+            ? t("이 기기에 저장됨 · 동기화 대기")
             : account.lastSync
-              ? "동기화 완료"
-              : "이 기기에 저장됨"}
+              ? t("동기화 완료")
+              : t("이 기기에 저장됨")}
       </p>
       <div className="action-buttons">
         <button
@@ -190,7 +201,7 @@ export function AccountControls({ account, showLink = false }) {
           onClick={() => account.synchronize()}
         >
           <Cloud size={17} />
-          동기화
+          {t("동기화")}
         </button>
         <button
           className="secondary-button"
@@ -198,12 +209,12 @@ export function AccountControls({ account, showLink = false }) {
           onClick={() => account.logout()}
         >
           <LogOut size={17} />
-          로그아웃
+          {t("로그아웃")}
         </button>
       </div>
       {account.message && (
         <p className="error-box" role="alert">
-          {account.message}
+          {t(account.message)}
         </p>
       )}
     </section>
@@ -239,7 +250,9 @@ export default function RankingPanel({
       if (scope === "all" && account.user) await friendApi("prepare-ranking");
       const rows =
         scope === "friends"
-          ? await friendApi("ranking", { period })
+          ? await friendApi("ranking", {
+              period,
+            })
           : account.user
             ? await fetchRanking(period)
             : await fetchPublicRanking(period);
@@ -295,45 +308,47 @@ export default function RankingPanel({
       <div className="section-heading">
         <div>
           <span className="eyebrow">LEADERBOARD</span>
-          <h2>훈련 랭킹</h2>
+          <h2>{t("훈련 랭킹")}</h2>
         </div>
         <Trophy size={24} />
       </div>
-      <div className="ranking-scope" role="group" aria-label="랭킹 범위">
+      <div className="ranking-scope" role="group" aria-label={t("랭킹 범위")}>
         <button aria-pressed={scope === "all"} onClick={() => setScope("all")}>
-          전체 랭킹
+          {t("전체 랭킹")}
         </button>
         <button
           aria-pressed={scope === "friends"}
           disabled={!account.user}
           onClick={() => setScope("friends")}
         >
-          친구 랭킹
+          {t("친구 랭킹")}
         </button>
       </div>
-      <div className="ranking-period" role="group" aria-label="랭킹 기간">
+      <div className="ranking-period" role="group" aria-label={t("랭킹 기간")}>
         <button
           aria-pressed={period === "all"}
           onClick={() => setPeriod("all")}
         >
-          누적
+          {t("누적")}
         </button>
         <button
           aria-pressed={period === "week"}
           onClick={() => setPeriod("week")}
         >
-          주간
+          {t("주간")}
         </button>
       </div>
       <div className="ranking-toolbar">
         <span>
           {period === "week"
-            ? `${week.slice(5).replace("-", ".")}부터 · 월요일 00시 KST 기준`
-            : "전체 운동 기록 기준"}
+            ? t("{0}부터 · 월요일 00시 KST 기준", {
+                0: week.slice(5).replace("-", "."),
+              })
+            : t("전체 운동 기록 기준")}
         </span>
         <button
           className="icon-button"
-          aria-label="랭킹 새로고침"
+          aria-label={t("랭킹 새로고침")}
           disabled={loading}
           onClick={refresh}
         >
@@ -344,9 +359,15 @@ export default function RankingPanel({
         <button
           className="my-ranking"
           aria-haspopup="dialog"
-          aria-label={`${data.characterName} 내 캐릭터 상세 보기`}
+          aria-label={t("{0} 내 캐릭터 상세 보기", {
+            0: data.characterName,
+          })}
           onClick={() =>
-            onUser({ ...summary, uid: account.user.uid, tag: friends?.me?.tag })
+            onUser({
+              ...summary,
+              uid: account.user.uid,
+              tag: friends?.me?.tag,
+            })
           }
         >
           <div>
@@ -361,32 +382,34 @@ export default function RankingPanel({
           </div>
           <div className="my-ranking-score">
             <b>LV. {summary.level}</b>
-            <small>{summary[field].toLocaleString("ko-KR")} EXP</small>
+            <small>{summary[field].toLocaleString(getLocale())} EXP</small>
           </div>
           <ChevronRight size={18} aria-hidden="true" />
         </button>
       )}
       {account.message && (
         <p className="error-box" role="alert">
-          {account.message}
+          {t(account.message)}
         </p>
       )}
       {error ? (
         <p className="error-box" role="alert">
-          {error}
+          {t(error)}
         </p>
       ) : loading ? (
         <p className="ranking-empty" role="status">
-          랭킹을 불러오는 중…
+          {t("랭킹을 불러오는 중…")}
         </p>
       ) : entries.length === 0 ? (
-        <p className="ranking-empty">아직 등록된 훈련 기록이 없습니다.</p>
+        <p className="ranking-empty">
+          {t("아직 등록된 훈련 기록이 없습니다.")}
+        </p>
       ) : (
         <div className="ranking-table">
           <div className="ranking-table-head" aria-hidden="true">
-            <span>순위</span>
-            <span>훈련생</span>
-            <span>레벨 / EXP</span>
+            <span>{t("순위")}</span>
+            <span>{t("훈련생")}</span>
+            <span>{t("레벨 / EXP")}</span>
             <span />
           </div>
           <ol className="ranking-list">
@@ -396,13 +419,17 @@ export default function RankingPanel({
                   className={`ranking-row ${entry.uid === account.user?.uid ? "is-me" : ""}`}
                   onClick={() => onUser(entry)}
                   aria-haspopup="dialog"
-                  aria-label={`${entry.rank}위 ${entry.characterName}, 레벨 ${displayedLevel(entry)}, 상세 보기`}
+                  aria-label={t("{0}위 {1}, 레벨 {2}, 상세 보기", {
+                    0: entry.rank,
+                    1: entry.characterName,
+                    2: displayedLevel(entry),
+                  })}
                 >
                   <span className={`rank-number rank-${entry.rank}`}>
                     {entry.rank <= 3 && <Trophy size={24} aria-hidden="true" />}
                     <b>
                       {entry.rank}
-                      <small>위</small>
+                      <small>{t("위")}</small>
                     </b>
                   </span>
                   <span className="rank-user">
@@ -411,13 +438,15 @@ export default function RankingPanel({
                         name={entry.characterName}
                         streak={entry.calculatedOn === day ? entry.streak : 0}
                       />
-                      {entry.uid === account.user?.uid && <em>나</em>}
+                      {entry.uid === account.user?.uid && <em>{t("나")}</em>}
                     </strong>
                     <DailyExp entry={entry} day={day} />
                   </span>
                   <span className="rank-score">
                     <strong>LV. {displayedLevel(entry)}</strong>
-                    <small>{entry[field].toLocaleString("ko-KR")} EXP</small>
+                    <small>
+                      {entry[field].toLocaleString(getLocale())} EXP
+                    </small>
                   </span>
                   <ChevronRight
                     className="rank-open"
@@ -431,10 +460,15 @@ export default function RankingPanel({
         </div>
       )}
       <p className="hint ranking-footnote">
-        {scope === "friends" ? "나와 친구들의 순위" : "상위 50명"} · 같은 EXP는
-        공동 순위
+        {scope === "friends" ? t("나와 친구들의 순위") : t("상위 50명")}
+        {t(" · 같은 EXP는 공동 순위")}
         {updated
-          ? ` · ${updated.toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit" })} 갱신`
+          ? t(" · {0} 갱신", {
+              0: updated.toLocaleTimeString(getLocale(), {
+                hour: "2-digit",
+                minute: "2-digit",
+              }),
+            })
           : ""}
       </p>
       {showAccountControls && <AccountControls account={account} />}

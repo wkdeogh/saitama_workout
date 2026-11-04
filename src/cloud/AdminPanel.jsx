@@ -1,3 +1,4 @@
+import { t, localizeExercise } from "../i18n/index.js";
 import { virtualEditSummary } from "./virtualEdits";
 import { ChevronDown, Plus, X, Trash2 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
@@ -10,15 +11,13 @@ import {
   TRAINING_INTENSITIES,
   TRAINING_FREQUENCIES,
   trainingFrequency,
-  trainingFrequencyLabel,
   trainingIntensityLabel,
 } from "./virtualLimits";
 import { friendApi } from "./friendsClient";
-
 function FrequencySelect({ value, onChange, disabled = false }) {
   return (
     <label className="virtual-intensity">
-      훈련빈도
+      {t("훈련빈도")}
       <select
         value={value ?? DEFAULT_TRAINING_FREQUENCY}
         onChange={(event) => onChange(Number(event.target.value))}
@@ -26,14 +25,21 @@ function FrequencySelect({ value, onChange, disabled = false }) {
       >
         {TRAINING_FREQUENCIES.map((setting) => (
           <option key={setting.level} value={setting.level}>
-            {trainingFrequencyLabel(setting)}
+            {t("{0}단계 · {1}", {
+              0: setting.level,
+              1:
+                setting.maxIntervalDays === 1
+                  ? t("매일")
+                  : t("1~{0}일에 한 번", {
+                      0: setting.maxIntervalDays,
+                    }),
+            })}
           </option>
         ))}
       </select>
     </label>
   );
 }
-
 function IntensitySelect({
   value,
   preferredExercises,
@@ -42,7 +48,7 @@ function IntensitySelect({
 }) {
   return (
     <label className="virtual-intensity">
-      훈련강도
+      {t("훈련강도")}
       <select
         value={value ?? DEFAULT_TRAINING_INTENSITY}
         onChange={(event) => onChange(Number(event.target.value))}
@@ -50,14 +56,13 @@ function IntensitySelect({
       >
         {TRAINING_INTENSITIES.map((setting) => (
           <option key={setting.level} value={setting.level}>
-            {trainingIntensityLabel(setting, preferredExercises)}
+            {t(trainingIntensityLabel(setting, preferredExercises))}
           </option>
         ))}
       </select>
     </label>
   );
 }
-
 function PreferredExercises({
   value = DEFAULT_PREFERRED_EXERCISES,
   onChange,
@@ -65,9 +70,9 @@ function PreferredExercises({
 }) {
   return (
     <fieldset className="virtual-preferences" disabled={disabled}>
-      <legend>선호 운동 (복수 선택)</legend>
+      <legend>{t("선호 운동 (복수 선택)")}</legend>
       <div>
-        {EXERCISES.map(({ key, label }) => (
+        {EXERCISES.map(localizeExercise).map(({ key, label }) => (
           <label key={key}>
             <input
               type="checkbox"
@@ -87,7 +92,6 @@ function PreferredExercises({
     </fieldset>
   );
 }
-
 function TraineeEditor({ entry, onSaved }) {
   const [values, setValues] = useState({
     ...entry,
@@ -103,7 +107,12 @@ function TraineeEditor({ entry, onSaved }) {
     try {
       if (values.preferredExercises?.length === 0)
         throw new Error("선호 운동을 1개 이상 선택해 주세요.");
-      onSaved(await friendApi("admin-update", { uid: entry.uid, values }));
+      onSaved(
+        await friendApi("admin-update", {
+          uid: entry.uid,
+          values,
+        }),
+      );
     } catch (e) {
       setError(e.message);
     } finally {
@@ -114,9 +123,9 @@ function TraineeEditor({ entry, onSaved }) {
     <form className="virtual-editor" onSubmit={save}>
       <p className="hint">#{entry.tag}</p>
       <fieldset disabled={busy}>
-        <legend>누적 운동량</legend>
+        <legend>{t("누적 운동량")}</legend>
         <div className="goal-fields">
-          {EXERCISES.map(({ key, label, unit, step }) => (
+          {EXERCISES.map(localizeExercise).map(({ key, label, unit, step }) => (
             <label key={key}>
               {label} ({unit})
               <input
@@ -138,7 +147,8 @@ function TraineeEditor({ entry, onSaved }) {
                 }
               />
               <small>
-                오늘 ▲ {summary.todayCounts[key]}
+                {t("오늘 ▲ ")}
+                {summary.todayCounts[key]}
                 {unit}
               </small>
             </label>
@@ -146,11 +156,11 @@ function TraineeEditor({ entry, onSaved }) {
         </div>
         <div className="goal-fields admin-scores">
           <label>
-            현재 레벨
+            {t("현재 레벨")}
             <input type="number" readOnly value={summary.level} />
           </label>
           <label>
-            누적 EXP
+            {t("누적 EXP")}
             <input type="number" readOnly value={summary.totalExp} />
           </label>
         </div>
@@ -159,40 +169,55 @@ function TraineeEditor({ entry, onSaved }) {
             type="checkbox"
             checked={values.enabled}
             onChange={(e) =>
-              setValues({ ...values, enabled: e.target.checked })
+              setValues({
+                ...values,
+                enabled: e.target.checked,
+              })
             }
           />{" "}
-          자동 운동
+          {t("자동 운동")}
         </label>
         <FrequencySelect
           value={values.frequency}
-          onChange={(frequency) => setValues({ ...values, frequency })}
+          onChange={(frequency) =>
+            setValues({
+              ...values,
+              frequency,
+            })
+          }
         />
         <IntensitySelect
           value={values.intensity}
           preferredExercises={values.preferredExercises}
-          onChange={(intensity) => setValues({ ...values, intensity })}
+          onChange={(intensity) =>
+            setValues({
+              ...values,
+              intensity,
+            })
+          }
         />
         <PreferredExercises
           value={values.preferredExercises}
           onChange={(preferredExercises) =>
-            setValues({ ...values, preferredExercises })
+            setValues({
+              ...values,
+              preferredExercises,
+            })
           }
         />
-        <p className="hint">운동일 밤 9시 이후 · 한국 시간</p>
+        <p className="hint">{t("운동일 밤 9시 이후 · 한국 시간")}</p>
         <button className="primary-button" type="submit">
-          {busy ? "저장 중…" : "변경 저장"}
+          {busy ? t("저장 중…") : t("변경 저장")}
         </button>
       </fieldset>
       {error && (
         <p role="alert" className="error-box">
-          {error}
+          {t(error)}
         </p>
       )}
     </form>
   );
 }
-
 export default function AdminPanel() {
   const [entries, setEntries] = useState([]);
   const [busy, setBusy] = useState(true);
@@ -213,7 +238,11 @@ export default function AdminPanel() {
     setError("");
     setMessage("");
     try {
-      setEntries(await friendApi("admin-delete", { uid }));
+      setEntries(
+        await friendApi("admin-delete", {
+          uid,
+        }),
+      );
       setDeleteTarget(null);
       setMessage("가상 훈련생을 삭제했습니다.");
     } catch (error) {
@@ -296,29 +325,30 @@ export default function AdminPanel() {
   return (
     <section className="admin-panel">
       <div className="section-heading">
-        <h2>가상 훈련생</h2>
+        <h2>{t("가상 훈련생")}</h2>
         <button
           className="secondary-button"
           onClick={() => load()}
           disabled={busy || creating || deleting}
         >
-          새로고침
+          {t("새로고침")}
         </button>
       </div>
-      {busy && <p role="status">불러오는 중…</p>}
+      {busy && <p role="status">{t("불러오는 중…")}</p>}
       {error && (
         <p className="error-box" role="alert">
-          {error}
+          {t(error)}
         </p>
       )}
       {message && (
         <p className="success-box" role="status">
-          {message}
+          {t(message)}
         </p>
       )}
       <div className="virtual-list-toolbar">
         <span>
-          {entries.length} / {MAX_VIRTUAL_TRAINEES}명
+          {entries.length} / {MAX_VIRTUAL_TRAINEES}
+          {t("명")}
         </span>
         <button
           className="secondary-button"
@@ -341,11 +371,11 @@ export default function AdminPanel() {
           ) : (
             <Plus size={16} aria-hidden="true" />
           )}
-          {showCreate ? "추가 취소" : "가상훈련생 추가"}
+          {showCreate ? t("추가 취소") : t("가상훈련생 추가")}
         </button>
       </div>
       {entries.length >= MAX_VIRTUAL_TRAINEES && (
-        <p className="hint">최대 10명까지 추가할 수 있습니다.</p>
+        <p className="hint">{t("최대 10명까지 추가할 수 있습니다.")}</p>
       )}
       {showCreate && (
         <form
@@ -354,7 +384,7 @@ export default function AdminPanel() {
           onSubmit={addTrainee}
         >
           <div className="virtual-create-heading">
-            <label htmlFor="virtual-name">훈련생 이름</label>
+            <label htmlFor="virtual-name">{t("훈련생 이름")}</label>
           </div>
           <div className="virtual-create-fields">
             <input
@@ -377,7 +407,7 @@ export default function AdminPanel() {
                 entries.length >= MAX_VIRTUAL_TRAINEES
               }
             >
-              {creating ? "추가 중…" : "추가"}
+              {creating ? t("추가 중…") : t("추가")}
             </button>
           </div>
           <FrequencySelect
@@ -405,7 +435,7 @@ export default function AdminPanel() {
         </form>
       )}
       {!busy && !error && !entries.length && (
-        <p className="hint">등록된 가상 훈련생이 없습니다.</p>
+        <p className="hint">{t("등록된 가상 훈련생이 없습니다.")}</p>
       )}
       {!busy && (
         <ul className="virtual-list">
@@ -416,12 +446,16 @@ export default function AdminPanel() {
                   <span className="virtual-list-identity">
                     <strong>{entry.characterName}</strong>
                     <small>
-                      LV. {entry.level} · 빈도 {trainingFrequency(entry)}단계 ·
-                      강도 {entry.intensity ?? DEFAULT_TRAINING_INTENSITY}단계
+                      LV. {entry.level}
+                      {t(" · 빈도 ")}
+                      {trainingFrequency(entry)}
+                      {t("단계 · 강도 ")}
+                      {entry.intensity ?? DEFAULT_TRAINING_INTENSITY}
+                      {t("단계")}
                     </small>
                   </span>
                   <span className="virtual-list-status">
-                    {entry.enabled ? "자동 운동" : "운동 중지"}
+                    {entry.enabled ? t("자동 운동") : t("운동 중지")}
                   </span>
                   <ChevronDown size={18} aria-hidden="true" />
                 </summary>
@@ -437,7 +471,9 @@ export default function AdminPanel() {
               <button
                 className="virtual-delete-button"
                 type="button"
-                aria-label={`${entry.characterName} 삭제`}
+                aria-label={t("{0} 삭제", {
+                  0: entry.characterName,
+                })}
                 disabled={deleting}
                 onClick={() => setDeleteTarget(entry.uid)}
               >
@@ -447,9 +483,14 @@ export default function AdminPanel() {
                 <div
                   className="virtual-delete-confirm"
                   role="group"
-                  aria-label={`${entry.characterName} 삭제 확인`}
+                  aria-label={t("{0} 삭제 확인", {
+                    0: entry.characterName,
+                  })}
                 >
-                  <p>{entry.characterName} 훈련생을 삭제할까요?</p>
+                  <p>
+                    {entry.characterName}
+                    {t(" 훈련생을 삭제할까요?")}
+                  </p>
                   <div className="action-buttons">
                     <button
                       className="secondary-button"
@@ -457,7 +498,7 @@ export default function AdminPanel() {
                       disabled={deleting}
                       onClick={() => setDeleteTarget(null)}
                     >
-                      취소
+                      {t("취소")}
                     </button>
                     <button
                       className="secondary-button"
@@ -465,7 +506,7 @@ export default function AdminPanel() {
                       disabled={deleting}
                       onClick={() => deleteTrainee(entry.uid)}
                     >
-                      {deleting ? "삭제 중…" : "삭제 확인"}
+                      {deleting ? t("삭제 중…") : t("삭제 확인")}
                     </button>
                   </div>
                 </div>

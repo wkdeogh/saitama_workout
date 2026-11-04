@@ -577,3 +577,9 @@
     transition: none;
   }
 }
+
+:lang(en) .field-exercises button {
+  padding: 0 4px;
+  font-size: 10px;
+  white-space: nowrap;
+}

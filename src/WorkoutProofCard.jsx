@@ -1,3 +1,4 @@
+import { t, getLocale, localizeExercise } from "./i18n/index.js";
 import { useEffect, useState } from "react";
 import { Link, Share2, Shuffle, RotateCcw } from "lucide-react";
 import { characterPortrait } from "./Character";
@@ -7,7 +8,7 @@ import {
   nextProofPose,
   proofShareData,
 } from "./workoutProofModel";
-
+import useLanguage from "./i18n/useLanguage.js";
 const font = '"Noto Sans KR", sans-serif';
 function text(
   ctx,
@@ -40,12 +41,11 @@ export async function createProofImage(proof, pose) {
   ctx.fillRect(0, 0, 1080, 198);
   ctx.fillStyle = "#ffdf48";
   ctx.fillRect(0, 0, 16, 198);
-  text(ctx, "오늘의 훈련 완료", 54, 135, 68, "#ffdf48", 900, 650);
+  text(ctx, t("오늘의 훈련 완료"), 54, 135, 68, "#ffdf48", 900, 650);
   ctx.textAlign = "right";
   text(ctx, proof.day.replaceAll("-", "."), 1026, 84, 38, "#ffffff");
-  text(ctx, "빡빡이훈련소", 1026, 141, 32, "#ffffff", 600);
+  text(ctx, t("빡빡이훈련소"), 1026, 141, 32, "#ffffff", 600);
   ctx.textAlign = "left";
-
   const glow = ctx.createRadialGradient(540, 610, 40, 540, 610, 570);
   glow.addColorStop(0, "#ffdf48");
   glow.addColorStop(0.55, "#f9e9a1");
@@ -73,7 +73,9 @@ export async function createProofImage(proof, pose) {
   if (proof.streak >= 2)
     text(
       ctx,
-      `${proof.streak}일 연속 운동 중!`,
+      t("{0}일 연속 운동 중!", {
+        0: proof.streak,
+      }),
       74,
       334,
       30,
@@ -81,21 +83,20 @@ export async function createProofImage(proof, pose) {
       800,
       600,
     );
-
   ctx.fillStyle = "#c7372b";
   ctx.fillRect(54, 926, 972, 64);
-  text(ctx, "오늘의 운동", 78, 970, 31, "#ffffff");
+  text(ctx, t("오늘의 운동"), 78, 970, 31, "#ffffff");
   ctx.textAlign = "right";
   text(
     ctx,
-    `+${recordExp(proof.counts).toLocaleString("ko-KR")} EXP`,
+    `+${recordExp(proof.counts).toLocaleString(getLocale())} EXP`,
     1000,
     970,
     32,
     "#ffffff",
   );
   ctx.textAlign = "left";
-  EXERCISES.forEach(({ key, label, unit }, index) => {
+  EXERCISES.map(localizeExercise).forEach(({ key, label, unit }, index) => {
     const x = 54 + (index % 2) * 496;
     const y = 1006 + Math.floor(index / 2) * 142;
     ctx.fillStyle = "#ffffff";
@@ -106,7 +107,7 @@ export async function createProofImage(proof, pose) {
     text(ctx, label, x + 24, y + 43, 28, "#555555", 600);
     text(
       ctx,
-      `${proof.counts[key].toLocaleString("ko-KR")} ${unit}`,
+      `${proof.counts[key].toLocaleString(getLocale())} ${unit}`,
       x + 24,
       y + 98,
       44,
@@ -117,16 +118,24 @@ export async function createProofImage(proof, pose) {
   });
   ctx.fillStyle = "#171717";
   ctx.fillRect(0, 1310, 1080, 130);
-  text(ctx, "빡빡이훈련소", 54, 1360, 28, "#ffdf48");
+  text(ctx, t("빡빡이훈련소"), 54, 1360, 28, "#ffdf48");
   text(ctx, APP_SHARE_URL, 54, 1404, 29, "#ffffff", 600);
   const blob = await new Promise((resolve) =>
     canvas.toBlob(resolve, "image/png"),
   );
   if (!blob) throw new Error("이미지를 만들지 못했습니다. 다시 시도해 주세요.");
-  return new File([blob], `오운완-${proof.day}.png`, { type: "image/png" });
+  return new File(
+    [blob],
+    t("오운완-{0}.png", {
+      0: proof.day,
+    }),
+    {
+      type: "image/png",
+    },
+  );
 }
-
 export default function WorkoutProofCard({ proof }) {
+  const { language } = useLanguage();
   const [pose, setPose] = useState(() => nextProofPose());
   const [attempt, setAttempt] = useState(0);
   const [image, setImage] = useState(null);
@@ -145,7 +154,10 @@ export default function WorkoutProofCard({ proof }) {
         .then((file) => {
           if (!active) return;
           url = URL.createObjectURL(file);
-          setImage({ file, url });
+          setImage({
+            file,
+            url,
+          });
         })
         .catch(() => {
           if (active)
@@ -159,7 +171,7 @@ export default function WorkoutProofCard({ proof }) {
       clearTimeout(timer);
       if (url) URL.revokeObjectURL(url);
     };
-  }, [proof, pose, attempt]);
+  }, [proof, pose, attempt, language]);
   async function share() {
     if (!image || sharing) return;
     const payload = proofShareData(image.file);
@@ -186,18 +198,34 @@ export default function WorkoutProofCard({ proof }) {
         {image ? (
           <img
             src={image.url}
-            alt={`${proof.day} ${proof.name} LV. ${proof.level} 오운완. ${proof.streak >= 2 ? `${proof.streak}일 연속 운동 중! ` : ""}${EXERCISES.map(({ key, label, unit }) => `${label} ${proof.counts[key]}${unit}`).join(", ")}`}
+            alt={t("{0} {1} LV. {2} 오운완. {3}{4}", {
+              0: proof.day,
+              1: proof.name,
+              2: proof.level,
+              3:
+                proof.streak >= 2
+                  ? t("{0}일 연속 운동 중! ", {
+                      0: proof.streak,
+                    })
+                  : "",
+              4: EXERCISES.map(localizeExercise)
+                .map(
+                  ({ key, label, unit }) =>
+                    `${label} ${proof.counts[key]}${unit}`,
+                )
+                .join(", "),
+            })}
           />
         ) : (
           <div className="proof-loading" role="status">
-            {error || "인증 이미지 만드는 중…"}
+            {t(error || t("인증 이미지 만드는 중…"))}
             {error && (
               <button
                 className="secondary-button"
                 onClick={() => setAttempt((n) => n + 1)}
               >
                 <RotateCcw size={17} />
-                다시 시도
+                {t("다시 시도")}
               </button>
             )}
           </div>
@@ -210,7 +238,7 @@ export default function WorkoutProofCard({ proof }) {
           onClick={() => setPose(nextProofPose(pose))}
         >
           <Shuffle size={17} />
-          다른포즈
+          {t("다른포즈")}
         </button>
         <button
           className="secondary-button"
@@ -225,7 +253,7 @@ export default function WorkoutProofCard({ proof }) {
           }}
         >
           <Link size={17} />
-          링크복사
+          {t("링크복사")}
         </button>
         <button
           className="primary-button"
@@ -233,12 +261,12 @@ export default function WorkoutProofCard({ proof }) {
           onClick={share}
         >
           <Share2 size={17} />
-          {sharing ? "공유 중…" : "공유"}
+          {sharing ? t("공유 중…") : t("공유")}
         </button>
       </div>
       {message && (
         <p className="proof-message" role="status">
-          {message}
+          {t(message)}
         </p>
       )}
     </div>

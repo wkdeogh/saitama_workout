@@ -1,5 +1,5 @@
+import { t } from "./i18n/index.js";
 import { STREAK_REWARDS } from "./characterAppearance";
-
 export default function StreakNickname({ name, streak = 0, dark = false }) {
   const stage = Math.min(
     6,
@@ -10,7 +10,10 @@ export default function StreakNickname({ name, streak = 0, dark = false }) {
   return (
     <span
       className={`streak-nickname${dark ? " streak-nickname-dark" : ""}`}
-      title={`${streak}일 연속 운동 · ${stage}단계`}
+      title={t("{0}일 연속 운동 · {1}단계", {
+        0: streak,
+        1: stage,
+      })}
       style={{
         "--streak-shine": `#${reward.color.toString(16).padStart(6, "0")}`,
       }}

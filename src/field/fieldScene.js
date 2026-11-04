@@ -1,3 +1,4 @@
+import { t } from "../i18n/index.js";
 import * as THREE from "three";
 import { createAvatar } from "./fieldAvatar";
 import { createMap } from "./fieldMap";
@@ -27,7 +28,9 @@ export function createFieldScene(
   host.appendChild(renderer.domElement);
   renderer.domElement.setAttribute(
     "aria-label",
-    "야외 훈련장 3D 화면. WASD 또는 방향키로 이동하고 화면을 드래그해 둘러보세요.",
+    t(
+      "야외 훈련장 3D 화면. WASD 또는 방향키로 이동하고 화면을 드래그해 둘러보세요.",
+    ),
   );
   const scene = new THREE.Scene();
   scene.background = new THREE.Color(0xc9e1e5);

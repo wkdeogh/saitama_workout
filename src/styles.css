@@ -3767,3 +3767,45 @@ main {
   padding: 0;
   min-width: 0;
 }
+
+.language-settings label {
+  display: block;
+  margin-bottom: 10px;
+  font-size: 14px;
+  font-weight: 700;
+}
+.language-settings select {
+  width: 100%;
+  min-height: 44px;
+  padding: 10px 12px;
+  border: 1px solid #aaa;
+  border-radius: 6px;
+  background: #fff;
+  color: #171717;
+  font: inherit;
+  font-size: 16px;
+}
+:lang(en) .guide-intro {
+  font-family: "Arial Black", "Noto Sans KR", sans-serif;
+  font-weight: 900;
+}
+:lang(en) .guide-intro .training-motto {
+  font-weight: 900;
+  font-size: clamp(18px, 5.4vw, 24px);
+}
+:lang(en) .mobile-nav button {
+  font-size: 10px;
+}
+:lang(en) .exercise-top h3 {
+  overflow-wrap: anywhere;
+}
+:lang(en) .hero-title h2 {
+  overflow-wrap: anywhere;
+}
+:lang(en) .brand-thin {
+  margin-left: 4px;
+}
+:lang(en) .kakao-login {
+  font-size: 15px;
+  font-weight: 700;
+}
