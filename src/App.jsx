@@ -62,7 +62,9 @@ import {
   hasWorkout,
   stats,
   validateData,
-  saveRecord,
+  saveTodayRecord,
+  deleteTodayRecord,
+  DAILY_WORKOUT_LIMITS,
   updateGoals,
   monthCells,
   stageIndex,
@@ -242,7 +244,7 @@ function CharacterNameForm({ initialName = "", onSave, autofocus = false }) {
         }}
       />
       <p id="character-name-hint" className="hint">
-        최대 20자 · 설정에서 변경 가능
+        최대 20자
       </p>
       {message && (
         <p className="error-box" role="alert">
@@ -290,7 +292,8 @@ function ExerciseIcon({ type }) {
   );
 }
 function WorkoutCard({ type, label, value, goal, onChange }) {
-  const { unit, step, max } = EXERCISES.find(({ key }) => key === type);
+  const { unit, step } = EXERCISES.find(({ key }) => key === type);
+  const max = DAILY_WORKOUT_LIMITS[type];
   const running = type === "runningKm";
   const done = goal > 0 && Number(value) >= goal;
   const add = (amount) =>
@@ -320,7 +323,9 @@ function WorkoutCard({ type, label, value, goal, onChange }) {
           disabled={!goal}
           aria-pressed={done}
           onClick={() =>
-            onChange(done ? 0 : Math.max(Number(value) || 0, goal))
+            onChange(
+              done ? 0 : Math.min(max, Math.max(Number(value) || 0, goal)),
+            )
           }
         >
           <Check size={17} />
@@ -373,7 +378,12 @@ function WorkoutCard({ type, label, value, goal, onChange }) {
       </div>
       <div className="quick-add">
         {(running ? [0.1, 1] : [10, 25]).map((n) => (
-          <button type="button" key={n} onClick={() => add(n)}>
+          <button
+            type="button"
+            key={n}
+            disabled={Number(value) >= max}
+            onClick={() => add(n)}
+          >
             +{n}
             {unit}
           </button>
@@ -381,7 +391,9 @@ function WorkoutCard({ type, label, value, goal, onChange }) {
         <button
           type="button"
           disabled={!goal}
-          onClick={() => onChange(Math.max(Number(value) || 0, goal))}
+          onClick={() =>
+            onChange(Math.min(max, Math.max(Number(value) || 0, goal)))
+          }
         >
           목표 채우기 <Check size={13} />
         </button>
@@ -687,6 +699,7 @@ export default function App() {
     [month, setMonth] = useState(new Date()),
     [tab, setTab] = useState("home"),
     [settings, setSettings] = useState(false),
+    [nameEditOpen, setNameEditOpen] = useState(false),
     [helpOpen, setHelpOpen] = useState(false),
     [toast, setToast] = useState(""),
     [celebrate, setCelebrate] = useState(false),
@@ -710,9 +723,11 @@ export default function App() {
     ({ key }) => String(draft[key]) !== String(record?.[key] || 0),
   );
   const progress = summary.level === MAX_LEVEL ? 100 : summary.progressExp;
+  const recordEditable = selected === today;
   const expDelta = recordExp(draft) - recordExp(record);
   useEffect(() => {
     setSettings(false);
+    setNameEditOpen(false);
     setHelpOpen(false);
     setRankingUser(null);
     setProof(null);
@@ -752,6 +767,7 @@ export default function App() {
       !data.characterName ||
       error ||
       settings ||
+      nameEditOpen ||
       helpOpen ||
       proof ||
       rankingUser ||
@@ -776,6 +792,7 @@ export default function App() {
     data.characterName,
     error,
     settings,
+    nameEditOpen,
     helpOpen,
     proof,
     rankingUser,
@@ -856,7 +873,7 @@ export default function App() {
         throw new Error(
           "운동량을 입력해 주세요. 하지 않은 운동은 0으로 입력하면 됩니다.",
         );
-      const nextData = saveRecord(
+      const nextData = saveTodayRecord(
         data,
         selected,
         Object.fromEntries(
@@ -909,6 +926,7 @@ export default function App() {
     ["growth", Sparkles, "성장 도감"],
     ["ranking", Trophy, "친구"],
   ];
+  const mobileNav = [nav[0], nav[2], nav[1], nav[3]];
   if (account.authLoading || !account.ready)
     return <LoginScreen account={account} />;
   return (
@@ -1096,6 +1114,7 @@ export default function App() {
                 name={characterName}
                 level={summary.level}
                 streak={summary.streak}
+                onEditName={() => setNameEditOpen(true)}
               />
             )}
             {tab === "ranking" &&
@@ -1189,71 +1208,80 @@ export default function App() {
                     </span>
                   </div>
                   <form onSubmit={save}>
-                    <div className="exercise-grid">
-                      {EXERCISES.map(({ key, label }) => (
-                        <WorkoutCard
-                          key={key}
-                          type={key}
-                          label={label}
-                          value={draft[key]}
-                          goal={goals[key]}
-                          onChange={(value) =>
-                            setDraft({ ...draft, [key]: value })
-                          }
-                        />
-                      ))}
-                    </div>
-                    {formError && (
-                      <p className="error-box" role="alert">
-                        {formError}
-                      </p>
-                    )}
-                    <div className="workout-save-actions">
-                      <button
-                        className={`primary-button save-button ${isComplete(record) && !dirty ? "saved" : ""}`}
-                        type="submit"
-                        disabled={!!error || (!dirty && !!record)}
-                      >
-                        <Check size={18} />
-                        {!dirty && record
-                          ? "기록 저장 완료"
-                          : record
-                            ? "변경한 기록 저장"
-                            : "운동 기록 저장"}
-                        {dirty && (
-                          <span>
-                            {expDelta >= 0 ? "+" : ""}
-                            {number(expDelta)} EXP
-                          </span>
-                        )}
-                      </button>
-                      {selected === today && (
-                        <button
-                          type="button"
-                          className="proof-button"
-                          onClick={openProof}
-                          disabled={!!error || !hasWorkout(draft)}
-                          aria-haspopup="dialog"
-                        >
-                          <Camera size={19} />
-                          오운완
-                        </button>
+                    <fieldset
+                      className="workout-fields"
+                      disabled={!recordEditable}
+                    >
+                      <div className="exercise-grid">
+                        {EXERCISES.map(({ key, label }) => (
+                          <WorkoutCard
+                            key={key}
+                            type={key}
+                            label={label}
+                            value={draft[key]}
+                            goal={goals[key]}
+                            onChange={(value) =>
+                              setDraft({ ...draft, [key]: value })
+                            }
+                          />
+                        ))}
+                      </div>
+                      {formError && (
+                        <p className="error-box" role="alert">
+                          {formError}
+                        </p>
                       )}
-                    </div>
+                      <div className="workout-save-actions">
+                        <button
+                          className={`primary-button save-button ${isComplete(record) && !dirty ? "saved" : ""}`}
+                          type="submit"
+                          disabled={
+                            !recordEditable || !!error || (!dirty && !!record)
+                          }
+                        >
+                          <Check size={18} />
+                          {!dirty && record
+                            ? "기록 저장 완료"
+                            : record
+                              ? "변경한 기록 저장"
+                              : "운동 기록 저장"}
+                          {dirty && (
+                            <span>
+                              {expDelta >= 0 ? "+" : ""}
+                              {number(expDelta)} EXP
+                            </span>
+                          )}
+                        </button>
+                        {selected === today && (
+                          <button
+                            type="button"
+                            className="proof-button"
+                            onClick={openProof}
+                            disabled={!!error || !hasWorkout(draft)}
+                            aria-haspopup="dialog"
+                          >
+                            <Camera size={19} />
+                            오운완
+                          </button>
+                        )}
+                      </div>
+                    </fieldset>
                     <div className="record-footer">
                       <span>
                         <ShieldCheck size={12} />
-                        {dirty
-                          ? "아직 저장하지 않은 기록이에요"
-                          : account.busy
-                            ? "동기화 중…"
-                            : account.pending
-                              ? "기기 저장 · 동기화 대기"
-                              : account.user
-                                ? "계정에 저장됨"
-                                : "이 기기에만 저장됨"}
+                        {!recordEditable
+                          ? "지난 기록 · 조회만 가능"
+                          : dirty
+                            ? "아직 저장하지 않은 기록이에요"
+                            : account.busy
+                              ? "동기화 중…"
+                              : account.pending
+                                ? "기기 저장 · 동기화 대기"
+                                : account.user
+                                  ? "계정에 저장됨"
+                                  : "이 기기에만 저장됨"}
                       </span>
-                      {record && (
+                      {record && recordEditable && (
                         <button
                           type="button"
                           onClick={() => setDeleteOpen(true)}
@@ -1338,7 +1366,7 @@ export default function App() {
         </footer>
       </main>
       <nav className="mobile-nav" aria-label="모바일 주 메뉴">
-        {nav.map(([id, Icon, label]) => (
+        {mobileNav.map(([id, Icon, label]) => (
           <button
             key={id}
             className={tab === id ? "active" : ""}
@@ -1398,6 +1426,20 @@ export default function App() {
           onClose={() => setSettings(false)}
         />
       )}{" "}
+      {nameEditOpen && (
+        <Modal title="닉네임 변경" onClose={() => setNameEditOpen(false)}>
+          <CharacterNameForm
+            initialName={characterName}
+            autofocus
+            onSave={(characterName) => {
+              if (!persist({ ...data, characterName })) return false;
+              setNameEditOpen(false);
+              notify("캐릭터 이름을 저장했습니다.");
+              return true;
+            }}
+          />
+        </Modal>
+      )}
       {deleteOpen && (
         <Modal
           title="이 날짜의 기록을 삭제할까요?"
@@ -1417,9 +1459,15 @@ export default function App() {
             <button
               className="primary-button"
               onClick={() => {
-                const records = { ...data.records };
-                delete records[selected];
-                if (persist({ ...data, records })) {
+                let next;
+                try {
+                  next = deleteTodayRecord(data, selected, dateKey());
+                } catch (error) {
+                  setDeleteOpen(false);
+                  notify(error.message);
+                  return;
+                }
+                if (persist(next)) {
                   setDeleteOpen(false);
                   notify("해당 날짜의 기록을 삭제했어요.");
                 }

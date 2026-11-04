@@ -1,11 +1,17 @@
 import { lazy, Suspense, useState } from "react";
-import { TreePine, ArrowRight, LoaderCircle } from "lucide-react";
+import { TreePine, ArrowRight, LoaderCircle, Pencil } from "lucide-react";
 import Character from "../Character";
 import "./field.css";
 
 const OutdoorWorld = lazy(() => import("./OutdoorWorld"));
 
-export default function OutdoorTraining({ user, name, level, streak }) {
+export default function OutdoorTraining({
+  user,
+  name,
+  level,
+  streak,
+  onEditName,
+}) {
   const [entered, setEntered] = useState(false);
   return (
     <section className="field-lobby panel">
@@ -23,6 +29,17 @@ export default function OutdoorTraining({ user, name, level, streak }) {
       </div>
       <div className="field-lobby-name">
         <strong>{name}</strong>
+        {onEditName && (
+          <button
+            type="button"
+            className="field-edit-name"
+            aria-label="닉네임 편집"
+            aria-haspopup="dialog"
+            onClick={onEditName}
+          >
+            <Pencil size={16} aria-hidden="true" />
+          </button>
+        )}
         <span>LV. {level}</span>
       </div>
       <button className="field-enter" onClick={() => setEntered(true)}>

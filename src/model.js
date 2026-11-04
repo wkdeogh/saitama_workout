@@ -1,5 +1,32 @@
 export const STORAGE_KEY = "saitama-training:v1";
 export const MAX_REPS = 10000;
+// Input limits are separate from legacy storage limits so existing records load losslessly.
+export const DAILY_WORKOUT_LIMITS = {
+  pushups: 300,
+  squats: 300,
+  situps: 300,
+  runningKm: 60,
+};
+export function assertTodayRecord(date, today = dateKey()) {
+  if (!isDateKey(date) || date !== today)
+    throw new Error("오늘 날짜의 운동 기록만 입력·수정할 수 있어요.");
+}
+export function saveTodayRecord(data, date, counts, today = dateKey()) {
+  assertTodayRecord(date, today);
+  for (const { key, label, unit } of EXERCISES) {
+    if (counts?.[key] > DAILY_WORKOUT_LIMITS[key])
+      throw new Error(
+        `${label} 기록은 하루 최대 ${DAILY_WORKOUT_LIMITS[key]}${unit}까지 입력할 수 있어요.`,
+      );
+  }
+  return saveRecord(data, date, counts, today);
+}
+export function deleteTodayRecord(data, date, today = dateKey()) {
+  assertTodayRecord(date, today);
+  const records = { ...data.records };
+  delete records[date];
+  return { ...data, records };
+}
 export const MAX_NAME_LENGTH = 20;
 export function validateName(value, allowEmpty = false) {
   if (typeof value !== "string")

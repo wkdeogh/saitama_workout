@@ -5,13 +5,33 @@ import {
   Trophy,
   Camera,
   Smartphone,
+  TreePine,
   ChevronLeft,
   ChevronRight,
   Check,
 } from "lucide-react";
 import { swipePage } from "./onboardingModel";
+import TrainingMotto from "./TrainingMotto";
 
 const pages = [
+  {
+    title: "소개",
+    intro: true,
+    content: (
+      <blockquote className="guide-intro">
+        <p className="guide-intro-opening">
+          “너희들에게도 알려주지. 내가 어떻게 강해졌는지.”
+        </p>
+        <TrainingMotto />
+        <ol className="guide-intro-rules">
+          <li>아무리 힘들어도 매일 계속할 것!</li>
+          <li>여름에는 에어컨, 겨울에는 난방을 사용하지 않을 것!</li>
+          <li>하루 세 끼를 먹되, 아침에는 바나나 하나만 먹어도 괜찮다!</li>
+          <li>이걸 3년 동안 계속한다!</li>
+        </ol>
+      </blockquote>
+    ),
+  },
   {
     title: "운동 입력과 목표",
     icon: Dumbbell,
@@ -42,6 +62,41 @@ const pages = [
           양심껏.
           <br />
           실제로 운동한 만큼만 입력하시오.
+        </p>
+      </>
+    ),
+  },
+  {
+    title: "야외 훈련장",
+    icon: TreePine,
+    content: (
+      <>
+        <p>
+          비회원도 다른 유저와 같은 3D 공간에서 만날 수 있습니다. 야외 훈련장
+          탭에서 <strong>입장하기</strong>를 누르세요. 이름 옆 연필 버튼으로
+          닉네임을 바꿀 수 있습니다.
+        </p>
+        <ul>
+          <li>
+            <strong>이동·시점</strong> · PC는 WASD·방향키, 모바일은 왼쪽 아래
+            조이스틱으로 이동합니다. 화면을 드래그하면 카메라가 회전합니다.
+          </li>
+          <li>
+            <strong>푸쉬업·스쿼트</strong> · 버튼을 누르면 동작을 반복합니다.
+            다시 누르거나 이동하면 멈춥니다.
+          </li>
+          <li>
+            <strong>달리기 ON / OFF</strong> · 버튼으로 달리기와 걷기를
+            전환합니다.
+          </li>
+          <li>
+            <strong>채팅</strong> · 말풍선 버튼을 눌러 메시지를 보내세요. 다른
+            유저의 닉네임과 말풍선은 가까이 가면 보입니다.
+          </li>
+        </ul>
+        <p>
+          오른쪽 위 <strong>나가기</strong>로 돌아옵니다. 이곳의 동작은 운동
+          기록이나 EXP에 반영되지 않습니다.
         </p>
       </>
     ),
@@ -279,10 +334,14 @@ export default function OnboardingGuide({ onClose }) {
           key={page}
           className={`guide-page ${direction > 0 ? "from-right" : "from-left"}`}
         >
-          <div className="guide-icon">
-            <Icon size={28} aria-hidden="true" />
-          </div>
-          <h3>{current.title}</h3>
+          {!current.intro && (
+            <>
+              <div className="guide-icon">
+                <Icon size={28} aria-hidden="true" />
+              </div>
+              <h3>{current.title}</h3>
+            </>
+          )}
           {current.content}
         </section>
       </div>

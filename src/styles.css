@@ -1,4 +1,11 @@
 @import url("https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700;800;900&display=swap");
+@font-face {
+  font-family: "Black Han Sans";
+  src: url("/fonts/BlackHanSans-Regular.ttf") format("truetype");
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+}
 :root {
   font-family:
     "Noto Sans KR",
@@ -2600,6 +2607,23 @@ main {
   font-size: 28px;
   margin: 20px 0 12px;
 }
+.training-motto {
+  display: block;
+  font-size: 19px;
+  font-weight: 800;
+  line-height: 1.65;
+  overflow-wrap: anywhere;
+}
+.training-motto > span {
+  display: block;
+}
+.training-motto-finale {
+  margin-top: 12px;
+}
+.login-card .training-motto {
+  margin: 24px 0;
+  font-size: clamp(16px, 4.5vw, 19px);
+}
 .login-card > p {
   font-size: 14px;
   line-height: 1.6;
@@ -2930,6 +2954,37 @@ main {
 }
 .guide-page p {
   margin: 12px 0;
+}
+.guide-intro {
+  margin: 0;
+  text-align: center;
+  font-family: "Black Han Sans", "Noto Sans KR", sans-serif;
+}
+.guide-intro-opening {
+  color: #444;
+  font-size: 17px;
+  word-break: keep-all;
+  text-wrap: balance;
+}
+.guide-intro .training-motto {
+  margin: 20px 0 24px;
+  font-size: 24px;
+  font-weight: 400;
+  line-height: 1.55;
+}
+.guide-intro .guide-intro-rules {
+  padding: 0;
+  list-style-position: inside;
+  color: #666;
+  font-size: 12px;
+  font-weight: 400;
+  font-family: "Noto Sans KR", sans-serif;
+  word-break: keep-all;
+  text-wrap: balance;
+}
+.guide-intro .guide-intro-rules li {
+  padding: 0;
+  margin-bottom: 8px;
 }
 .guide-page ul,
 .guide-page ol {
@@ -3704,4 +3759,11 @@ main {
   .streak-nickname-dark {
     color: #ffffff;
   }
+}
+
+.workout-fields {
+  border: 0;
+  margin: 0;
+  padding: 0;
+  min-width: 0;
 }
