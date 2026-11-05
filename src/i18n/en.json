@@ -583,5 +583,6 @@
   "슈퍼코드가 올바르지 않습니다.": "The super code is incorrect.",
   "슈퍼코드를 적용하지 못했습니다. 잠시 후 다시 시도해 주세요.": "Could not apply the super code. Please try again later.",
   "슈퍼코드 서버에 연결하지 못했습니다. 다시 시도해 주세요.": "Could not connect to the super code server. Please try again.",
-  "계정 상태를 확인하지 못했습니다. 다시 시도해 주세요.": "Could not verify your account status. Please try again."
+  "계정 상태를 확인하지 못했습니다. 다시 시도해 주세요.": "Could not verify your account status. Please try again.",
+  "자세한 이용 안내": "Detailed user guide"
 }

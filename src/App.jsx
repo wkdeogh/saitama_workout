@@ -28,11 +28,10 @@ import {
 import Character from "./Character";
 import WorkoutProofCard from "./WorkoutProofCard";
 import OnboardingGuide from "./OnboardingGuide";
-import AdCard from "./ads/AdCard";
-import AdSenseRuntime from "./ads/AdSenseRuntime";
 import useAdAccess from "./ads/useAdAccess";
 import OutdoorTraining from "./field/OutdoorTraining";
 import PrivacyLink from "./PrivacyLink";
+import PublicGuideLink from "./PublicGuideLink";
 import { claimOnboarding } from "./onboardingModel";
 import { workoutProof } from "./workoutProofModel";
 import { guestCharacterName } from "./guestModel";
@@ -1098,7 +1097,6 @@ export default function App() {
     return <LoginScreen account={account} />;
   return (
     <>
-      <AdSenseRuntime access={adAccess} />
       <header className="site-header">
         <div className="header-inner">
           <button className="brand" onClick={() => navigate("home")}>
@@ -1568,11 +1566,11 @@ export default function App() {
                 </p>
               </section>
             )}
-            {tab === "home" && <AdCard enabled={adAccess.allowed} />}
           </div>
         </div>
         <footer className="page-footer">
           <span>BBAKBAK TRAINING © {new Date().getFullYear()}</span>
+          <PublicGuideLink />
           <PrivacyLink />
         </footer>
       </main>

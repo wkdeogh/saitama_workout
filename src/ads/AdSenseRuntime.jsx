@@ -6,7 +6,7 @@ export default function AdSenseRuntime({ access }) {
   const started = useRef(null),
     reloading = useRef(false);
   useEffect(() => {
-    if (!["connect", "adsense"].includes(config.mode) || !access.ready) return;
+    if (config.mode !== "adsense" || !access.ready) return;
     // An SDK that already ran cannot be safely unloaded. Start a clean document
     // after account/entitlement changes so its frames and timers cannot survive.
     if (

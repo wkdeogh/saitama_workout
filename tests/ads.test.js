@@ -3,33 +3,45 @@ import assert from "node:assert/strict";
 import { adConfig, ADSENSE_CLIENT } from "../src/ads/adConfig.js";
 import { loadAdSense } from "../src/ads/loadAdSense.js";
 
-test("publisher connection is enabled in production; manual cards still require a slot", () => {
-  assert.deepEqual(adConfig({}), { mode: "connect", client: ADSENSE_CLIENT });
-  assert.deepEqual(adConfig({ VITE_ADS_MODE: "off" }), { mode: "off" });
-  assert.deepEqual(adConfig({ DEV: true }), { mode: "preview" });
-  assert.deepEqual(adConfig({ DEV: true, VITE_ADS_MODE: "off" }), {
-    mode: "off",
+test("review mode disables real ads and legacy shared SDK configuration", () => {
+  assert.deepEqual(adConfig({}), { mode: "off" });
+  assert.deepEqual(adConfig({ DEV: true }), { mode: "off" });
+  for (const mode of ["off", "connect", "invalid", "preview"]) {
+    assert.deepEqual(adConfig({ VITE_ADS_MODE: mode }), { mode: "off" });
+  }
+  assert.deepEqual(adConfig({ DEV: true, VITE_ADS_MODE: "preview" }), {
+    mode: "preview",
   });
-  for (const values of [
-    {},
-    { VITE_ADSENSE_CLIENT: "ca-pub-123", VITE_ADSENSE_SLOT: "1234" },
-    { VITE_ADSENSE_CLIENT: "ca-pub-1234567890123456", VITE_ADSENSE_SLOT: "" },
-    {
-      VITE_ADSENSE_CLIENT: "ca-pub-1234567890123456",
-      VITE_ADSENSE_SLOT: "<script>",
-    },
-  ])
-    assert.deepEqual(adConfig({ ...values, VITE_ADS_MODE: "adsense" }), {
+  assert.deepEqual(
+    adConfig({ VITE_ADS_MODE: "connect", VITE_ADS_APPROVED: "true" }),
+    { mode: "off" },
+  );
+});
+
+test("future manual ads require explicit approval and a valid real unit", () => {
+  const manual = {
+    VITE_ADS_MODE: "adsense",
+    VITE_ADSENSE_CLIENT: "ca-pub-1234567890123456",
+    VITE_ADSENSE_SLOT: "1234567890",
+  };
+  for (const approved of [undefined, false, true, "false", "1"])
+    assert.deepEqual(adConfig({ ...manual, VITE_ADS_APPROVED: approved }), {
       mode: "off",
     });
-  assert.deepEqual(
-    adConfig({
-      VITE_ADS_MODE: "adsense",
-      VITE_ADSENSE_CLIENT: " ca-pub-1234567890123456 ",
-      VITE_ADSENSE_SLOT: " 1234567890 ",
-    }),
-    { mode: "adsense", client: "ca-pub-1234567890123456", slot: "1234567890" },
-  );
+  for (const values of [
+    { VITE_ADSENSE_CLIENT: "ca-pub-123" },
+    { VITE_ADSENSE_SLOT: "" },
+    { VITE_ADSENSE_SLOT: "<script>" },
+  ])
+    assert.deepEqual(
+      adConfig({ ...manual, ...values, VITE_ADS_APPROVED: "true" }),
+      { mode: "off" },
+    );
+  assert.deepEqual(adConfig({ ...manual, VITE_ADS_APPROVED: "true" }), {
+    mode: "adsense",
+    client: manual.VITE_ADSENSE_CLIENT,
+    slot: manual.VITE_ADSENSE_SLOT,
+  });
 });
 
 function fakeDocument() {
@@ -85,14 +97,10 @@ test("SDK timeout settles and a late load cannot start ad requests", async (t) =
   assert.equal(doc.scripts[0].removed, true);
 });
 
-test("publisher config never fabricates a manual slot from a script-only connection", () => {
-  assert.deepEqual(adConfig({ VITE_ADS_MODE: "connect" }), {
-    mode: "connect",
-    client: "ca-pub-6094417231997652",
-  });
-  assert.deepEqual(adConfig({ VITE_ADS_MODE: "adsense" }), { mode: "off" });
+test("publisher identity is retained independently of ad delivery", () => {
+  assert.equal(ADSENSE_CLIENT, "ca-pub-6094417231997652");
   assert.deepEqual(
-    adConfig({ VITE_ADS_MODE: "connect", VITE_ADSENSE_CLIENT: "invalid" }),
+    adConfig({ VITE_ADS_MODE: "adsense", VITE_ADS_APPROVED: "true" }),
     { mode: "off" },
   );
 });

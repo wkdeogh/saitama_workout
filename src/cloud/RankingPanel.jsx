@@ -21,6 +21,7 @@ import { stats } from "../model";
 import StreakNickname from "../StreakNickname";
 import useKoreaDay from "./useKoreaDay";
 import PrivacyLink from "../PrivacyLink";
+import PublicGuideLink from "../PublicGuideLink";
 import TrainingMotto from "../TrainingMotto";
 function DailyExp({ entry, day, dark = false }) {
   const { todayExp } = displayedDailyActivity(entry, day);
@@ -124,6 +125,7 @@ export function LoginScreen({ account }) {
         />
         <TrainingMotto />
         <p role="status">{t("기록을 불러오는 중…")}</p>
+        <PublicGuideLink />
         <PrivacyLink />
         {account.message && (
           <p className="error-box" role="alert">
