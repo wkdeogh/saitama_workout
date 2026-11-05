@@ -2922,6 +2922,19 @@ main {
 .account-button:hover {
   background: #eee;
 }
+@media (max-width: 760px) {
+  .header-actions {
+    gap: 0;
+  }
+  .header-actions > button {
+    width: 40px;
+    height: 44px;
+    padding: 0;
+    display: grid;
+    place-items: center;
+    flex-shrink: 0;
+  }
+}
 .super-account-section label {
   display: block;
   margin-bottom: 8px;
@@ -2976,15 +2989,6 @@ main {
   }
   .brand small {
     letter-spacing: 1px;
-  }
-  .header-actions {
-    gap: 2px;
-  }
-  .header-actions .settings-button {
-    width: 44px;
-    min-height: 44px;
-    padding: 0;
-    justify-content: center;
   }
 }
 .guide-progress {
