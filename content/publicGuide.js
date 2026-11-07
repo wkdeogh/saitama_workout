@@ -292,7 +292,7 @@ export const guidePages = [
         ],
         [
           "오운완의 공유와 링크복사는 무엇이 다른가요?",
-          "<p>오운완을 누르면 오늘 기록을 저장하고 캐릭터 인증 이미지를 만듭니다. 공유는 이미지를 전달하고, 링크복사는 앱 주소를 복사합니다. 링크를 받은 사람이 내 개인 운동 기록에 자동으로 접근할 수 있는 것은 아닙니다.</p>",
+          "<p>오운완을 누르면 오늘 기록을 저장하고 캐릭터 인증 이미지를 만듭니다. 주소 공유를 누르면 앱 주소를 먼저 공유하고, 돌아온 뒤 이미지 공유를 눌러 같은 대화에 인증 이미지를 공유합니다. 링크복사는 앱 주소를 복사합니다. 링크를 받은 사람이 내 개인 운동 기록에 자동으로 접근할 수 있는 것은 아닙니다.</p>",
         ],
         [
           "홈 화면에 추가할 수 있나요?",
@@ -329,7 +329,7 @@ export const guidePages = [
         ],
         [
           "How do Share and Copy link differ?",
-          "<p>Workout proof saves today’s record and creates a character image. Share sends that image; Copy link copies the app address. Receiving an app link does not automatically grant access to your private workout records.</p>",
+          "<p>Workout proof saves today’s record and creates a character image. Share link sends the app address first. Return and select Share image to share the proof image to the same conversation. Copy link copies the app address. Receiving an app link does not automatically grant access to your private workout records.</p>",
         ],
         [
           "Can I add the app to my Home Screen?",

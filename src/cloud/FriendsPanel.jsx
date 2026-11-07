@@ -87,10 +87,15 @@ export default function FriendsPanel({ account, data, onUser, friends }) {
           ? "outgoing"
           : "none";
   const identity = (user) => (
-    <div className="friend-person">
+    <button
+      className="friend-person friend-profile-button"
+      aria-haspopup="dialog"
+      onClick={() => onUser(user)}
+      aria-label={t("{0} 상세 보기", { 0: user.name || t("이름 미설정") })}
+    >
       <strong>{user.name || t("이름 미설정")}</strong>
       <small>#{user.tag}</small>
-    </div>
+    </button>
   );
   return (
     <>

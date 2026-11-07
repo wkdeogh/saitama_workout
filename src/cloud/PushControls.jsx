@@ -17,23 +17,34 @@ export default function PushControls({ uid }) {
     [busy, setBusy] = useState(false),
     [error, setError] = useState("");
   useEffect(() => {
-    setEnabled(
-      pushPreference(uid) &&
-        pushAvailable() &&
-        Notification.permission === "granted",
-    );
+    const refresh = () =>
+      setEnabled(
+        pushPreference(uid) &&
+          pushAvailable() &&
+          Notification.permission === "granted",
+      );
+    refresh();
+    window.addEventListener("saitama-push-change", refresh);
+    window.addEventListener("focus", refresh);
+    window.addEventListener("storage", refresh);
+    return () => {
+      window.removeEventListener("saitama-push-change", refresh);
+      window.removeEventListener("focus", refresh);
+      window.removeEventListener("storage", refresh);
+    };
   }, [uid]);
   return (
     <div className="friend-push">
       <div>
         <strong>
           <Bell size={16} />
-          {t("친구 요청 알림")}
+          {t("친구 요청 · 따봉 알림")}
         </strong>
         <p>{t("아이폰: 홈 화면에 추가한 앱에서 알림 허용")}</p>
       </div>
       <button
         className="secondary-button"
+        aria-pressed={enabled}
         disabled={busy || !pushAvailable()}
         onClick={async () => {
           setBusy(true);

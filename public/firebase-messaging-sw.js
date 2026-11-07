@@ -12,8 +12,18 @@ self.addEventListener("notificationclick", (event) => {
       );
       if (existing) {
         await existing.focus();
-        existing.postMessage({ type: "OPEN_FRIENDS" });
-      } else await self.clients.openWindow("/?view=friends");
+        existing.postMessage({
+          type:
+            event.notification.data?.url === "/?view=kudos"
+              ? "OPEN_KUDOS"
+              : "OPEN_FRIENDS",
+        });
+      } else
+        await self.clients.openWindow(
+          event.notification.data?.url === "/?view=kudos"
+            ? "/?view=kudos"
+            : "/?view=friends",
+        );
     })(),
   );
 });
@@ -51,11 +61,16 @@ async function currentUser() {
 }
 firebase.messaging().onBackgroundMessage(async (payload) => {
   if (!payload.data?.uid || (await currentUser()) !== payload.data.uid) return;
-  return self.registration.showNotification("친구 요청", {
+  return self.registration.showNotification(payload.data.title || "친구 요청", {
     body: payload.data?.body || "새 친구 요청이 도착했습니다.",
     icon: "/icons/icon-192.png",
     badge: "/icons/icon-192.png",
-    tag: `friend-${payload.data?.requestTag || "request"}`,
-    data: { url: "/?view=friends" },
+    tag:
+      payload.data.notificationTag ||
+      `friend-${payload.data?.requestTag || "request"}`,
+    data: {
+      url:
+        payload.data.url === "/?view=kudos" ? "/?view=kudos" : "/?view=friends",
+    },
   });
 });

@@ -221,6 +221,8 @@ test("friend inbox belongs to its recipient and social identities are server con
     "friendLists/owner",
     "friendCooldowns/pair",
     "pushDevices/token",
+    "dailyKudos/owner/days/2026-11-07",
+    "dailyKudos/owner/days/2026-11-07/senders/other",
   ]) {
     await assertFails(getDoc(doc(authed("owner"), path)));
     await assertFails(setDoc(doc(authed("owner"), path), { uid: "owner" }));

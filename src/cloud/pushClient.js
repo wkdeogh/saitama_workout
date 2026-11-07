@@ -14,10 +14,21 @@ export function pushPreference(uid) {
     return false;
   }
 }
+export function notificationsMuted(uid) {
+  try {
+    return localStorage.getItem(`saitama-push:${uid}`) === "off";
+  } catch {
+    return false;
+  }
+}
+export function declinePush(uid) {
+  preference(uid, "off");
+}
 function preference(uid, value) {
   try {
     localStorage.setItem(`saitama-push:${uid}`, value);
   } catch {}
+  window.dispatchEvent(new Event("saitama-push-change"));
 }
 export function setPushIdentity(uid) {
   return new Promise((resolve, reject) => {
@@ -108,11 +119,11 @@ export async function listenForeground(uid) {
     )
       return;
     const registration = await navigator.serviceWorker.getRegistration("/");
-    await registration?.showNotification("친구 요청", {
+    await registration?.showNotification(payload.data.title || "친구 요청", {
       body: payload.data.body,
       icon: "/icons/icon-192.png",
-      tag: `friend-${payload.data.requestTag}`,
-      data: { url: "/?view=friends" },
+      tag: payload.data.notificationTag || `friend-${payload.data.requestTag}`,
+      data: { url: payload.data.url || "/?view=friends" },
     });
   });
 }

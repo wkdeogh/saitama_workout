@@ -49,13 +49,14 @@ export default function useFriends(account) {
   }, [refresh, account.lastSync]);
   useEffect(() => {
     if (!account.user || !account.ready) return;
-    let first = true;
+    let previous;
     const stop = observeFriendInbox(
       account.user.uid,
       (value) => {
         setPending(value.pending || 0);
-        if (!first) refresh();
-        first = false;
+        const revision = `${value.pending}:${value.sent}:${value.updatedAt?.toMillis()}`;
+        if (previous !== undefined && previous !== revision) refresh();
+        previous = revision;
       },
       () => setError("친구 요청 실시간 연결이 끊겼습니다. 새로고침해 주세요."),
     );

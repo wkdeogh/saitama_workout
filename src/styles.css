@@ -3298,7 +3298,7 @@ main {
 }
 .proof-actions {
   display: grid;
-  grid-template-columns: 1fr 1fr 0.8fr;
+  grid-template-columns: 1fr 1fr 1.1fr;
   gap: 8px;
   margin-top: 16px;
 }
@@ -3437,6 +3437,58 @@ main {
 }
 .friend-person {
   min-width: 0;
+}
+.friend-profile-button {
+  text-align: left;
+  min-height: 44px;
+  padding: 4px 0;
+}
+.user-social-actions {
+  display: flex;
+  gap: 10px;
+  margin: 12px 0;
+}
+.user-social-actions .secondary-button {
+  flex: 1;
+  min-width: 0;
+  min-height: 44px;
+  font-size: 12px;
+}
+.kudos-toggle[aria-pressed="true"] {
+  background: #ffd61f;
+  color: #171717;
+}
+.character-kudos {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 44px;
+  min-width: 64px;
+  padding: 8px 12px;
+  border: 1.5px solid #171717;
+  border-radius: 4px;
+  background: #ffd61f;
+  color: #171717;
+  font-weight: 800;
+}
+.character-kudos:hover {
+  background: #ffdf48;
+}
+.kudos-senders {
+  max-height: 50dvh;
+  overflow-y: auto;
+}
+.kudos-toast {
+  top: max(18px, env(safe-area-inset-top));
+  bottom: auto;
+}
+.kudos-toast svg {
+  flex-shrink: 0;
 }
 .friend-person strong {
   display: block;

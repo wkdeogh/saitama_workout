@@ -24,6 +24,7 @@ import {
   Volume2,
   VolumeX,
   TreePine,
+  ThumbsUp,
 } from "lucide-react";
 import Character from "./Character";
 import WorkoutProofCard from "./WorkoutProofCard";
@@ -46,6 +47,10 @@ import SuperAccountSection from "./cloud/SuperAccountSection";
 import { friendApi } from "./cloud/friendsClient";
 import FriendsPanel from "./cloud/FriendsPanel";
 import useFriends from "./cloud/useFriends";
+import useKudos from "./cloud/useKudos";
+import UserSocialActions from "./cloud/UserSocialActions";
+import KudosNotifications from "./cloud/KudosNotifications";
+import PushControls from "./cloud/PushControls";
 import RankingPanel, {
   LoginScreen,
   AccountControls,
@@ -198,57 +203,117 @@ function StageDialog({ stage, currentLevel, onClose }) {
     </Modal>
   );
 }
-function RankingUserDialog({ entry, onClose }) {
+function RankingUserDialog({
+  entry: initialEntry,
+  account,
+  friends,
+  kudos,
+  onReceived,
+  onClose,
+}) {
+  const [entry, setEntry] = useState(initialEntry),
+    [error, setError] = useState("");
   const day = useKoreaDay();
+  useEffect(() => {
+    if (initialEntry.totals || !account.user) return;
+    let active = true;
+    friendApi("user", { to: initialEntry.uid })
+      .then((profile) => {
+        if (active) setEntry(profile);
+      })
+      .catch((e) => {
+        if (active) setError(e.message);
+      });
+    return () => {
+      active = false;
+    };
+  }, [initialEntry.uid, account.user?.uid]);
   const { todayCounts, todayExp } = displayedDailyActivity(entry, day);
-  const level = displayedLevel(entry, day),
+  const level = entry.totals ? displayedLevel(entry, day) : 1,
     streak = entry.calculatedOn === day ? entry.streak || 0 : 0,
     appearance = characterAppearance(level, streak);
   return (
-    <Modal title={entry.characterName} onClose={onClose}>
-      <p className="ranking-user-level">LV. {level}</p>
-      {entry.tag && <p className="friend-profile-tag">#{entry.tag}</p>}
-      <div
-        className="stage-reveal character-stage character-evolved stage-unlocked"
-        data-powered={appearance.aura}
-        style={{
-          "--aura-color": `#${appearance.auraColor.toString(16).padStart(6, "0")}`,
-        }}
-      >
-        <Character level={level} streak={streak} stage={stageIndex(level)} />
-        {streak >= 2 && (
-          <span className="character-streak">
-            {streak}
-            {t("일 연속 운동 중!")}
-          </span>
-        )}
-      </div>
-      <div className="ranking-user-totals">
-        {EXERCISES.map(localizeExercise).map(({ key, label, unit }) => (
-          <div key={key}>
-            <span>{label}</span>
-            <strong>
-              {number(entry.totals[key])}
-              <small>{unit}</small>
-            </strong>
-            <small
-              className="daily-count"
-              style={{
-                color: dailyExpColor(todayExp),
-              }}
-            >
-              {t("오늘 ▲ ")}
-              {number(todayCounts[key])}
-              {unit}
-            </small>
+    <Modal title={entry.characterName || entry.name} onClose={onClose}>
+      <UserSocialActions
+        uid={entry.uid}
+        account={account}
+        friends={friends}
+        Dialog={Modal}
+      />
+      {error && (
+        <p className="error-box" role="alert">
+          {t(error)}
+        </p>
+      )}
+      {!entry.totals ? (
+        <p role="status">{t("불러오는 중…")}</p>
+      ) : (
+        <>
+          <p className="ranking-user-level">LV. {level}</p>
+          {entry.tag && <p className="friend-profile-tag">#{entry.tag}</p>}
+          <div
+            className="stage-reveal character-stage character-evolved stage-unlocked"
+            data-powered={appearance.aura}
+            style={{
+              "--aura-color": `#${appearance.auraColor.toString(16).padStart(6, "0")}`,
+            }}
+          >
+            <Character
+              level={level}
+              streak={streak}
+              stage={stageIndex(level)}
+            />
+            {entry.uid === account.user?.uid && kudos.count > 0 && (
+              <KudosBadge count={kudos.count} onClick={onReceived} />
+            )}
+            {streak >= 2 && (
+              <span className="character-streak">
+                {streak}
+                {t("일 연속 운동 중!")}
+              </span>
+            )}
           </div>
-        ))}
-      </div>
-      <p className="hint">
-        {t("누적 운동량 · ")}
-        {number(entry.totalExp)} EXP
-      </p>
+          <div className="ranking-user-totals">
+            {EXERCISES.map(localizeExercise).map(({ key, label, unit }) => (
+              <div key={key}>
+                <span>{label}</span>
+                <strong>
+                  {number(entry.totals[key])}
+                  <small>{unit}</small>
+                </strong>
+                <small
+                  className="daily-count"
+                  style={{
+                    color: dailyExpColor(todayExp),
+                  }}
+                >
+                  {t("오늘 ▲ ")}
+                  {number(todayCounts[key])}
+                  {unit}
+                </small>
+              </div>
+            ))}
+          </div>
+          <p className="hint">
+            {t("누적 운동량 · ")}
+            {number(entry.totalExp)} EXP
+          </p>
+        </>
+      )}
     </Modal>
+  );
+}
+function KudosBadge({ count, onClick }) {
+  return (
+    <button
+      className="character-kudos"
+      onClick={onClick}
+      aria-haspopup="dialog"
+      aria-label={t("오늘 받은 따봉 {0}개, 보낸 사람 보기", { 0: count })}
+    >
+      <ThumbsUp size={19} aria-hidden="true" />
+      <span>+{count}</span>
+    </button>
   );
 }
 function CharacterNameForm({ initialName = "", onSave, autofocus = false }) {
@@ -686,6 +751,7 @@ function AccountPanel({
   );
 }
 function SettingsPanel({
+  account,
   data,
   persist,
   onClose,
@@ -699,6 +765,11 @@ function SettingsPanel({
   return (
     <Modal title={t("훈련소 설정")} onClose={onClose}>
       <LanguageSettings />
+      {account.user && (
+        <section className="settings-section">
+          <PushControls uid={account.user.uid} />
+        </section>
+      )}
       <section className="settings-section">
         <button
           className="secondary-button"
@@ -821,6 +892,8 @@ export default function App() {
   } = useWorkoutAccount();
   const adAccess = useAdAccess(account);
   const friends = useFriends(account);
+  const kudos = useKudos(account);
+  const [receivedOpen, setReceivedOpen] = useState(false);
   const [rankingUser, setRankingUser] = useState(null);
   const [proof, setProof] = useState(null);
   const [today, setToday] = useState(dateKey()),
@@ -875,6 +948,7 @@ export default function App() {
     setNameEditOpen(false);
     setHelpOpen(false);
     setRankingUser(null);
+    setReceivedOpen(false);
     setProof(null);
     setStageDetail(null);
     setDeleteOpen(false);
@@ -888,6 +962,21 @@ export default function App() {
       setTab("ranking");
       setStageDetail(null);
     };
+    const openKudos = () => {
+      setTab("home");
+      setReceivedOpen(true);
+      kudos.refresh();
+    };
+    if (new URLSearchParams(window.location.search).get("view") === "kudos") {
+      openKudos();
+      const url = new URL(window.location.href);
+      url.searchParams.delete("view");
+      window.history.replaceState(
+        null,
+        "",
+        url.pathname + url.search + url.hash,
+      );
+    }
     if (new URLSearchParams(window.location.search).get("view") === "friends") {
       open();
       const url = new URL(window.location.href);
@@ -900,6 +989,7 @@ export default function App() {
     }
     const handler = (event) => {
       if (event.data?.type === "OPEN_FRIENDS") open();
+      if (event.data?.type === "OPEN_KUDOS") openKudos();
     };
     navigator.serviceWorker?.addEventListener("message", handler);
     return () =>
@@ -1233,6 +1323,15 @@ export default function App() {
                     streak={summary.streak}
                     celebrate={celebrate}
                   />
+                  {account.user && kudos.count > 0 && (
+                    <KudosBadge
+                      count={kudos.count}
+                      onClick={() => {
+                        setReceivedOpen(true);
+                        kudos.refresh();
+                      }}
+                    />
+                  )}
                   <span className="drag-label">
                     <RotateCcw size={11} />
                     {t("드래그해서 돌려보기")}
@@ -1598,10 +1697,50 @@ export default function App() {
       </nav>
       {rankingUser && (
         <RankingUserDialog
+          key={`${account.user?.uid}:${rankingUser.uid}`}
           entry={rankingUser}
+          account={account}
+          friends={friends}
+          kudos={kudos}
+          onReceived={() => {
+            setReceivedOpen(true);
+            kudos.refresh();
+          }}
           onClose={() => setRankingUser(null)}
         />
       )}
+      {receivedOpen && account.user && (
+        <Modal
+          title={t("오늘 받은 따봉")}
+          onClose={() => setReceivedOpen(false)}
+        >
+          {kudos.error ? (
+            <p className="error-box" role="alert">
+              {t(kudos.error)}
+            </p>
+          ) : kudos.count === 0 ? (
+            <p className="ranking-empty">{t("오늘 받은 따봉이 없습니다.")}</p>
+          ) : (
+            <ul className="friend-list kudos-senders">
+              {kudos.received.map((sender) => (
+                <li key={sender.uid}>
+                  <div className="friend-person">
+                    <strong>{sender.name}</strong>
+                    <small>#{sender.tag}</small>
+                  </div>
+                  <ThumbsUp size={18} aria-hidden="true" />
+                </li>
+              ))}
+            </ul>
+          )}
+        </Modal>
+      )}
+      <KudosNotifications
+        key={`${account.user?.uid}:${kudos.day}`}
+        uid={account.user?.uid}
+        day={kudos.day}
+        notifications={kudos.notifications}
+      />
       {stageDetail && (
         <StageDialog
           stage={stageDetail}
@@ -1652,6 +1791,7 @@ export default function App() {
       {settings && (
         <SettingsPanel
           {...{
+            account,
             data,
             persist,
             notify,

@@ -7,6 +7,18 @@ export class FriendError extends Error {
     this.status = status;
   }
 }
+export function normalizeUid(uid) {
+  if (
+    typeof uid !== "string" ||
+    !uid ||
+    uid.length > 128 ||
+    uid.includes("/") ||
+    uid === "." ||
+    uid === ".."
+  )
+    throw new FriendError("사용자를 확인해 주세요.");
+  return uid;
+}
 export function accountTag() {
   const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
   return (

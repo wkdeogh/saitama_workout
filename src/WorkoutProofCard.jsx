@@ -1,5 +1,5 @@
 import { t, getLocale, localizeExercise } from "./i18n/index.js";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, Share2, Shuffle, RotateCcw } from "lucide-react";
 import { characterPortrait } from "./Character";
 import { EXERCISES, recordExp } from "./model";
@@ -142,6 +142,9 @@ export default function WorkoutProofCard({ proof }) {
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
   const [sharing, setSharing] = useState(false);
+  const [shareStep, setShareStep] = useState("link");
+  const sharePending = useRef(false);
+  useEffect(() => setShareStep("link"), [proof]);
   useEffect(() => {
     let active = true,
       url;
@@ -173,22 +176,29 @@ export default function WorkoutProofCard({ proof }) {
     };
   }, [proof, pose, attempt, language]);
   async function share() {
-    if (!image || sharing) return;
-    const payload = proofShareData(image.file);
-    if (!navigator.share || !navigator.canShare?.(payload)) {
+    if (!image || sharePending.current) return;
+    const payload = proofShareData(image.file, shareStep);
+    if (
+      !navigator.share ||
+      !navigator.canShare?.(proofShareData(image.file, "link")) ||
+      !navigator.canShare?.(proofShareData(image.file, "image"))
+    ) {
       setMessage(
-        "이 브라우저는 이미지 공유를 지원하지 않습니다. 이미지 공유를 지원하는 브라우저에서 다시 시도해 주세요.",
+        "이 브라우저는 주소와 이미지 공유를 지원하지 않습니다. 다른 브라우저에서 다시 시도해 주세요.",
       );
       return;
     }
+    sharePending.current = true;
     setSharing(true);
     setMessage("");
     try {
       await navigator.share(payload);
+      setShareStep(shareStep === "link" ? "image" : "link");
     } catch (e) {
       if (e.name !== "AbortError")
         setMessage("공유창을 열지 못했습니다. 다시 시도해 주세요.");
     } finally {
+      sharePending.current = false;
       setSharing(false);
     }
   }
@@ -261,9 +271,18 @@ export default function WorkoutProofCard({ proof }) {
           onClick={share}
         >
           <Share2 size={17} />
-          {sharing ? t("공유 중…") : t("공유")}
+          {sharing
+            ? t("공유 중…")
+            : shareStep === "link"
+              ? t("주소 공유")
+              : t("이미지 공유")}
         </button>
       </div>
+      {shareStep === "image" && !message && (
+        <p className="proof-message" role="status">
+          {t("이어서 같은 대화에 이미지를 공유해 주세요.")}
+        </p>
+      )}
       {message && (
         <p className="proof-message" role="status">
           {t(message)}

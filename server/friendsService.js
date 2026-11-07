@@ -8,6 +8,7 @@ import {
   FriendError,
   assertFriendCapacity,
   MAX_PENDING,
+  normalizeUid,
 } from "./friendsModel.js";
 import {
   koreaDay,
@@ -18,6 +19,7 @@ import { parseBackup, stats } from "../src/model.js";
 import { virtualService } from "./virtualService.js";
 import { publicVirtual } from "./virtualModel.js";
 import { dailyActivity } from "../src/cloud/dailyActivity.js";
+import { sendSocialPush } from "./socialPush.js";
 
 const stamp = () => FieldValue.serverTimestamp();
 const profileView = (snap) =>
@@ -135,40 +137,40 @@ export function friendsService(db, messaging) {
     return profiles.filter((p) => p?.name && p.tag !== own.tag);
   }
   async function notify(to, sender) {
-    if (!messaging) return { sent: 0, failed: 0 };
-    const devices = await db
-      .collection("pushDevices")
-      .where("uid", "==", to)
-      .limit(10)
-      .get();
-    if (devices.empty) return { sent: 0, failed: 0 };
-    try {
-      const result = await messaging.sendEachForMulticast({
-        tokens: devices.docs.map((d) => d.data().token),
-        data: {
-          uid: to,
-          title: "친구 요청",
-          body: `${sender.name || "훈련생"} (#${sender.tag})님이 친구 요청을 보냈습니다.`,
-          url: "/?view=friends",
-          requestTag: sender.tag,
-        },
-        webpush: { headers: { TTL: "86400", Urgency: "normal" } },
-      });
-      await Promise.all(
-        result.responses.map((r, i) =>
-          !r.success &&
-          [
-            "messaging/registration-token-not-registered",
-            "messaging/invalid-registration-token",
-          ].includes(r.error?.code)
-            ? devices.docs[i].ref.delete()
-            : Promise.resolve(),
-        ),
-      );
-      return { sent: result.successCount, failed: result.failureCount };
-    } catch {
-      return { sent: 0, failed: devices.size };
+    return sendSocialPush(db, messaging, to, {
+      title: "친구 요청",
+      body: `${sender.name || "훈련생"} (#${sender.tag})님이 친구 요청을 보냈습니다.`,
+      url: "/?view=friends",
+      requestTag: sender.tag,
+    });
+  }
+  async function user(uid, to) {
+    normalizeUid(to);
+    const day = koreaDay();
+    const [account, virtual] = await Promise.all([
+      db.doc(`accounts/${to}`).get(),
+      db.doc(`virtualTrainees/${to}`).get(),
+    ]);
+    if (virtual.exists) {
+      const profile = await profileRef(to).get();
+      return { ...profileView(profile), ...publicVirtual(virtual.data(), day) };
     }
+    if (!account.exists || !account.data().participating)
+      throw new FriendError("사용자를 찾을 수 없습니다.", 404);
+    const data = parseBackup(account.data().payload, day);
+    if (!data.characterName)
+      throw new FriendError("사용자를 찾을 수 없습니다.", 404);
+    const profile = await ensureProfile(to);
+    return {
+      ...profile,
+      ...rankingSummary(data, day),
+      streak: stats(data, day).streak,
+      ...dailyActivity(data, day),
+    };
+  }
+  async function requestUser(uid, to) {
+    const profile = await user(uid, to);
+    return request(uid, profile.tag);
   }
   async function request(uid, tag) {
     const me = await ensureProfile(uid),
@@ -439,5 +441,7 @@ export function friendsService(db, messaging) {
     ranking,
     device,
     labels,
+    user,
+    requestUser,
   };
 }

@@ -44,8 +44,8 @@ export function workoutProof(data, day) {
     ),
   };
 }
-export function proofShareData(file) {
-  return { files: [file] };
+export function proofShareData(file, step = "image") {
+  return step === "link" ? { url: APP_SHARE_URL } : { files: [file] };
 }
 
 // Posed arm endpoints also drive fists, fingers and wrist wraps.

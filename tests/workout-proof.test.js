@@ -16,6 +16,7 @@ import {
   legPose,
   bodyPose,
   proofShareData,
+  APP_SHARE_URL,
 } from "../src/workoutProofModel.js";
 const day = "2026-09-28";
 test("proof takes a detached snapshot of saved counts and the updated level", () => {
@@ -51,11 +52,15 @@ test("proof requires a real workout on the requested date, but not full goals", 
   assert.equal(workoutProof(data, day).counts.runningKm, 0.1);
   assert.throws(() => workoutProof(data, "2026-09-29"), /먼저 입력/);
 });
-test("sharing sends exactly one image without a message, title or link", () => {
+test("sharing prepares the site address first and one PNG in a separate second step", () => {
   const file = new File(["png"], "proof.png", { type: "image/png" });
-  const payload = proofShareData(file);
-  assert.deepEqual(payload, { files: [file] });
-  assert.equal(payload.files[0].type, "image/png");
+  const link = proofShareData(file, "link");
+  assert.deepEqual(link, { url: APP_SHARE_URL });
+  assert.equal(link.url, "https://saitama-workout.vercel.app/");
+  const image = proofShareData(file, "image");
+  assert.deepEqual(image, { files: [file] });
+  assert.equal(image.files[0].type, "image/png");
+  assert.equal(image.url, undefined);
 });
 test("random pose changes do not repeat and remain in the supported set", () => {
   for (const previous of [undefined, ...PROOF_POSES])

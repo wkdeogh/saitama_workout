@@ -3,6 +3,7 @@ export function createFriendsHandler({
   verify,
   service,
   virtual,
+  kudos,
   administrator = async () => false,
   origin = "https://saitama-workout.vercel.app",
 }) {
@@ -83,6 +84,18 @@ export function createFriendsHandler({
           break;
         case "profile":
           result = await api.ensureProfile(uid);
+          break;
+        case "user":
+          result = await api.user(uid, body.to);
+          break;
+        case "request-user":
+          result = await api.requestUser(uid, body.to);
+          break;
+        case "kudos-state":
+          result = await kudos().state(uid, body.to ?? uid);
+          break;
+        case "kudos-set":
+          result = await kudos().set(uid, body.to, body.active);
           break;
         case "labels":
           result = await api.labels(uid, body.ids);

@@ -132,3 +132,56 @@ test("friend production entry loads on Vercel without ESM require support", () =
   );
   assert.equal(result.status, 0, result.stderr);
 });
+
+test("kudos endpoints always use the verified sender and server day, and reject unauthenticated calls", async () => {
+  const calls = [];
+  const handler = createFriendsHandler({
+    verify: async () => ({
+      uid: "verified",
+      firebase: { sign_in_provider: "google.com" },
+    }),
+    service: () => ({}),
+    kudos: () => ({
+      set: async (...args) => {
+        calls.push(args);
+        return { given: true };
+      },
+      state: async (...args) => {
+        calls.push(args);
+        return { count: 1 };
+      },
+    }),
+  });
+  const req = {
+    method: "POST",
+    headers: {
+      origin: "https://saitama-workout.vercel.app",
+      authorization: "Bearer valid",
+    },
+    query: { action: "kudos-set" },
+    body: {
+      uid: "forged",
+      from: "forged",
+      to: "recipient",
+      active: true,
+      day: "2000-01-01",
+    },
+  };
+  const res = {
+    setHeader() {},
+    end(body) {
+      this.body = JSON.parse(body);
+    },
+  };
+  await handler(req, res);
+  assert.equal(res.statusCode, 200);
+  assert.deepEqual(calls[0], ["verified", "recipient", true]);
+  await handler(
+    { ...req, query: { action: "kudos-state" }, body: { uid: "forged" } },
+    res,
+  );
+  assert.deepEqual(calls[1], ["verified", "verified"]);
+  await handler({ ...req, headers: { origin: req.headers.origin } }, res);
+  assert.equal(res.statusCode, 401);
+  assert.equal(calls.length, 2);
+});
